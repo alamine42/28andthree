@@ -35,22 +35,38 @@ ALTER DEFAULT PRIVILEGES FOR ROLE neondb_owner IN SCHEMA public
 
 Passwords live in Dashlane `28-and-three` → `Neon — app_read` / `Neon — etl_writer` / `Neon — neondb_owner (migrator)`.
 
-## preview-migrations
+## schema-changes
 
-Neon-Vercel integration spawns a per-PR branch on every PR. Before any Playwright test hits the preview URL, the `.github/workflows/preview-migrate.yml` workflow runs `pnpm db:migrate` against that branch using `PREVIEW_MIGRATOR_DATABASE_URL`.
+Single-branch workflow: commits go direct to `main`; Vercel auto-deploys to prod. There is **no** per-PR preview DB infrastructure (dropped once required PR-review was relaxed).
 
-**One-time setup in Neon-Vercel integration:**
+**Normal schema change:**
 
-1. Neon console → Integrations → Vercel.
-2. When installing the integration, check "Create environment variables for preview branches."
-3. Set preview-branch env var `MIGRATOR_DATABASE_URL` (template: `${NEON_BRANCH_URL}/twentyeightandthree?sslmode=require`).
-4. In GitHub repo settings → Secrets → Actions, add `PREVIEW_MIGRATOR_DATABASE_URL` mirroring the Neon-Vercel-managed var.
+```bash
+# 1. Edit db/schema.ts
+# 2. Generate the migration SQL offline:
+pnpm db:generate --name=<kebab-case-name>
+# 3. Commit both schema and the generated SQL
+# 4. Apply to prod (from local; later automate on merge-to-main):
+MIGRATOR_DATABASE_URL='<prod owner URL>' pnpm db:migrate
+```
 
-**If a preview deploy reports a schema mismatch:**
+**Risky schema change (destructive, or unclear blast radius):**
 
-- Check the preview-migrate workflow run for that PR.
-- If the migration step failed, re-run with fresh credentials (`gh workflow run preview-migrate.yml -f database_url=<url>`).
-- If it succeeded but the app still sees stale schema, the preview branch may have been created from a stale prod snapshot; delete the Neon branch and re-open the PR.
+```bash
+# Test on dev branch first
+MIGRATOR_DATABASE_URL='<dev owner URL>' pnpm db:migrate
+# Verify app behavior against the dev branch in a local dev run
+DATABASE_URL='<dev app_read URL>' pnpm dev
+# When satisfied, apply to prod
+```
+
+**One-off preview environment when needed** (e.g., design review before merging a UI redo):
+
+- Push a branch; Vercel auto-creates a preview URL for any branch (default behavior, no integration required).
+- If the preview needs a non-prod DB: create a Neon branch manually via Neon UI → copy its connection string → set it on the Vercel preview via env override or `.env.preview.local` equivalent.
+- Merge to main when done; Vercel promotes to prod on the next push.
+
+**Rollback path:** `git revert <sha>` + force-reverse the migration. Neon PITR is the last resort (see `etl-rollback` below).
 
 ## etl-rollback
 
@@ -79,9 +95,11 @@ Alerts route to `alamine@gmail.com` primary. See E1-14 for script.
 
 ## adding-a-migration
 
+See `schema-changes` above for the full flow. TL;DR:
+
 1. Edit `db/schema.ts`.
 2. `pnpm db:generate --name=<kebab-case-name>`.
 3. Review generated SQL in `/drizzle/`; add `CONCURRENTLY` on any index creation against tables > 100k rows.
 4. Commit both.
-5. CI runs `drizzle-kit migrate` in the preview-migrate workflow against the per-PR Neon branch.
-6. On merge to `main`, CI runs the migration against prod (Neon `main` branch) before Vercel deploys the new build.
+5. Apply to prod: `MIGRATOR_DATABASE_URL='<owner URL>' pnpm db:migrate`.
+6. (Future) Automate step 5 in CI on push to `main` — currently manual.

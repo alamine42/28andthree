@@ -136,31 +136,30 @@ Drizzle is the **only** migration runner. Python reads the schema but never muta
 
 **Change after adversarial review:** codex flagged the Drizzle→Pydantic codegen as premature for a one-table schema. Accept → hand-write `etl/models.py` with a single `MetaRefresh` Pydantic v2 model in E1. Build the codegen / drift check in E2 when `plays` + `games` land and drift risk becomes real. (E1-15 deferred to E2 as `E2-00b`.)
 
-**Per-PR preview migrations** (new, codex finding #1): Preview deploys run `pnpm drizzle-kit migrate` against the preview branch's unpooled URL **before** the Vercel preview publishes. Without this, a PR that adds a column renders against a stale schema. Wired in new task E1-10a.
+**Schema changes go direct to main.** After dropping the PR requirement, a schema change is: edit `db/schema.ts` → `pnpm db:generate` → commit → `MIGRATOR_DATABASE_URL=<prod> pnpm db:migrate` (or wire into CI on merge to main — future work). Test risky migrations on the `dev` branch first.
 
 ### 3.4 Environments
 
 | Env | Neon branch | Vercel env | Where secrets live |
 |---|---|---|---|
 | Local dev | `dev` (solo scratch; manual reseed from prod as needed) | `vercel dev` reads `.env.local` | `.env.local` gitignored; populated from Dashlane |
-| PR preview | `preview/pr-N` (auto, via Neon-Vercel integration; migrations applied before deploy) | Vercel preview env | Vercel env vars (per-env) |
 | Production | `main` | Vercel production env | Vercel env vars (per-env); GH Actions secrets for ETL |
 
-No separate staging. Preview-per-PR is staging. ETL always targets prod's Neon `main` branch on Tuesday.
+**Single-branch workflow.** No separate staging, no per-PR preview DB infrastructure. Commits land on `main`; Vercel auto-deploys to prod. If a specific change needs a preview environment (risky schema migration, big UI redo), the flow is one-off: push a branch → Vercel auto-previews it → optionally point the preview at a manually-created Neon branch via env override → merge when satisfied.
 
-**Change after adversarial review:** dropped the "weekly mirror prod → dev" idea. The `dev` branch is my personal scratch space; I reseed it manually from prod when I need fresh data. Schema experiments belong on a per-PR preview branch.
+**History:** earlier drafts of this plan required PRs and wired per-PR Neon branches via the Neon-Vercel integration. That was dropped when the "require PR + 1 review" branch protection was removed — self-bypass theater for solo work. The preview-per-PR infra was solving a problem the simplified workflow doesn't have.
 
-### 3.4a Database roles (new, codex finding #5)
+### 3.4a Database roles (codex finding #5, simplified during E1-05)
 
-Three Neon roles, not one omnipotent URL:
+Two created roles + the built-in `neondb_owner` as the migrator:
 
-| Role | Privileges | Used by | Env var |
-|---|---|---|---|
-| `app_read` | `SELECT` on all tables; no DDL | Next.js server components (prod + preview) | `DATABASE_URL` |
-| `etl_writer` | `SELECT, INSERT, UPDATE, DELETE` on tables + sequences; no DDL | Python ETL (prod via GH Actions; personal branch in dev) | `ETL_DATABASE_URL` |
-| `migrator` | Schema owner; DDL + DML | `drizzle-kit migrate` in CI only; never by the running app | `MIGRATOR_DATABASE_URL` |
+| Logical role | Backed by | Privileges | Used by | Env var |
+|---|---|---|---|---|
+| app_read | `app_read` (created) | `SELECT` on all tables | Next.js server components | `DATABASE_URL` |
+| etl_writer | `etl_writer` (created) | `SELECT, INSERT, UPDATE, DELETE` on tables + sequences | Python ETL | `ETL_DATABASE_URL` |
+| migrator | `neondb_owner` (built-in) | Full DDL + DML | `drizzle-kit migrate` only | `MIGRATOR_DATABASE_URL` |
 
-Granting happens in E1-05 via Neon SQL-console one-off. Documented in `docs/runbook.md#db-roles`.
+Granted via Neon SQL console in E1-05. Documented in `docs/runbook.md#db-roles`.
 
 ### 3.5 Env variables
 
@@ -213,7 +212,7 @@ Tracked as `E2-12` in existing IMPLEMENTATION.md, which we can harden at that ti
 |---|---|---|
 | `web` | ubuntu-latest | setup-node 22 → setup-pnpm → `pnpm install --frozen-lockfile` → `pnpm typecheck` → `pnpm lint` → `pnpm test` (Node unit tests, sparse) |
 | `e2e` | ubuntu-latest | install deps → `pnpm build` → Playwright **chromium only** (the e1 smoke suite) |
-| `preview-migrate` (new) | ubuntu-latest | `pnpm drizzle-kit migrate` against the per-PR branch's unpooled URL BEFORE Vercel publishes the preview (codex finding #1) |
+| ~~`preview-migrate`~~ | ~~Removed when preview-per-PR was dropped.~~ Schema changes now apply direct to prod via local `pnpm db:migrate` against `MIGRATOR_DATABASE_URL`; see `docs/runbook.md#schema-changes`. |
 
 Cache: `~/.local/share/pnpm/store` keyed by `pnpm-lock.yaml`; `~/.cache/ms-playwright` keyed by Playwright version.
 
@@ -492,7 +491,7 @@ These updates are minor and can be applied via `bd update --notes`.
 | Risk | Mitigation |
 |---|---|
 | Bun+Vercel interaction edge cases | Pin Bun version in `package.json` engines. Vercel already supports Bun; fallback to Node+pnpm is ~1 day of work. |
-| Neon-Vercel preview-per-PR integration quirks | Documented in `README.md`; if the auto-integration flakes, fall back to a single shared `preview` branch with a 15-min cleanup cron. |
+| ~~Neon-Vercel preview-per-PR integration quirks~~ | Dropped — single-branch workflow adopted. |
 | uv in GH Actions not caching well | Known good pattern with `astral-sh/setup-uv@v3 --enable-cache`. |
 | Cabinet Grotesk Fontshare ToS changes during the sprint | Self-hosted WOFF2 mitigates; license captured in `/docs/licenses.md`. |
 | Sentry free-tier (5K events/mo) blown by a noisy deploy | Sample rate: 10% in production, 100% in preview. Capture only handled errors in the browser; capture all errors server-side. |
@@ -517,7 +516,7 @@ These updates are minor and can be applied via `bd update --notes`.
 
 - All 17 E1 beads tasks closed (`bd stats` shows 0 open under epic `elj`).
 - `main` deployed; DNS for `28andthree.com` points at Vercel (or the apex holds a landing page and `app.28andthree.com` points at Vercel).
-- A live PR demonstrates: preview URL spawns, an isolated Neon preview branch exists, pre-deploy `drizzle-kit migrate` ran, closing the PR removes the branch.
+- A push to `main` deploys to Vercel prod with the latest schema applied (migration run locally via `MIGRATOR_DATABASE_URL` before push).
 - `pnpm audit` clean (0 high/critical).
 - At least one synthetic Sentry event visible in the web project dashboard (captured from a preview, not prod).
 - Lighthouse CI has posted at least one info-only comment on a PR.
