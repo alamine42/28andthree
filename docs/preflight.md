@@ -10,7 +10,7 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 
 | Task | Status | Date | Evidence |
 |---|---|---|---|
-| E0-01 Domain registration | PENDING | — | — |
+| E0-01 Domain registration | PASS | 2026-04-17 | `28andthree.com` registered (primary target) |
 | E0-02 USPTO TESS brand check | PASS | 2026-04-17 | `/docs/preflight/e0-02/findings.md` + archived USPTO search PDFs |
 | E0-03 nflverse license review | PENDING | — | `/docs/licenses.md#nflverse` |
 | E0-04 Fontshare + Google Fonts ToS | PENDING | — | `/docs/licenses.md#fonts` |
@@ -26,11 +26,11 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 
 ## E0-01: Domain registration
 
-- **Status:** PENDING
-- **Date:** —
-- **Evidence:** (attach `whois` output screenshot here)
-- **Decision / notes:** Target `28andthree.com`. Fallbacks (priority order): `28andthree.app`, `28and3.com`, `28andthree.io`. Private WHOIS required. 1-year registration minimum. Do NOT execute until E0-02 clears.
-- **Escalation:** If primary + all fallbacks taken → pivot to backup name per escalation.md Scenario 1.
+- **Status:** PASS
+- **Date:** 2026-04-17
+- **Evidence:** `28andthree.com` registered (primary target secured).
+- **Decision / notes:** Primary domain `28andthree.com` acquired. E0-02 TESS check cleared first as gate. Confirm: private WHOIS enabled, 1-yr minimum renewal, auto-renew on, owner email matches vault primary.
+- **Escalation:** N/A — primary secured.
 
 ## E0-02: USPTO TESS brand check
 
