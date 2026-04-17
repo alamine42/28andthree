@@ -2,7 +2,7 @@
 
 Advanced analytics for the New England Patriots — built for fans who read the box score twice.
 
-**Status:** pre-launch. Sprint 1 (E1 Foundation) in progress. See `IMPLEMENTATION.md` for the full plan.
+**Status:** pre-launch. Sprint 1 (E1 Foundation) complete. Live at **[28andthree.com](https://28andthree.com)**. See `IMPLEMENTATION.md` for the full plan.
 
 ## Source-of-truth docs
 

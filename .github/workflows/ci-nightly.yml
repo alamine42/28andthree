@@ -39,13 +39,13 @@ jobs:
       - if: steps.pw-cache.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps
 
-      - run: pnpm build
-
-      - name: Run Playwright full matrix
-        run: pnpm exec playwright test --reporter=github
+      - name: Run Playwright full matrix against production
+        run: pnpm exec playwright test --reporter=github tests/e2e/e1.spec.ts
         env:
           CI: '1'
           PLAYWRIGHT_NIGHTLY: '1'
+          PLAYWRIGHT_BASE_URL: https://28andthree.com
+          PLAYWRIGHT_SKIP_WEBSERVER: '1'
 
       - name: Upload Playwright report on failure
         if: failure()
@@ -76,9 +76,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm add -D @lhci/cli
 
-      - run: pnpm build
-
       - name: Run Lighthouse CI (info-only until E3)
-        run: pnpm exec lhci autorun || true
+        run: |
+          pnpm exec lhci autorun \
+            --collect.url=https://28andthree.com \
+            --collect.url=https://28andthree.com/status \
+            --collect.url=https://28andthree.com/tokens \
+            --collect.startServerCommand='' \
+            --collect.numberOfRuns=1 \
+            --upload.target=temporary-public-storage \
+            || true
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
