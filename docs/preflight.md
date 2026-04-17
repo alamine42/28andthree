@@ -11,7 +11,7 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 | Task | Status | Date | Evidence |
 |---|---|---|---|
 | E0-01 Domain registration | PENDING | — | — |
-| E0-02 USPTO TESS brand check | PRELIMINARY GO (human session pending) | 2026-04-17 | `/docs/preflight/e0-02/findings.md` |
+| E0-02 USPTO TESS brand check | PASS | 2026-04-17 | `/docs/preflight/e0-02/findings.md` + archived USPTO search PDFs |
 | E0-03 nflverse license review | PENDING | — | `/docs/licenses.md#nflverse` |
 | E0-04 Fontshare + Google Fonts ToS | PENDING | — | `/docs/licenses.md#fonts` |
 | E0-05 Account provisioning | PENDING | — | — |
@@ -34,9 +34,9 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 
 ## E0-02: USPTO TESS brand check
 
-- **Status:** PRELIMINARY GO — human USPTO session still required before PASS.
+- **Status:** PASS
 - **Date:** 2026-04-17
-- **Evidence:** `/docs/preflight/e0-02/findings.md` (full research). PDF archive from `tmsearch.uspto.gov` still needed per §5 of findings.
+- **Evidence:** `/docs/preflight/e0-02/findings.md` (agent research) + human-run USPTO TESS session confirming GO.
 - **Required searches:**
   - `28 AND THREE` exact, all classes
   - `28 AND 3` exact, all classes
