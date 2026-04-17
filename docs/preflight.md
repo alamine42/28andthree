@@ -11,7 +11,7 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 | Task | Status | Date | Evidence |
 |---|---|---|---|
 | E0-01 Domain registration | PENDING | — | — |
-| E0-02 USPTO TESS brand check | PENDING | — | — |
+| E0-02 USPTO TESS brand check | PRELIMINARY GO (human session pending) | 2026-04-17 | `/docs/preflight/e0-02/findings.md` |
 | E0-03 nflverse license review | PENDING | — | `/docs/licenses.md#nflverse` |
 | E0-04 Fontshare + Google Fonts ToS | PENDING | — | `/docs/licenses.md#fonts` |
 | E0-05 Account provisioning | PENDING | — | — |
@@ -34,17 +34,17 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 
 ## E0-02: USPTO TESS brand check
 
-- **Status:** PENDING
-- **Date:** —
-- **Evidence:** (archive USPTO TESS search PDFs to `/docs/preflight/e0-02/`)
+- **Status:** PRELIMINARY GO — human USPTO session still required before PASS.
+- **Date:** 2026-04-17
+- **Evidence:** `/docs/preflight/e0-02/findings.md` (full research). PDF archive from `tmsearch.uspto.gov` still needed per §5 of findings.
 - **Required searches:**
   - `28 AND THREE` exact, all classes
   - `28 AND 3` exact, all classes
   - `28-3` exact, all classes
   - `TWENTY EIGHT AND THREE` exact, all classes
   - Phonetic-equivalents search via TESS's `phonetic` qualifier, class 041
-- **Decision / notes:** Written GO / NO-GO with rationale per class inspected. Focus on classes 041 (entertainment/information) and 009 (software).
-- **Escalation:** Any live registration or recent pending in class 041/009 → Scenario 1 in escalation.md. $500 pre-authorized counsel consult.
+- **Decision / notes:** Agent-driven research (Google-indexed USPTO records, Justia/Trademarkia, Gerben Law Patriots trademark index, commercial-use scan) returned **zero blocking marks** in Class 041 (entertainment/information services) or Class 009 (downloadable software). Common-law use of "28-3" exists only as Patriots-comeback apparel slogans (Class 025), which do not reach into analytics/information-services channels. No NFL, Patriots, or Falcons registered mark touches "28", "28-3", "THREE", or "COMEBACK". Expected outcome of the human TESS session: PASS. See findings.md §2–§4.
+- **Escalation:** Any live registration or recent pending in class 041/009 found during the human session → Scenario 1 in escalation.md. $500 pre-authorized counsel consult.
 
 ## E0-03: nflverse license review
 
