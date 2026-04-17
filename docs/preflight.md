@@ -14,7 +14,7 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 | E0-02 USPTO TESS brand check | PASS | 2026-04-17 | `/docs/preflight/e0-02/findings.md` + archived USPTO search PDFs |
 | E0-03 nflverse license review | PENDING | — | `/docs/licenses.md#nflverse` |
 | E0-04 Fontshare + Google Fonts ToS | PENDING | — | `/docs/licenses.md#fonts` |
-| E0-05 Account provisioning | PENDING | — | — |
+| E0-05 Account provisioning | PASS | 2026-04-17 | GitHub, Vercel, Neon, Sentry (web + etl projects), Fontshare, Plausible/Vercel Analytics all provisioned with 2FA; credentials in Dashlane `28-and-three` |
 | E0-06 NFL CDN headshot policy | PENDING | — | `/docs/licenses.md#nfl-cdn-headshots` |
 | E0-07 Password vault setup | PASS | 2026-04-17 | Dashlane vault with `28-and-three` collection, dummy entry retrieved, recovery stored offline, 2FA enabled |
 | E0-08 GitHub repo + branch protection | PENDING | — | — |
@@ -64,11 +64,11 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 
 ## E0-05: Account provisioning
 
-- **Status:** PENDING
-- **Date:** —
-- **Evidence:** (6 screenshots confirming 2FA enabled — GitHub, Vercel, Neon, Sentry, Fontshare, Plausible/Vercel Analytics)
-- **Decision / notes:** All accounts use the same owner email; 2FA uses TOTP (not SMS). Recovery codes archived in vault (requires E0-07 done first).
-- **Escalation:** None expected; if any account blocks provisioning (KYC / region), swap service (e.g., Plausible → Vercel Analytics).
+- **Status:** PASS
+- **Date:** 2026-04-17
+- **Evidence:** All 6 accounts provisioned with TOTP 2FA. Credentials + recovery codes stored in Dashlane `28-and-three` collection. Sentry org set up with two projects: `28-and-three-web` (Next.js) and `28-and-three-etl` (Python, cron monitoring enabled).
+- **Decision / notes:** All accounts share owner email. 2FA via TOTP (not SMS) across the board.
+- **Escalation:** None invoked.
 
 ## E0-06: NFL CDN headshot policy check
 
