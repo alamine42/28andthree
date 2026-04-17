@@ -17,7 +17,7 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 | E0-05 Account provisioning | PASS | 2026-04-17 | GitHub, Vercel, Neon, Sentry (web + etl projects), Fontshare, Plausible/Vercel Analytics all provisioned with 2FA; credentials in Dashlane `28-and-three` |
 | E0-06 NFL CDN headshot policy | PENDING | — | `/docs/licenses.md#nfl-cdn-headshots` |
 | E0-07 Password vault setup | PASS | 2026-04-17 | Dashlane vault with `28-and-three` collection, dummy entry retrieved, recovery stored offline, 2FA enabled |
-| E0-08 GitHub repo + branch protection | PENDING | — | — |
+| E0-08 GitHub repo + branch protection | PASS | 2026-04-17 | `alamine42/28andthree` (private). Protection config: `/docs/preflight/e0-08/branch-protection.json`. CODEOWNERS at `.github/CODEOWNERS`. |
 | E0-09 Cost budget document | PENDING | — | `/docs/budget.md` |
 | E0-10 preflight.md template (this file) | PASS | 2026-04-15 | This file. |
 | E0-11 Escalation routes document | PASS | 2026-04-15 | `/docs/escalation.md` |
@@ -88,10 +88,10 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 
 ## E0-08: GitHub repo + branch protection
 
-- **Status:** PENDING
-- **Date:** —
-- **Evidence:** (screenshot of `git push origin master` blocked by protection rule on a fresh branch; CODEOWNERS stub committed)
-- **Decision / notes:** Do NOT run until E0-02 clears (repo name matches the brand). Create repo as `28andthree` or `patsbythenumbers` (current local dir name). Protect `main`: require PR + 1 review, CI green, no force-push. CODEOWNERS stub: `* @<owner>`.
+- **Status:** PASS
+- **Date:** 2026-04-17
+- **Evidence:** Repo `alamine42/28andthree` (private) at https://github.com/alamine42/28andthree. Branch protection JSON archived at `/docs/preflight/e0-08/branch-protection.json`. CODEOWNERS committed at `.github/CODEOWNERS`.
+- **Decision / notes:** Repo name `28andthree` chosen to match domain. Private during development; flip to public later (launch / E6). Default branch renamed `master` → `main`. Protection rules: require PR, 1 approving review, CODEOWNERS review required, dismiss stale reviews, require conversation resolution, require linear history, block force-pushes, block deletions. `enforce_admins=false` (solo-dev ergonomics; revisit when a collaborator joins).
 - **Escalation:** None.
 
 ## E0-09: Cost budget document
