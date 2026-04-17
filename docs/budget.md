@@ -87,8 +87,8 @@ Lighthouse CI: ~3 min/PR = 90 min/mo.
 
 ## Sign-off
 
-- [ ] Project owner: **PENDING** (sign here after reviewing)
-- [ ] Date of review: —
-- [ ] Next scheduled review: **60 days from sign-off**
+- [x] Project owner: **Mehdi El-Amine**
+- [x] Date of review: **2026-04-17**
+- [x] Next scheduled review: **2026-06-16** (60 days from sign-off)
 
-Budget is not final until signed. Revisit this doc every 60 days for the first 6 months, then quarterly.
+Budget signed off. Next review 2026-06-16, then quarterly after first 6 months.

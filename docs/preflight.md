@@ -18,7 +18,7 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 | E0-06 NFL CDN headshot policy | PENDING | — | `/docs/licenses.md#nfl-cdn-headshots` |
 | E0-07 Password vault setup | PASS | 2026-04-17 | Dashlane vault with `28-and-three` collection, dummy entry retrieved, recovery stored offline, 2FA enabled |
 | E0-08 GitHub repo + branch protection | PASS | 2026-04-17 | `alamine42/28andthree` (private). Protection config: `/docs/preflight/e0-08/branch-protection.json`. CODEOWNERS at `.github/CODEOWNERS`. |
-| E0-09 Cost budget document | PENDING | — | `/docs/budget.md` |
+| E0-09 Cost budget document | PASS | 2026-04-17 | `/docs/budget.md` (signed off) |
 | E0-10 preflight.md template (this file) | PASS | 2026-04-15 | This file. |
 | E0-11 Escalation routes document | PASS | 2026-04-15 | `/docs/escalation.md` |
 
@@ -96,11 +96,11 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 
 ## E0-09: Cost budget document
 
-- **Status:** PENDING
-- **Date:** —
-- **Evidence:** See `/docs/budget.md`. Signed off by project owner.
-- **Decision / notes:** Target < $25/mo for v1. Document month-2 projected costs (likely $19/mo for Neon paid tier once storage grows).
-- **Escalation:** > $50/mo → Scenario 3.
+- **Status:** PASS
+- **Date:** 2026-04-17
+- **Evidence:** `/docs/budget.md` — signed off by Mehdi El-Amine 2026-04-17.
+- **Decision / notes:** Target < $25/mo for v1 confirmed. Next budget review scheduled 2026-06-16.
+- **Escalation:** > $50/mo → Scenario 3 (not triggered).
 
 ## E0-10: preflight.md deliverable template
 
@@ -122,11 +122,11 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 
 Sprint 1 kickoff is **blocked** until every row above shows `Status: PASS`. Partial completion does not unblock. The project owner signs off by appending to this file:
 
-```
 ## Sprint 1 Gate — SIGNED OFF
 
-- Date: YYYY-MM-DD
-- Owner: <name>
-- All 11 E0 tasks: PASS
-- Go / no-go: GO
-```
+- **Date:** 2026-04-17
+- **Owner:** Mehdi El-Amine
+- **All 11 E0 tasks:** PASS
+- **Go / no-go:** **GO**
+
+Sprint 1 is cleared to start. `bd ready` now surfaces E1 Foundation tasks.
