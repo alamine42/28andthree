@@ -17,14 +17,15 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   etl:
     name: ETL — nflverse → Neon
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: etl
     steps:
       - uses: actions/checkout@v4
 
@@ -36,29 +37,33 @@ jobs:
         with:
           enable-cache: true
 
-      - run: uv sync --frozen
+      - name: Install ETL deps
+        working-directory: etl
+        run: uv sync --frozen
 
+      # All "run" invocations below execute from repo root so `python -m etl.main`
+      # resolves correctly: cwd=repo root → PYTHONPATH=. → `etl` is the package.
       - name: Heartbeat (scheduled + default manual dispatch)
         if: ${{ github.event_name == 'schedule' || inputs.mode == 'heartbeat' || inputs.mode == '' }}
         env:
           ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
           SENTRY_DSN_ETL: ${{ secrets.SENTRY_DSN_ETL }}
           SENTRY_MONITOR_SLUG: etl-weekly
-        run: uv run python -m etl.main --heartbeat
+        run: uv run --project etl python -m etl.main --heartbeat
 
       - name: Season refresh
         if: ${{ inputs.mode == 'season' }}
         env:
           ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
           SENTRY_DSN_ETL: ${{ secrets.SENTRY_DSN_ETL }}
-        run: uv run python -m etl.main --season ${{ inputs.season }}
+        run: uv run --project etl python -m etl.main --season ${{ inputs.season }}
 
       - name: Full backfill
         if: ${{ inputs.mode == 'full' }}
         env:
           ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
           SENTRY_DSN_ETL: ${{ secrets.SENTRY_DSN_ETL }}
-        run: uv run python -m etl.main --full
+        run: uv run --project etl python -m etl.main --full
 
       - name: Open issue on failure
         if: failure()
