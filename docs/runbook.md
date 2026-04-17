@@ -4,35 +4,36 @@ Operations playbook for 28 and Three. Each section is a named anchor used by dee
 
 ## db-roles
 
-Three Neon roles with least privilege:
+Three logical roles, two physical ones. Neon's built-in `neondb_owner` is already a superuser equivalent for the database and plays the **migrator** role — no separate `migrator` role is created.
 
-| Role | Privileges | Used by | Env var |
-|---|---|---|---|
-| `app_read` | `SELECT` on all tables | Next.js server components | `DATABASE_URL` |
-| `etl_writer` | `SELECT, INSERT, UPDATE, DELETE` on all tables + sequences | Python ETL | `ETL_DATABASE_URL` |
-| `migrator` | Schema owner; full DDL + DML | `drizzle-kit migrate` in CI only | `MIGRATOR_DATABASE_URL` |
+| Logical role | Backed by | Privileges | Used by | Env var |
+|---|---|---|---|---|
+| app_read | `app_read` (created) | `SELECT` on all tables | Next.js server components | `DATABASE_URL` |
+| etl_writer | `etl_writer` (created) | `SELECT, INSERT, UPDATE, DELETE` on all tables + sequences | Python ETL | `ETL_DATABASE_URL` |
+| migrator | `neondb_owner` (built-in) | Schema owner; full DDL + DML | `drizzle-kit migrate` in CI only | `MIGRATOR_DATABASE_URL` |
 
-**Creation SQL (one-off, run as `migrator` in Neon SQL console):**
+**Creation SQL** (one-off, run as `neondb_owner`; already applied to both `main` and `dev` branches 2026-04-17). See `docs/plans/e1-foundation-plan.md` §3.4a for why.
 
 ```sql
--- App read-only role
-CREATE ROLE app_read LOGIN PASSWORD '<random>';
-GRANT CONNECT ON DATABASE twentyeightandthree TO app_read;
+CREATE ROLE app_read LOGIN PASSWORD :'app_read_pw';
+GRANT CONNECT ON DATABASE neondb TO app_read;
 GRANT USAGE ON SCHEMA public TO app_read;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_read;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO app_read;
+ALTER DEFAULT PRIVILEGES FOR ROLE neondb_owner IN SCHEMA public
+  GRANT SELECT ON TABLES TO app_read;
 
--- ETL writer role
-CREATE ROLE etl_writer LOGIN PASSWORD '<random>';
-GRANT CONNECT ON DATABASE twentyeightandthree TO etl_writer;
+CREATE ROLE etl_writer LOGIN PASSWORD :'etl_writer_pw';
+GRANT CONNECT ON DATABASE neondb TO etl_writer;
 GRANT USAGE ON SCHEMA public TO etl_writer;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO etl_writer;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO etl_writer;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO etl_writer;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO etl_writer;
+ALTER DEFAULT PRIVILEGES FOR ROLE neondb_owner IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO etl_writer;
+ALTER DEFAULT PRIVILEGES FOR ROLE neondb_owner IN SCHEMA public
+  GRANT USAGE, SELECT ON SEQUENCES TO etl_writer;
 ```
 
-Passwords live in Dashlane `28-and-three` → `Neon — app_read` / `Neon — etl_writer` / `Neon — migrator`.
+Passwords live in Dashlane `28-and-three` → `Neon — app_read` / `Neon — etl_writer` / `Neon — neondb_owner (migrator)`.
 
 ## preview-migrations
 
