@@ -10,14 +10,29 @@ Do not deviate without explicit user approval.
 In QA mode, flag any code that doesn't match DESIGN.md.
 
 ## Stack
-- Next.js (App Router, TypeScript) on Vercel
-- Neon Postgres
-- Python ETL (`nfl_data_py`) via GitHub Actions cron
-- Tailwind CSS + Recharts
-- See `SPEC.md` §4 for the full architecture.
+- Next.js 15 (App Router, TypeScript) on Vercel, **pnpm 9 + Node 22 LTS** (not Bun — see `docs/plans/e1-foundation-plan-adversarial-review.md`)
+- Neon Postgres — two roles (`app_read`, `etl_writer`) + `neondb_owner` as migrator; see `docs/runbook.md#db-roles`
+- Python 3.12 ETL via **uv** (not pip/poetry) on GitHub Actions cron. Note: `nfl_data_py 0.3.3` does not build on Python 3.12 — see `docs/solutions/build-errors/nfl-data-py-pandas-python-312-build-failure.md` before adding it as a dep.
+- Drizzle ORM (DDL); psycopg3 (Python DML)
+- Tailwind 3 + Recharts (E3+)
+- Sentry (web + etl projects)
+- See `SPEC.md` §4 for the full architecture and `docs/plans/e1-foundation-plan.md` for Sprint 1 specifics.
+
+## Workflow
+Single-branch: commits land on `main`, Vercel auto-deploys to prod. No required PRs, no per-PR Neon branches. Schema changes: `pnpm db:generate` → commit → `MIGRATOR_DATABASE_URL=<prod> pnpm db:migrate` (test on `dev` first for risky ones). See `docs/runbook.md#schema-changes`.
 
 ## Testing
 Per `SPEC.md` §8: data contract tests in the ETL (primary), Playwright smoke E2E for key pages. No broad unit-test pyramid — bugs will be in the data, not component render logic.
+- Node unit tests: `pnpm test` (uses `tsx --test`, not Jest/Vitest).
+- E2E: `pnpm test:e2e` (chromium per-PR; `PLAYWRIGHT_NIGHTLY=1` for full matrix).
+- Python: `cd etl && uv run pytest`.
+
+## Knowledge base
+Solved problems + architecture decisions live in `docs/solutions/`. Before debugging a non-trivial issue, check there first:
+```bash
+grep -r "<keyword>" docs/solutions/
+```
+Categories: `build-errors`, `integration-issues`, `runtime-errors`, `gotchas`, `architecture`, `best-practices`. When you fix something non-trivial, run `/consolidate` to add to the knowledge base.
 
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
