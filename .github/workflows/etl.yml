@@ -1,0 +1,77 @@
+name: ETL (weekly)
+
+on:
+  # 14:00 UTC on Tuesday = 10:00 ET during DST, 09:00 ET otherwise.
+  # DST-boundary runs (Nov/Mar) are exercised via the E1-09 acceptance test.
+  schedule:
+    - cron: '0 14 * * 2'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run mode'
+        type: choice
+        default: heartbeat
+        options: [heartbeat, season, full]
+      season:
+        description: 'Season (if mode=season)'
+        required: false
+        type: string
+
+jobs:
+  etl:
+    name: ETL — nflverse → Neon
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: etl
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv sync --frozen
+
+      - name: Heartbeat (scheduled + default manual dispatch)
+        if: ${{ github.event_name == 'schedule' || inputs.mode == 'heartbeat' || inputs.mode == '' }}
+        env:
+          ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
+          SENTRY_DSN_ETL: ${{ secrets.SENTRY_DSN_ETL }}
+          SENTRY_MONITOR_SLUG: etl-weekly
+        run: uv run python -m etl.main --heartbeat
+
+      - name: Season refresh
+        if: ${{ inputs.mode == 'season' }}
+        env:
+          ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
+          SENTRY_DSN_ETL: ${{ secrets.SENTRY_DSN_ETL }}
+        run: uv run python -m etl.main --season ${{ inputs.season }}
+
+      - name: Full backfill
+        if: ${{ inputs.mode == 'full' }}
+        env:
+          ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
+          SENTRY_DSN_ETL: ${{ secrets.SENTRY_DSN_ETL }}
+        run: uv run python -m etl.main --full
+
+      - name: Open issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const title = `ETL failure — ${new Date().toISOString().slice(0, 10)}`;
+            const body = [
+              `ETL run failed in [workflow run #${context.runId}](`+
+              `https://github.com/${owner}/${repo}/actions/runs/${context.runId}).`,
+              '',
+              `Trigger: ${context.eventName}`,
+              `Ref: ${context.ref}`,
+            ].join('\n');
+            await github.rest.issues.create({ owner, repo, title, body, labels: ['etl-failure'] });

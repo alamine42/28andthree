@@ -11,3 +11,35 @@ HANDOVER.md
 # macOS
 .DS_Store
 **/.DS_Store
+
+# Node / Next
+node_modules
+.next
+next-env.d.ts
+*.tsbuildinfo
+
+# Env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Playwright
+/playwright-report
+/test-results
+/tests/e2e/__screenshots__/*-actual.png
+
+# Python
+.venv
+etl/.venv
+__pycache__
+*.pyc
+.pytest_cache
+
+# Drizzle — commit migration SQL; ignore only transient introspection output
+/drizzle/meta/_snapshot_.*
+/drizzle/.cache
+
+# Coverage
+coverage
+.nyc_output

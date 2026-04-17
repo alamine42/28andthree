@@ -1,0 +1,84 @@
+name: CI (nightly)
+
+on:
+  schedule:
+    # 09:00 UTC = 05:00 ET during DST, 04:00 ET otherwise.
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+env:
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  e2e-matrix:
+    name: E2E — full browser matrix (nightly)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Playwright browsers cache
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-full-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps
+
+      - run: pnpm build
+
+      - name: Run Playwright full matrix
+        run: pnpm exec playwright test --reporter=github
+        env:
+          CI: '1'
+          PLAYWRIGHT_NIGHTLY: '1'
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-nightly
+          path: playwright-report
+          retention-days: 14
+
+  lighthouse:
+    name: Lighthouse — info-only
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm add -D @lhci/cli
+
+      - run: pnpm build
+
+      - name: Run Lighthouse CI (info-only until E3)
+        run: pnpm exec lhci autorun || true
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}

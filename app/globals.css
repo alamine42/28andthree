@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* DESIGN.md dark-mode tokens (E1 ships dark only; light mode deferred per SPEC §11) */
+:root {
+  --bg: #0b1520;
+  --surface: #121e2b;
+  --surface-2: #19273a;
+  --border: #1f2d3d;
+  --border-strong: #2c3e55;
+  --text: #e8e6e1;
+  --text-muted: #8a96a3;
+  --text-dim: #5f6e80;
+  --accent: #d21f3c;
+  --accent-dim: #a23a4a;
+  --positive: #e0b44a;
+  --positive-dim: #8b6f2e;
+  --negative: #a23a4a;
+  --chart-neutral: #5f6e80;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  letter-spacing: 0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Live-data pulse; used only on the footer "fresh" dot per DESIGN.md §Motion */
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.live-dot {
+  animation: live-pulse 2s ease-in-out infinite;
+}

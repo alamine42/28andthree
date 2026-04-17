@@ -1,0 +1,30 @@
+{
+  "ci": {
+    "collect": {
+      "url": ["http://localhost:3000/", "http://localhost:3000/status"],
+      "numberOfRuns": 3,
+      "startServerCommand": "pnpm start",
+      "startServerReadyPattern": "Ready in",
+      "settings": {
+        "preset": "desktop"
+      }
+    },
+    "assert": {
+      "preset": "lighthouse:recommended",
+      "assertions": {
+        "categories:performance": ["warn", { "minScore": 0.9 }],
+        "categories:accessibility": ["warn", { "minScore": 0.95 }],
+        "largest-contentful-paint": ["warn", { "maxNumericValue": 2000 }],
+        "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.05 }],
+        "total-byte-weight": ["warn", { "maxNumericValue": 400000 }],
+        "unused-javascript": "off",
+        "uses-http2": "off",
+        "is-crawlable": "off",
+        "canonical": "off"
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}
