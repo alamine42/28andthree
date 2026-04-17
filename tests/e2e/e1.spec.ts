@@ -30,12 +30,17 @@ test.describe('E1 smoke: home + chrome', () => {
 });
 
 test.describe('E1 smoke: /status', () => {
-  test('renders without raw DB errors when no ETL has run', async ({ page }) => {
+  test('renders without raw DB errors in either empty or populated state', async ({ page }) => {
     await page.goto('/status');
     await expect(page).toHaveURL(/\/status$/);
     const body = page.locator('body');
-    await expect(body).toContainText(/never run|last run/i);
-    await expect(body).not.toContainText(/ECONNREFUSED|role .* does not exist|password authentication failed/i);
+    // "Pipeline health" is the H1 on either branch (empty: "ETL has never run";
+    // populated: field grid). What we really care about is that the page rendered
+    // without leaking a raw DB error.
+    await expect(body).toContainText(/Pipeline health/i);
+    await expect(body).not.toContainText(
+      /ECONNREFUSED|role .* does not exist|password authentication failed|relation .* does not exist/i,
+    );
   });
 
   test('sets Cache-Control: no-store', async ({ request }) => {
