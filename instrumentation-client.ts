@@ -1,7 +1,9 @@
 import * as Sentry from '@sentry/nextjs';
 
-// Browser-side Sentry. No-op when DSN is absent, so preview + local dev don't
-// spam the project.
+// Browser-side Sentry (Next 16 + Turbopack convention: instrumentation-client.ts).
+// No-op when DSN is absent, so preview + local dev don't spam the project.
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 const environment = process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? 'development';
 

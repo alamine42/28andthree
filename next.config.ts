@@ -55,7 +55,6 @@ const sentryConfig = {
   widenClientFileUpload: true,
   tunnelRoute: undefined,
   hideSourceMaps: true,
-  disableLogger: true,
 };
 
 export default withSentryConfig(nextConfig, sentryConfig);
