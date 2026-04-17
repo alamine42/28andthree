@@ -16,7 +16,7 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 | E0-04 Fontshare + Google Fonts ToS | PENDING | — | `/docs/licenses.md#fonts` |
 | E0-05 Account provisioning | PENDING | — | — |
 | E0-06 NFL CDN headshot policy | PENDING | — | `/docs/licenses.md#nfl-cdn-headshots` |
-| E0-07 Password vault setup | PENDING | — | — |
+| E0-07 Password vault setup | PASS | 2026-04-17 | Dashlane vault with `28-and-three` collection, dummy entry retrieved, recovery stored offline, 2FA enabled |
 | E0-08 GitHub repo + branch protection | PENDING | — | — |
 | E0-09 Cost budget document | PENDING | — | `/docs/budget.md` |
 | E0-10 preflight.md template (this file) | PASS | 2026-04-15 | This file. |
@@ -80,10 +80,10 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 
 ## E0-07: Password manager + secrets vault setup
 
-- **Status:** PENDING
-- **Date:** —
-- **Evidence:** (vault category `28-and-three` exists; dummy entry retrieved; recovery method documented in an offline location)
-- **Decision / notes:** Recommended: 1Password or Bitwarden. A Mac-only Keychain is not sufficient for this project's lifecycle.
+- **Status:** PASS
+- **Date:** 2026-04-17
+- **Evidence:** Dashlane — `28-and-three` collection created, dummy smoke-test entry retrieved successfully, recovery key stored offline, account 2FA enabled via TOTP.
+- **Decision / notes:** Dashlane chosen (user already held a paid account). Meets requirement of cross-platform real password manager (not Mac-only Keychain).
 - **Escalation:** None.
 
 ## E0-08: GitHub repo + branch protection
