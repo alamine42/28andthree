@@ -91,7 +91,7 @@ This document is the **deliverable artifact** of Epic E0. Sprint 1 does not star
 - **Status:** PASS
 - **Date:** 2026-04-17
 - **Evidence:** Repo `alamine42/28andthree` (private) at https://github.com/alamine42/28andthree. Branch protection JSON archived at `/docs/preflight/e0-08/branch-protection.json`. CODEOWNERS committed at `.github/CODEOWNERS`.
-- **Decision / notes:** Repo name `28andthree` chosen to match domain. Private during development; flip to public later (launch / E6). Default branch renamed `master` → `main`. Protection rules: require PR, 1 approving review, CODEOWNERS review required, dismiss stale reviews, require conversation resolution, require linear history, block force-pushes, block deletions. `enforce_admins=false` (solo-dev ergonomics; revisit when a collaborator joins).
+- **Decision / notes:** Repo name `28andthree` chosen to match domain. Private during development; flip to public later (launch / E6). Default branch renamed `master` → `main`. **Protection rules (solo-dev pragmatic):** block force-pushes, block deletions, require linear history. CODEOWNERS committed. Direct-push to `main` is permitted — the "require PR + 1 review" rule was rejected as self-bypass theater for solo work. Revisit when: (a) CI exists in E1 → add `required_status_checks`, or (b) a collaborator joins → reinstate `required_pull_request_reviews`.
 - **Escalation:** None.
 
 ## E0-09: Cost budget document
