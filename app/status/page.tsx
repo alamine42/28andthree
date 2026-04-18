@@ -65,14 +65,18 @@ export default async function StatusPage({ searchParams }: StatusPageProps) {
           <StatField
             label="Started"
             value={formatRelative(last.startedAt)}
-            titleAttr={startedAbs ?? undefined}
             mono
+            time={{ iso: last.startedAt.toISOString(), absolute: startedAbs ?? undefined }}
           />
           <StatField
             label="Completed"
             value={last.completedAt ? formatRelative(last.completedAt) : 'in progress'}
-            titleAttr={completedAbs ?? undefined}
             mono
+            time={
+              last.completedAt
+                ? { iso: last.completedAt.toISOString(), absolute: completedAbs ?? undefined }
+                : undefined
+            }
           />
         </dl>
       )}
@@ -94,17 +98,22 @@ export default async function StatusPage({ searchParams }: StatusPageProps) {
 }
 
 // DESIGN.md §Motion restricts the pulse animation to the footer's fresh-data dot
-// only, so status badges render a static dot regardless of state.
+// only, so status badges render a static dot regardless of state. Text colors are
+// tuned for WCAG AA on the dark bg: `--negative` at 2.84:1 is too low for body
+// text, so the failed badge uses `--text` for the label and leans on the colored
+// dot + border to carry the "bad" signal.
 const HEALTH_TONE: Record<EtlStatus | 'none', { classes: string; dot: string }> = {
   ok: { classes: 'border-positive-dim text-positive', dot: 'bg-positive' },
   heartbeat: { classes: 'border-positive-dim text-positive', dot: 'bg-positive' },
   running: { classes: 'border-border-strong text-text-muted', dot: 'bg-chart-neutral' },
-  failed: { classes: 'border-negative text-negative', dot: 'bg-negative' },
-  none: { classes: 'border-border-strong text-text-dim', dot: 'bg-text-dim' },
+  failed: { classes: 'border-negative text-text', dot: 'bg-negative' },
+  none: { classes: 'border-border-strong text-text-muted', dot: 'bg-text-muted' },
 };
 
 function HealthBadge({ status }: { status: EtlStatus | null }) {
-  const tone = HEALTH_TONE[status ?? 'none'];
+  // Defensive: if a drifted value slips past the CHECK constraint during a
+  // schema transition, fall back to `none` rather than crash with undefined.
+  const tone = HEALTH_TONE[status as EtlStatus] ?? HEALTH_TONE.none;
   const label = status ?? 'no data';
   return (
     <span
@@ -122,19 +131,28 @@ function StatField({
   label,
   value,
   mono,
-  titleAttr,
+  time,
 }: {
   label: string;
   value: string;
   mono?: boolean;
-  titleAttr?: string;
+  // When present, renders the value in a <time> element with ISO dateTime + a
+  // visually-hidden absolute timestamp — accessible to keyboard + screen readers
+  // (title attr is not).
+  time?: { iso: string; absolute?: string };
 }) {
+  const textClass = `text-base text-text ${mono ? 'font-mono' : ''}`;
   return (
     <div className="flex flex-col gap-1 bg-bg p-4 md:p-6">
       <span className="text-2xs uppercase tracking-widest text-text-muted">{label}</span>
-      <span className={`text-base text-text ${mono ? 'font-mono' : ''}`} title={titleAttr}>
-        {value}
-      </span>
+      {time ? (
+        <time dateTime={time.iso} className={textClass}>
+          {value}
+          {time.absolute ? <span className="sr-only"> ({time.absolute})</span> : null}
+        </time>
+      ) : (
+        <span className={textClass}>{value}</span>
+      )}
     </div>
   );
 }

@@ -28,7 +28,7 @@ export default function HomePage() {
         <ul className="grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
           {UPCOMING.map((item) => (
             <li key={item.label} className="flex flex-col gap-1 bg-bg p-4 md:p-6">
-              <span className="font-mono text-2xs uppercase tracking-widest text-text-dim">
+              <span className="font-mono text-2xs uppercase tracking-widest text-text-muted">
                 {item.eta}
               </span>
               <span className="text-base text-text">{item.label}</span>

@@ -1,0 +1,1 @@
+ALTER TABLE "meta_refresh" ADD CONSTRAINT "meta_refresh_status_chk" CHECK ("meta_refresh"."status" IN ('running', 'ok', 'failed', 'heartbeat'));
