@@ -15,6 +15,20 @@
       "when": 1776533499054,
       "tag": "0001_0002_status_check",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776543333584,
+      "tag": "0002_0002_e2_plays_games_phases",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776543333585,
+      "tag": "0003_0003_e2_plays_indexes",
+      "breakpoints": true
     }
   ]
 }

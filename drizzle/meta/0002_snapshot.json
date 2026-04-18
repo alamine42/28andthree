@@ -1,0 +1,746 @@
+{
+  "id": "6f3da478-6a2e-4353-b725-c73d0b17218d",
+  "prevId": "e80601ce-3ee2-49ae-8259-71f9f89ebc75",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.games": {
+      "name": "games",
+      "schema": "",
+      "columns": {
+        "game_id": {
+          "name": "game_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "season": {
+          "name": "season",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "week": {
+          "name": "week",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "season_type": {
+          "name": "season_type",
+          "type": "varchar(4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "home_team": {
+          "name": "home_team",
+          "type": "varchar(3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "away_team": {
+          "name": "away_team",
+          "type": "varchar(3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "home_score": {
+          "name": "home_score",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_score": {
+          "name": "away_score",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "game_date": {
+          "name": "game_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "completed": {
+          "name": "completed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "posteam_epa": {
+          "name": "posteam_epa",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "defteam_epa": {
+          "name": "defteam_epa",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "games_season_type_chk": {
+          "name": "games_season_type_chk",
+          "value": "\"games\".\"season_type\" IN ('REG', 'POST')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.meta_refresh": {
+      "name": "meta_refresh",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "season": {
+          "name": "season",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "week": {
+          "name": "week",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_version": {
+          "name": "source_version",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "row_counts": {
+          "name": "row_counts",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_text": {
+          "name": "error_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "meta_refresh_status_chk": {
+          "name": "meta_refresh_status_chk",
+          "value": "\"meta_refresh\".\"status\" IN ('running', 'ok', 'failed', 'heartbeat')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.plays": {
+      "name": "plays",
+      "schema": "",
+      "columns": {
+        "game_id": {
+          "name": "game_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "play_id": {
+          "name": "play_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "season": {
+          "name": "season",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "week": {
+          "name": "week",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "season_type": {
+          "name": "season_type",
+          "type": "varchar(4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "posteam": {
+          "name": "posteam",
+          "type": "varchar(3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "defteam": {
+          "name": "defteam",
+          "type": "varchar(3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "down": {
+          "name": "down",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ydstogo": {
+          "name": "ydstogo",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "yardline_100": {
+          "name": "yardline_100",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "play_type": {
+          "name": "play_type",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "yards_gained": {
+          "name": "yards_gained",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "epa": {
+          "name": "epa",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cpoe": {
+          "name": "cpoe",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "success": {
+          "name": "success",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "wp": {
+          "name": "wp",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qb_dropback": {
+          "name": "qb_dropback",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qb_kneel": {
+          "name": "qb_kneel",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qb_spike": {
+          "name": "qb_spike",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "two_point_attempt": {
+          "name": "two_point_attempt",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pass_attempt": {
+          "name": "pass_attempt",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rush_attempt": {
+          "name": "rush_attempt",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pass_length": {
+          "name": "pass_length",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "air_yards": {
+          "name": "air_yards",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_redzone": {
+          "name": "is_redzone",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "yardline_100 <= 20",
+            "type": "stored"
+          }
+        },
+        "is_third_down": {
+          "name": "is_third_down",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "down = 3",
+            "type": "stored"
+          }
+        },
+        "is_explosive_pass": {
+          "name": "is_explosive_pass",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_explosive_run": {
+          "name": "is_explosive_run",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "special_teams_play": {
+          "name": "special_teams_play",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qb_hit": {
+          "name": "qb_hit",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sack": {
+          "name": "sack",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "was_pressure": {
+          "name": "was_pressure",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "number_of_pass_rushers": {
+          "name": "number_of_pass_rushers",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shotgun": {
+          "name": "shotgun",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "no_huddle": {
+          "name": "no_huddle",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pre_snap_motion": {
+          "name": "pre_snap_motion",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "play_action": {
+          "name": "play_action",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "personnel_offense": {
+          "name": "personnel_offense",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "personnel_defense": {
+          "name": "personnel_defense",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "defenders_in_box": {
+          "name": "defenders_in_box",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "score_differential": {
+          "name": "score_differential",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "game_seconds_remaining": {
+          "name": "game_seconds_remaining",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "posteam_timeouts_remaining": {
+          "name": "posteam_timeouts_remaining",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "defteam_timeouts_remaining": {
+          "name": "defteam_timeouts_remaining",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "roof": {
+          "name": "roof",
+          "type": "varchar(12)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "surface": {
+          "name": "surface",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "plays_game_id_games_game_id_fk": {
+          "name": "plays_game_id_games_game_id_fk",
+          "tableFrom": "plays",
+          "tableTo": "games",
+          "columnsFrom": [
+            "game_id"
+          ],
+          "columnsTo": [
+            "game_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "plays_pkey": {
+          "name": "plays_pkey",
+          "columns": [
+            "game_id",
+            "play_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "plays_season_type_chk": {
+          "name": "plays_season_type_chk",
+          "value": "\"plays\".\"season_type\" IN ('REG', 'POST')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.team_phase_season": {
+      "name": "team_phase_season",
+      "schema": "",
+      "columns": {
+        "team": {
+          "name": "team",
+          "type": "varchar(3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "season": {
+          "name": "season",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phase": {
+          "name": "phase",
+          "type": "phase_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plays": {
+          "name": "plays",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "epa_per_play": {
+          "name": "epa_per_play",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "success_rate": {
+          "name": "success_rate",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rank": {
+          "name": "rank",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "percentile": {
+          "name": "percentile",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "insufficient_sample": {
+          "name": "insufficient_sample",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "team_phase_season_unique": {
+          "name": "team_phase_season_unique",
+          "columns": [
+            {
+              "expression": "team",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "season",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "phase",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.team_phase_weekly": {
+      "name": "team_phase_weekly",
+      "schema": "",
+      "columns": {
+        "team": {
+          "name": "team",
+          "type": "varchar(3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "season": {
+          "name": "season",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "week": {
+          "name": "week",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phase": {
+          "name": "phase",
+          "type": "phase_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plays": {
+          "name": "plays",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "epa_per_play": {
+          "name": "epa_per_play",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "success_rate": {
+          "name": "success_rate",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rank": {
+          "name": "rank",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "percentile": {
+          "name": "percentile",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "insufficient_sample": {
+          "name": "insufficient_sample",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "team_phase_weekly_unique": {
+          "name": "team_phase_weekly_unique",
+          "columns": [
+            {
+              "expression": "team",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "season",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "week",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "phase",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.phase_enum": {
+      "name": "phase_enum",
+      "schema": "public",
+      "values": [
+        "pass_offense",
+        "rush_offense",
+        "overall_offense",
+        "pass_defense",
+        "run_defense",
+        "redzone_offense",
+        "redzone_defense",
+        "third_down_offense",
+        "third_down_defense",
+        "explosive_offense",
+        "explosive_defense",
+        "special_teams"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
