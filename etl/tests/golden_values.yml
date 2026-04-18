@@ -1,0 +1,109 @@
+# Golden-value anchor fixture (E2-11a).
+#
+# Purpose: contract test #12 asserts that the season-end NE rank for these
+# phases matches these values after every full backfill. Catches source-data
+# drift that contract test #4 (pandas-on-polars baseline) can't — both paths
+# consume the same parquet, so they'd agree even if nflverse's upstream epa
+# column shifted.
+#
+# Values sourced from rbsdm.com and Sumer Sports. Each entry records the
+# source URL and the date the value was read. When a discrepancy fires, either
+# re-record the value (and update `recorded_on`) or investigate an ETL bug.
+#
+# Bootstrapping note (2026-04-18): placeholder values below. Before the first
+# full-backfill commit lands, replace `expected_rank: pending` with the real
+# rank from the cited source. Contract test skips entries with rank=pending
+# rather than failing — gives us room to land the ETL first and anchor the
+# goldens against a verified first run.
+
+entries:
+  - season: 2020
+    team: NE
+    phase: pass_offense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/ (season filter 2020, NE, pass EPA rank)"
+    recorded_on: null
+
+  - season: 2020
+    team: NE
+    phase: rush_offense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/ (season filter 2020, NE, rush EPA rank)"
+    recorded_on: null
+
+  - season: 2020
+    team: NE
+    phase: pass_defense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/ (season filter 2020, NE, pass EPA allowed rank)"
+    recorded_on: null
+
+  - season: 2021
+    team: NE
+    phase: pass_offense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/"
+    recorded_on: null
+
+  - season: 2021
+    team: NE
+    phase: rush_offense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/"
+    recorded_on: null
+
+  - season: 2022
+    team: NE
+    phase: pass_offense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/"
+    recorded_on: null
+
+  - season: 2022
+    team: NE
+    phase: pass_defense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/"
+    recorded_on: null
+
+  - season: 2023
+    team: NE
+    phase: pass_offense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/"
+    recorded_on: null
+
+  - season: 2023
+    team: NE
+    phase: overall_offense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/"
+    recorded_on: null
+
+  - season: 2024
+    team: NE
+    phase: pass_offense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/"
+    recorded_on: null
+
+  - season: 2024
+    team: NE
+    phase: rush_offense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/"
+    recorded_on: null
+
+  - season: 2025
+    team: NE
+    phase: pass_offense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/"
+    recorded_on: null
+
+  - season: 2025
+    team: NE
+    phase: overall_offense
+    expected_rank: pending
+    source: "rbsdm.com/stats/stats/"
+    recorded_on: null
