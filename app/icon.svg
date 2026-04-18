@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>28 and Three</title>
+  <rect width="512" height="512" rx="64" fill="#0B1520"/>
+  <text
+    x="256"
+    y="368"
+    text-anchor="middle"
+    font-family="'Cabinet Grotesk','Geist',ui-sans-serif,system-ui,sans-serif"
+    font-style="italic"
+    font-weight="700"
+    font-size="380"
+    fill="#E0B44A"
+    letter-spacing="-0.02em"
+  >&amp;</text>
+</svg>
