@@ -1,6 +1,6 @@
 import { desc } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { metaRefresh } from '@/db/schema';
+import { type EtlStatus, metaRefresh, type MetaRefresh } from '@/db/schema';
 import { getDb } from '@/lib/db';
 import { getServerEnv } from '@/lib/env';
 
@@ -11,7 +11,7 @@ type StatusPageProps = {
   searchParams: Promise<{ debug?: string }>;
 };
 
-async function getLastRefresh() {
+async function getLastRefresh(): Promise<MetaRefresh | null> {
   const db = getDb();
   if (!db) return null;
   try {
@@ -38,49 +38,131 @@ export default async function StatusPage({ searchParams }: StatusPageProps) {
   }
 
   const last = await getLastRefresh();
+  const startedAbs = last ? formatAbsolute(last.startedAt) : null;
+  const completedAbs = last?.completedAt ? formatAbsolute(last.completedAt) : null;
 
   return (
-    <section className="flex flex-col gap-8 py-12">
-      <header className="flex flex-col gap-2">
-        <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">
-          Data status
-        </p>
-        <h1 className="font-display text-2xl font-bold tracking-tighter text-text">
-          Pipeline health
-        </h1>
+    <section className="flex flex-col gap-10 py-12 md:py-16">
+      <header className="flex flex-col gap-3">
+        <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">Data status</p>
+        <div className="flex flex-wrap items-center gap-4">
+          <h1 className="font-display text-2xl font-bold tracking-tighter text-text md:text-3xl">
+            Pipeline health
+          </h1>
+          <HealthBadge status={last?.status ?? null} />
+        </div>
       </header>
 
       {last === null ? (
-        <p className="text-base text-text-muted">
-          ETL has never run. Last refresh: <span className="text-text">never</span>.
-        </p>
+        <EmptyState />
       ) : (
-        <dl className="grid gap-4 font-mono text-sm md:grid-cols-4">
-          <StatField label="Status" value={last.status} />
-          <StatField label="Season / Week" value={`${last.season ?? '—'} / ${last.week ?? '—'}`} />
+        <dl className="grid gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-4">
+          <StatField label="Status" value={last.status} mono />
+          <StatField
+            label="Season / Week"
+            value={last.season === null && last.week === null ? '—' : `${last.season ?? '—'} · W${last.week ?? '—'}`}
+          />
           <StatField
             label="Started"
-            value={new Date(last.startedAt).toISOString().replace('T', ' ').slice(0, 19) + 'Z'}
+            value={formatRelative(last.startedAt)}
+            titleAttr={startedAbs ?? undefined}
+            mono
           />
           <StatField
             label="Completed"
-            value={
-              last.completedAt
-                ? new Date(last.completedAt).toISOString().replace('T', ' ').slice(0, 19) + 'Z'
-                : 'in progress'
-            }
+            value={last.completedAt ? formatRelative(last.completedAt) : 'in progress'}
+            titleAttr={completedAbs ?? undefined}
+            mono
           />
         </dl>
       )}
+
+      {last?.rowCounts && Object.keys(last.rowCounts).length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-mono text-2xs uppercase tracking-widest text-text-muted">
+            Row counts
+          </h2>
+          <dl className="grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {Object.entries(last.rowCounts).map(([k, v]) => (
+              <StatField key={k} label={k} value={String(v)} mono />
+            ))}
+          </dl>
+        </section>
+      ) : null}
     </section>
   );
 }
 
-function StatField({ label, value }: { label: string; value: string }) {
+// DESIGN.md §Motion restricts the pulse animation to the footer's fresh-data dot
+// only, so status badges render a static dot regardless of state.
+const HEALTH_TONE: Record<EtlStatus | 'none', { classes: string; dot: string }> = {
+  ok: { classes: 'border-positive-dim text-positive', dot: 'bg-positive' },
+  heartbeat: { classes: 'border-positive-dim text-positive', dot: 'bg-positive' },
+  running: { classes: 'border-border-strong text-text-muted', dot: 'bg-chart-neutral' },
+  failed: { classes: 'border-negative text-negative', dot: 'bg-negative' },
+  none: { classes: 'border-border-strong text-text-dim', dot: 'bg-text-dim' },
+};
+
+function HealthBadge({ status }: { status: EtlStatus | null }) {
+  const tone = HEALTH_TONE[status ?? 'none'];
+  const label = status ?? 'no data';
   return (
-    <div className="flex flex-col gap-1 border-l border-border pl-4">
+    <span
+      className={`inline-flex items-center gap-2 rounded-pill border px-3 py-1 font-mono text-2xs uppercase tracking-widest ${tone.classes}`}
+      role="status"
+      aria-label={`Pipeline status: ${label}`}
+    >
+      <span aria-hidden="true" className={`inline-block h-1.5 w-1.5 rounded-pill ${tone.dot}`} />
+      {label}
+    </span>
+  );
+}
+
+function StatField({
+  label,
+  value,
+  mono,
+  titleAttr,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  titleAttr?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1 bg-bg p-4 md:p-6">
       <span className="text-2xs uppercase tracking-widest text-text-muted">{label}</span>
-      <span className="text-base text-text">{value}</span>
+      <span className={`text-base text-text ${mono ? 'font-mono' : ''}`} title={titleAttr}>
+        {value}
+      </span>
     </div>
   );
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-start gap-3 rounded-md border border-dashed border-border p-6 md:p-8">
+      <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">
+        waiting for first run
+      </p>
+      <p className="max-w-prose text-base text-text">
+        Once the weekly ETL writes its first row to <code className="font-mono text-sm text-text-muted">meta_refresh</code>, this page will show run status, timing, and per-table row counts.
+      </p>
+    </div>
+  );
+}
+
+function formatRelative(d: Date): string {
+  const diffMs = Date.now() - d.getTime();
+  const absSec = Math.abs(diffMs) / 1000;
+  const sign = diffMs >= 0 ? '' : 'in ';
+  const suffix = diffMs >= 0 ? ' ago' : '';
+  if (absSec < 60) return `${sign}${Math.round(absSec)}s${suffix}`;
+  if (absSec < 3600) return `${sign}${Math.round(absSec / 60)}m${suffix}`;
+  if (absSec < 86400) return `${sign}${Math.round(absSec / 3600)}h${suffix}`;
+  return `${sign}${Math.round(absSec / 86400)}d${suffix}`;
+}
+
+function formatAbsolute(d: Date): string {
+  return d.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
 }
