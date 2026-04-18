@@ -1,6 +1,6 @@
 import { desc } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { type EtlStatus, metaRefresh, type MetaRefresh } from '@/db/schema';
+import { type EtlStatus, ETL_STATUSES, metaRefresh, type MetaRefresh } from '@/db/schema';
 import { getDb } from '@/lib/db';
 import { getServerEnv } from '@/lib/env';
 
@@ -11,16 +11,35 @@ type StatusPageProps = {
   searchParams: Promise<{ debug?: string }>;
 };
 
-async function getLastRefresh(): Promise<MetaRefresh | null> {
+// Postgres SQLSTATE 42P01 = undefined_table. Returned when the app hits the
+// DB before migrations have run. Every other error (auth, network, bad SQL)
+// is a real problem and must surface instead of being rendered as "never run" —
+// a status page that hides outages is worse than a status page that 500s.
+const PG_UNDEFINED_TABLE = '42P01';
+
+type RefreshResult = { kind: 'row'; row: MetaRefresh } | { kind: 'empty' } | { kind: 'error'; message: string };
+
+async function getLastRefresh(): Promise<RefreshResult> {
   const db = getDb();
-  if (!db) return null;
+  if (!db) return { kind: 'empty' };
   try {
     const [row] = await db.select().from(metaRefresh).orderBy(desc(metaRefresh.startedAt)).limit(1);
-    return row ?? null;
-  } catch {
-    // DB reachable but table missing (migrations haven't run yet) → "never run".
-    return null;
+    return row ? { kind: 'row', row } : { kind: 'empty' };
+  } catch (e) {
+    if (e && typeof e === 'object' && 'code' in e && e.code === PG_UNDEFINED_TABLE) {
+      return { kind: 'empty' };
+    }
+    // Log the full error server-side (Sentry will capture it via instrumentation);
+    // surface a short message to users so an outage is visible, not swallowed.
+    console.error('getLastRefresh failed', e);
+    const message = e instanceof Error ? e.message : 'unknown database error';
+    return { kind: 'error', message };
   }
+}
+
+function normalizeStatus(raw: string | null | undefined): EtlStatus | null {
+  if (!raw) return null;
+  return (ETL_STATUSES as readonly string[]).includes(raw) ? (raw as EtlStatus) : null;
 }
 
 export default async function StatusPage({ searchParams }: StatusPageProps) {
@@ -37,9 +56,11 @@ export default async function StatusPage({ searchParams }: StatusPageProps) {
     notFound();
   }
 
-  const last = await getLastRefresh();
-  const startedAbs = last ? formatAbsolute(last.startedAt) : null;
-  const completedAbs = last?.completedAt ? formatAbsolute(last.completedAt) : null;
+  const result = await getLastRefresh();
+  const row = result.kind === 'row' ? result.row : null;
+  const normalizedStatus = normalizeStatus(row?.status);
+  const startedAbs = row ? formatAbsolute(row.startedAt) : null;
+  const completedAbs = row?.completedAt ? formatAbsolute(row.completedAt) : null;
 
   return (
     <section className="flex flex-col gap-10 py-12 md:py-16">
@@ -49,45 +70,47 @@ export default async function StatusPage({ searchParams }: StatusPageProps) {
           <h1 className="font-display text-2xl font-bold tracking-tighter text-text md:text-3xl">
             Pipeline health
           </h1>
-          <HealthBadge status={last?.status ?? null} />
+          <HealthBadge status={normalizedStatus} />
         </div>
       </header>
 
-      {last === null ? (
+      {result.kind === 'error' ? (
+        <ErrorState message={result.message} />
+      ) : row === null ? (
         <EmptyState />
       ) : (
         <dl className="grid gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-4">
-          <StatField label="Status" value={last.status} mono />
+          <StatField label="Status" value={normalizedStatus ?? 'unknown'} mono />
           <StatField
             label="Season / Week"
-            value={last.season === null && last.week === null ? '—' : `${last.season ?? '—'} · W${last.week ?? '—'}`}
+            value={row.season === null && row.week === null ? '—' : `${row.season ?? '—'} · W${row.week ?? '—'}`}
           />
           <StatField
             label="Started"
-            value={formatRelative(last.startedAt)}
+            value={formatRelative(row.startedAt)}
             mono
-            time={{ iso: last.startedAt.toISOString(), absolute: startedAbs ?? undefined }}
+            time={{ iso: row.startedAt.toISOString(), absolute: startedAbs ?? undefined }}
           />
           <StatField
             label="Completed"
-            value={last.completedAt ? formatRelative(last.completedAt) : 'in progress'}
+            value={row.completedAt ? formatRelative(row.completedAt) : 'in progress'}
             mono
             time={
-              last.completedAt
-                ? { iso: last.completedAt.toISOString(), absolute: completedAbs ?? undefined }
+              row.completedAt
+                ? { iso: row.completedAt.toISOString(), absolute: completedAbs ?? undefined }
                 : undefined
             }
           />
         </dl>
       )}
 
-      {last?.rowCounts && Object.keys(last.rowCounts).length > 0 ? (
+      {row?.rowCounts && Object.keys(row.rowCounts).length > 0 ? (
         <section className="flex flex-col gap-3">
           <h2 className="font-mono text-2xs uppercase tracking-widest text-text-muted">
             Row counts
           </h2>
           <dl className="grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {Object.entries(last.rowCounts).map(([k, v]) => (
+            {Object.entries(row.rowCounts).map(([k, v]) => (
               <StatField key={k} label={k} value={String(v)} mono />
             ))}
           </dl>
@@ -166,6 +189,23 @@ function EmptyState() {
       <p className="max-w-prose text-base text-text">
         Once the weekly ETL writes its first row to <code className="font-mono text-sm text-text-muted">meta_refresh</code>, this page will show run status, timing, and per-table row counts.
       </p>
+    </div>
+  );
+}
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-start gap-3 rounded-md border border-negative bg-surface p-6 md:p-8">
+      <p className="font-mono text-2xs uppercase tracking-widest text-text">
+        database unreachable
+      </p>
+      <p className="max-w-prose text-base text-text">
+        The status query failed. The ETL may still be writing — this page just can&apos;t read
+        right now. Check Sentry for the full error.
+      </p>
+      <code className="max-w-full overflow-x-auto rounded-sm bg-surface-2 px-2 py-1 font-mono text-sm text-text-muted">
+        {message}
+      </code>
     </div>
   );
 }

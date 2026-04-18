@@ -100,6 +100,15 @@ See `schema-changes` above for the full flow. TL;DR:
 1. Edit `db/schema.ts`.
 2. `pnpm db:generate --name=<kebab-case-name>`.
 3. Review generated SQL in `/drizzle/`; add `CONCURRENTLY` on any index creation against tables > 100k rows.
-4. Commit both.
-5. Apply to prod: `MIGRATOR_DATABASE_URL='<owner URL>' pnpm db:migrate`.
-6. (Future) Automate step 5 in CI on push to `main` — currently manual.
+4. For **CHECK constraints** on existing tables: drizzle-kit emits an immediate `ADD CONSTRAINT ... CHECK`, which scans the entire table and aborts if any row violates. For safety, edit the SQL to use the `NOT VALID` + `VALIDATE` pattern:
+   ```sql
+   -- Replace: ALTER TABLE foo ADD CONSTRAINT bar CHECK (...);
+   -- With:
+   ALTER TABLE foo ADD CONSTRAINT bar CHECK (...) NOT VALID;
+   -- Manually clean up drifted rows (or run an UPDATE here).
+   ALTER TABLE foo VALIDATE CONSTRAINT bar;
+   ```
+   This lets the migration succeed on a dirty environment; you fix data separately, then validate.
+5. Commit both.
+6. Apply to prod: `MIGRATOR_DATABASE_URL='<owner URL>' pnpm db:migrate`.
+7. (Future) Automate step 6 in CI on push to `main` — currently manual.
