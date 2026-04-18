@@ -4,12 +4,17 @@ version = "0.1.0"
 description = "28 and Three — ETL for nflverse PBP → Neon Postgres"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-  # nflverse ingest deps (nfl_data_py / nflreadpy / pyarrow) land in E2.
-  # E1 ships only the heartbeat path, so keep the install surface small.
   "psycopg[binary]>=3.2.3",
   "pydantic>=2.9.2",
   "pydantic-settings>=2.6.1",
   "sentry-sdk>=2.19.0",
+  # E2 nflverse ingest. nflreadpy is the maintained successor to nfl_data_py;
+  # see docs/solutions/build-errors/nfl-data-py-pandas-python-312-build-failure.md
+  # for the dep we explicitly rejected.
+  "nflreadpy>=0.1.0",
+  "polars>=1.12.0",
+  "pyarrow>=17.0.0",
+  "pyyaml>=6.0.2",  # for golden_values.yml (E2-11a contract test fixture)
 ]
 
 [dependency-groups]
@@ -31,3 +36,8 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+markers = [
+  "integration: requires TEST_DATABASE_URL (local Postgres) — skipped otherwise",
+]

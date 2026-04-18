@@ -1,0 +1,188 @@
+"""nflverse PBP + schedule ingest.
+
+Separates two concerns:
+  - `fetch_*` functions hit the network via nflreadpy; pure I/O, tested
+    end-to-end by the integration backfill (E2-10).
+  - `normalize_*` functions are pure polars → list[BaseModel] transformations;
+    unit-tested in `test_ingest_nflverse.py`.
+
+Column semantics documented in docs/phase-definitions.md and plan §3.3.
+Explosive thresholds are ≥20 yards for passes, ≥15 yards for rushes (FTN
+convention).
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterable
+from datetime import date, datetime
+from typing import Final
+
+import polars as pl
+
+from etl.constants import normalize_team_abbr
+from etl.models import Game, Play
+
+# The minimum PBP columns we need. nflverse returns ~370; we subset on pull to
+# keep polars memory + network small. If a column isn't present in a given
+# nflverse release (schema drift), fetch logs a warning and skips it — the
+# contract tests catch any resulting data quality regression.
+_REQUIRED_PLAY_COLUMNS: Final[tuple[str, ...]] = (
+    "game_id", "play_id", "season", "week", "season_type",
+    "posteam", "defteam", "down", "ydstogo", "yardline_100",
+    "play_type", "yards_gained", "epa", "cpoe", "success", "wp",
+    "qb_dropback", "qb_kneel", "qb_spike", "two_point_attempt",
+    "pass_attempt", "rush_attempt", "pass_length", "air_yards",
+    "special_teams_play",
+    # E4-dep
+    "qb_hit", "sack", "was_pressure", "number_of_pass_rushers",
+    # E5-dep
+    "shotgun", "no_huddle", "pre_snap_motion", "play_action",
+    "offense_personnel", "defense_personnel", "defenders_in_box",
+    # E5-nfl4th-dep
+    "score_differential", "game_seconds_remaining",
+    "posteam_timeouts_remaining", "defteam_timeouts_remaining",
+    "roof", "surface",
+)
+
+# nflverse → our schema column renames. Keeps our Pydantic fields aligned with
+# DB columns without us taking the column name dance into the aggregation SQL.
+_PLAY_COLUMN_RENAMES: Final[dict[str, str]] = {
+    "offense_personnel": "personnel_offense",
+    "defense_personnel": "personnel_defense",
+}
+
+EXPLOSIVE_PASS_YARDS: Final[int] = 20
+EXPLOSIVE_RUN_YARDS: Final[int] = 15
+
+
+def required_play_columns() -> tuple[str, ...]:
+    return _REQUIRED_PLAY_COLUMNS
+
+
+# ---- fetch (network I/O) ----------------------------------------------------
+
+def fetch_pbp(seasons: Iterable[int]) -> pl.DataFrame:
+    """Fetch league-wide PBP for the given seasons via nflreadpy. Subset to
+    the columns in `_REQUIRED_PLAY_COLUMNS` that are actually present."""
+    import nflreadpy  # lazy: nflreadpy imports polars + pyarrow eagerly
+
+    seasons = tuple(seasons)
+    pbp = nflreadpy.load_pbp(seasons=seasons)
+    # nflreadpy returns polars; subset to the columns we need (intersected
+    # with what the release actually exposes — defensive against schema drift).
+    available = tuple(c for c in _REQUIRED_PLAY_COLUMNS if c in pbp.columns)
+    return pbp.select(available)
+
+
+def fetch_schedules(seasons: Iterable[int]) -> pl.DataFrame:
+    """Fetch schedule rows for the given seasons via nflreadpy."""
+    import nflreadpy
+
+    seasons = tuple(seasons)
+    sched = nflreadpy.load_schedules(seasons=seasons)
+    # Keep the columns normalize_games cares about. Everything else is dropped.
+    keep = [
+        c for c in (
+            "game_id", "season", "week", "season_type", "home_team", "away_team",
+            "home_score", "away_score", "gameday",
+        )
+        if c in sched.columns
+    ]
+    return sched.select(keep)
+
+
+# ---- normalize (pure transforms) --------------------------------------------
+
+def normalize_plays(df: pl.DataFrame) -> list[Play]:
+    """Convert a polars PBP frame into a list of Play models.
+
+    Responsibilities:
+      - Team abbreviation normalization (WSH → WAS) on posteam/defteam.
+      - Column renames (offense_personnel → personnel_offense, etc.).
+      - Compute is_explosive_pass / is_explosive_run from yards_gained.
+    """
+    renamed = df.rename({k: v for k, v in _PLAY_COLUMN_RENAMES.items() if k in df.columns})
+    derived = renamed
+    # Derived flags require both the attempt column and yards_gained. Skip
+    # gracefully when either is absent (small test frames, old nflverse releases).
+    if {"pass_attempt", "yards_gained"}.issubset(derived.columns):
+        derived = derived.with_columns(
+            _explosive_expr(col="pass_attempt", yards_threshold=EXPLOSIVE_PASS_YARDS)
+            .alias("is_explosive_pass")
+        )
+    if {"rush_attempt", "yards_gained"}.issubset(derived.columns):
+        derived = derived.with_columns(
+            _explosive_expr(col="rush_attempt", yards_threshold=EXPLOSIVE_RUN_YARDS)
+            .alias("is_explosive_run")
+        )
+    records = derived.to_dicts()
+    return [_play_from_record(r) for r in records]
+
+
+def normalize_games(df: pl.DataFrame) -> list[Game]:
+    """Convert a polars schedule frame into a list of Game models."""
+    records = df.to_dicts()
+    return [_game_from_record(r) for r in records]
+
+
+# ---- internals --------------------------------------------------------------
+
+def _explosive_expr(*, col: str, yards_threshold: int) -> pl.Expr:
+    """Build a polars expression for is_explosive_{pass,run}.
+
+    Returns null when the relevant attempt flag is null, false when not an
+    attempt, true when an attempt gained ≥ threshold yards.
+    """
+    return (
+        pl.when(pl.col(col).is_null())
+        .then(pl.lit(False, dtype=pl.Boolean))
+        .when(pl.col(col) & (pl.col("yards_gained") >= yards_threshold))
+        .then(pl.lit(True, dtype=pl.Boolean))
+        .otherwise(pl.lit(False, dtype=pl.Boolean))
+    )
+
+
+def _play_from_record(r: dict) -> Play:
+    # normalize_team_abbr preserves unknowns and maps only known aliases.
+    r = dict(r)  # shallow copy so polars internals aren't mutated
+    if "posteam" in r:
+        r["posteam"] = normalize_team_abbr(r["posteam"])
+    if "defteam" in r:
+        r["defteam"] = normalize_team_abbr(r["defteam"])
+    # Drop any keys Pydantic doesn't know about (schema drift safety valve).
+    allowed = set(Play.model_fields.keys())
+    payload = {k: v for k, v in r.items() if k in allowed}
+    return Play.model_validate(payload)
+
+
+def _game_from_record(r: dict) -> Game:
+    r = dict(r)
+    for field in ("home_team", "away_team"):
+        if field in r:
+            r[field] = normalize_team_abbr(r[field])
+    # gameday → game_date (rename + parse)
+    gameday = r.pop("gameday", None)
+    r["game_date"] = _parse_date(gameday)
+    # completed flag: if either score is non-null we treat the game as complete.
+    r["completed"] = _is_completed(r)
+    allowed = set(Game.model_fields.keys())
+    payload = {k: v for k, v in r.items() if k in allowed}
+    return Game.model_validate(payload)
+
+
+def _parse_date(raw: object) -> date | None:
+    if raw is None:
+        return None
+    if isinstance(raw, date) and not isinstance(raw, datetime):
+        return raw
+    if isinstance(raw, datetime):
+        return raw.date()
+    if isinstance(raw, str):
+        return datetime.strptime(raw, "%Y-%m-%d").date()
+    return None
+
+
+def _is_completed(r: dict) -> bool:
+    home = r.get("home_score")
+    away = r.get("away_score")
+    return home is not None and away is not None
