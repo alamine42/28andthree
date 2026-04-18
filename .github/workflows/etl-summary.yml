@@ -1,0 +1,93 @@
+name: ETL summary (Wed watcher)
+
+# Wednesday morning watcher. Queries meta_refresh: if no status='ok' row has
+# landed since the start of this week, opens a GitHub issue with label
+# etl-failure-urgent. Idempotent via issue-title search before creation.
+#
+# This replaces the "3-strike exit-code-2 tracking" pattern that required
+# cross-run state; much simpler reading one row from the DB.
+
+on:
+  schedule:
+    - cron: '0 6 * * 3'  # Wednesday 06:00 UTC ≈ late-Tuesday-night ET
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    name: No-ok-since-Tuesday check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install ETL deps
+        working-directory: etl
+        run: uv sync --frozen
+
+      - name: Query meta_refresh for latest ok
+        id: query
+        env:
+          ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
+        run: |
+          LATEST=$(uv run --project etl python -c "
+          import os, psycopg
+          from datetime import UTC, datetime, timedelta
+          conn = psycopg.connect(os.environ['ETL_DATABASE_URL'])
+          with conn.cursor() as cur:
+              cur.execute('''
+                SELECT COUNT(*) FROM meta_refresh
+                WHERE status='ok' AND started_at >= date_trunc('week', now())
+              ''')
+              row = cur.fetchone()
+          print(row[0] if row else 0)
+          ")
+          echo "ok_this_week=$LATEST" >> $GITHUB_OUTPUT
+          echo "Count of ok runs this week: $LATEST"
+
+      - name: Open issue when no ok this week
+        if: steps.query.outputs.ok_this_week == '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const today = new Date().toISOString().slice(0, 10);
+            const title = `ETL: no successful run since Tuesday (${today})`;
+
+            // Idempotency: skip if an open issue with this title already exists.
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner, repo,
+              labels: 'etl-failure-urgent',
+              state: 'open',
+              per_page: 20,
+            });
+            if (existing.some((i) => i.title === title)) {
+              core.info(`issue already open: ${title}`);
+              return;
+            }
+
+            const body = [
+              'The weekly ETL has not written a `status=ok` row to `meta_refresh`',
+              'since the start of this week. Check:',
+              '',
+              '- [ ] Primary run at 10:00 ET Tue',
+              '- [ ] Retry runs at 14:00 + 18:00 ET Tue',
+              '- [ ] `/status` page on prod',
+              '- [ ] Sentry ETL project',
+              '',
+              'Runbook: `docs/runbook.md#etl-failure`.',
+            ].join('\n');
+            await github.rest.issues.create({
+              owner, repo, title, body, labels: ['etl-failure-urgent'],
+            });

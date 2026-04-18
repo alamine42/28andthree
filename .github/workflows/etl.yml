@@ -10,17 +10,23 @@ on:
       mode:
         description: 'Run mode'
         type: choice
-        default: heartbeat
-        options: [heartbeat, season, full]
+        default: freshness-gate
+        options: [freshness-gate, heartbeat, season, full]
       season:
         description: 'Season (if mode=season)'
+        required: false
+        type: string
+      week:
+        description: 'Week (optional, with mode=season)'
         required: false
         type: string
 
 permissions:
   contents: read
-  issues: write
 
+# Primary + retry runs (see etl-retry.yml) share the same freshness-gate. No
+# cross-run state coordination — whichever fires first with fresh data runs
+# the ETL; subsequent fires find max(week) == nflverse's and exit heartbeat.
 jobs:
   etl:
     name: ETL — nflverse → Neon
@@ -43,40 +49,53 @@ jobs:
 
       # All "run" invocations below execute from repo root so `python -m etl.main`
       # resolves correctly: cwd=repo root → PYTHONPATH=. → `etl` is the package.
-      - name: Heartbeat (scheduled + default manual dispatch)
-        if: ${{ github.event_name == 'schedule' || inputs.mode == 'heartbeat' || inputs.mode == '' }}
+      - name: Scheduled run — gate then refresh if fresh
+        if: ${{ github.event_name == 'schedule' }}
+        env:
+          ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
+          SENTRY_DSN_ETL: ${{ secrets.SENTRY_DSN_ETL }}
+          SENTRY_MONITOR_SLUG: etl-weekly
+        run: |
+          CURRENT_SEASON=$(date +%Y)
+          if [ "$(date +%m)" -lt "03" ]; then CURRENT_SEASON=$((CURRENT_SEASON - 1)); fi
+          echo "Derived current NFL season: $CURRENT_SEASON"
+          uv run --project etl python -m etl.main --season "$CURRENT_SEASON"
+
+      - name: Manual freshness-gate only
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'freshness-gate' }}
+        env:
+          ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
+          SENTRY_DSN_ETL: ${{ secrets.SENTRY_DSN_ETL }}
+        run: uv run --project etl python -m etl.main --freshness-gate
+
+      - name: Manual heartbeat
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'heartbeat' }}
         env:
           ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
           SENTRY_DSN_ETL: ${{ secrets.SENTRY_DSN_ETL }}
           SENTRY_MONITOR_SLUG: etl-weekly
         run: uv run --project etl python -m etl.main --heartbeat
 
-      - name: Season refresh
-        if: ${{ inputs.mode == 'season' }}
+      - name: Season refresh (manual)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'season' }}
         env:
           ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
           SENTRY_DSN_ETL: ${{ secrets.SENTRY_DSN_ETL }}
-        run: uv run --project etl python -m etl.main --season ${{ inputs.season }}
+        run: |
+          if [ -n "${{ inputs.week }}" ]; then
+            uv run --project etl python -m etl.main --season ${{ inputs.season }} --week ${{ inputs.week }}
+          else
+            uv run --project etl python -m etl.main --season ${{ inputs.season }}
+          fi
 
-      - name: Full backfill
-        if: ${{ inputs.mode == 'full' }}
+      - name: Full backfill (manual)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'full' }}
         env:
           ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
           SENTRY_DSN_ETL: ${{ secrets.SENTRY_DSN_ETL }}
         run: uv run --project etl python -m etl.main --full
 
-      - name: Open issue on failure
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const title = `ETL failure — ${new Date().toISOString().slice(0, 10)}`;
-            const body = [
-              `ETL run failed in [workflow run #${context.runId}](`+
-              `https://github.com/${owner}/${repo}/actions/runs/${context.runId}).`,
-              '',
-              `Trigger: ${context.eventName}`,
-              `Ref: ${context.ref}`,
-            ].join('\n');
-            await github.rest.issues.create({ owner, repo, title, body, labels: ['etl-failure'] });
+      - name: Contract tests
+        env:
+          TEST_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
+        run: uv run --project etl pytest etl/tests/test_contracts.py --tb=short

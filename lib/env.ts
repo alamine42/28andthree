@@ -19,6 +19,20 @@ const serverSchema = z.object({
     .enum(['true', 'false'])
     .optional()
     .transform((v) => v === 'true'),
+
+  // /status/data admin token. 32-byte hex recommended; compared via constant
+  // time. When unset the endpoint rejects all requests (fail-closed).
+  STATUS_ADMIN_TOKEN: z.string().min(16).optional(),
+
+  // Upstash Redis REST credentials (per plan §3.9). When either is absent,
+  // the rate limiter runs in a warn-and-allow mode locally and the
+  // /status/data endpoint refuses requests in prod (fail-closed).
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(16).optional(),
+
+  // Vercel injects this. Used to gate /status/data to preview-only for the
+  // first 30 days post-E2 per plan §3.9.
+  VERCEL_ENV: z.enum(['development', 'preview', 'production']).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;

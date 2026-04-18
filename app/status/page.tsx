@@ -105,13 +105,13 @@ export default async function StatusPage({ searchParams }: StatusPageProps) {
       )}
 
       {row?.rowCounts && Object.keys(row.rowCounts).length > 0 ? (
-        <section className="flex flex-col gap-3">
+        <section className="flex flex-col gap-3" data-testid="row-counts">
           <h2 className="font-mono text-2xs uppercase tracking-widest text-text-muted">
             Row counts
           </h2>
           <dl className="grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {Object.entries(row.rowCounts).map(([k, v]) => (
-              <StatField key={k} label={k} value={String(v)} mono />
+              <StatField key={k} label={k} value={formatRowCount(v)} mono />
             ))}
           </dl>
         </section>
@@ -223,4 +223,9 @@ function formatRelative(d: Date): string {
 
 function formatAbsolute(d: Date): string {
   return d.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+}
+
+function formatRowCount(n: number): string {
+  if (n < 1000) return String(n);
+  return n.toLocaleString('en-US');
 }
