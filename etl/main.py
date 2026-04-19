@@ -24,15 +24,12 @@ import json
 import logging
 import sys
 from datetime import UTC, date, datetime
-from typing import Any
-
 import psycopg
 
 from etl.constants import CONCURRENT_ETL_LOCK_ID
 from etl.freshness import FreshnessResult, check_freshness, now_utc
 from etl.ingest.nflverse import fetch_pbp, fetch_schedules, normalize_games, normalize_plays
 from etl.load.plays import upsert_games, upsert_plays
-from etl.models import MetaRefresh
 from etl.settings import EtlSettings
 from etl.transform.phases import recompute_season, recompute_weekly
 
@@ -422,30 +419,14 @@ def _write_meta_refresh_failed(
         )
 
 
-# -----------------------------------------------------------------------------
-# Re-exports so the heartbeat / integration tests still pass
-# -----------------------------------------------------------------------------
-
 __all__ = [
     "DEFAULT_BACKFILL_SEASONS",
-    "MetaRefresh",
     "build_parser",
     "main",
     "run_freshness_gate",
     "run_full_backfill",
     "run_season",
 ]
-
-
-def _noop_unused_import() -> None:
-    """Keep MetaRefresh in the public namespace for any caller that imports it."""
-    _ = MetaRefresh  # pragma: no cover - harmless
-
-
-def write_heartbeat(settings: EtlSettings) -> Any:  # pragma: no cover - legacy shim
-    """Backwards-compat shim for tests that call the old function by name."""
-    _write_heartbeat(settings, reason="manual")
-    return None
 
 
 if __name__ == "__main__":

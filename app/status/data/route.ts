@@ -3,7 +3,19 @@ import type { NextRequest } from 'next/server';
 import { getPhaseDistribution } from '@/lib/status-data/dal';
 import { getRateLimiter, ipFromRequest } from '@/lib/status-data/ratelimit';
 import { queryParamSchema } from '@/lib/status-data/schema';
+import { PHASES } from '@/lib/constants/phases';
 import { getServerEnv } from '@/lib/env';
+
+// Returned when an authenticated request hits /status/data with no query
+// params — friendlier than a 400 full of zod issue strings.
+const USAGE_HELP = {
+  usage: 'GET /status/data?phase=<slug>&season=<year>[&week=<n>]',
+  phases: PHASES,
+  seasons: { min: 2020, max: 'current year + 1' },
+  weeks: '1..22 (optional; omit for season-aggregate)',
+  example:
+    '/status/data?phase=pass_offense&season=2025 → array of 32 team rows with rank + EPA + percentile',
+} as const;
 
 // Cutoff after which the preview-only gate lifts. 30 days from E2 plan
 // commit (2026-04-18). After this date, authorized prod requests succeed
@@ -47,6 +59,12 @@ export async function GET(req: NextRequest) {
 
   // 5. Input validation.
   const rawParams = Object.fromEntries(new URL(req.url).searchParams.entries());
+  // Auth'd request with no params: return a usage hint rather than a terse 400.
+  // (Also avoids a confusing "phase: phase must be a known slug" error for
+  // the first-time user who just hits the base URL to see what's there.)
+  if (Object.keys(rawParams).length === 0) {
+    return json(USAGE_HELP, 200);
+  }
   const parsed = queryParamSchema.safeParse(rawParams);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');

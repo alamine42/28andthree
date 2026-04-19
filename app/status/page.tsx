@@ -111,7 +111,7 @@ export default async function StatusPage({ searchParams }: StatusPageProps) {
           </h2>
           <dl className="grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {Object.entries(row.rowCounts).map(([k, v]) => (
-              <StatField key={k} label={k} value={formatRowCount(v)} mono />
+              <StatField key={k} label={formatRowCountLabel(k)} value={formatRowCount(v)} mono />
             ))}
           </dl>
         </section>
@@ -228,4 +228,20 @@ function formatAbsolute(d: Date): string {
 function formatRowCount(n: number): string {
   if (n < 1000) return String(n);
   return n.toLocaleString('en-US');
+}
+
+// Map the technical table names that the ETL emits into row_counts back to
+// user-facing labels. Any unknown key falls back to the raw string so a new
+// table showing up doesn't silently hide a row.
+const ROW_COUNT_LABELS: Record<string, string> = {
+  plays: 'Plays',
+  games: 'Games',
+  team_phase_weekly: 'Weekly rollups',
+  team_phase_season: 'Season rollups',
+  heartbeat: 'Heartbeat',
+  concurrent_skipped: 'Skipped (locked)',
+};
+
+function formatRowCountLabel(key: string): string {
+  return ROW_COUNT_LABELS[key] ?? key;
 }

@@ -5,8 +5,9 @@ Rank + tiebreak semantics come from SPEC §3.5a.
 
 Structure:
   - PHASE_FILTERS: per-phase SQL predicates + group-by column + metric type.
-  - build_weekly_sql / build_season_sql: parameterized aggregation queries.
-  - recompute_weekly / recompute_season: run queries against a Postgres conn.
+  - _build_phase_sql: single parameterized aggregation query used for both
+    weekly and season granularities; same tiebreak semantics either way.
+  - recompute_weekly / recompute_season: loop over phases, execute SQL.
 """
 
 from __future__ import annotations
@@ -20,10 +21,10 @@ from psycopg import sql
 from etl.constants import PHASES
 
 MetricKind = Literal["epa", "rate"]
+Granularity = Literal["weekly", "season"]
 
-# Weekly sample-size threshold per SPEC §3.5a.
+# Sample-size thresholds per SPEC §3.5a.
 WEEKLY_MIN_PLAYS = 10
-# Season sample-size threshold per SPEC §3.5a.
 SEASON_MIN_PLAYS = 30
 
 
@@ -81,10 +82,10 @@ def recompute_weekly(
     total = 0
     for phase in PHASES:
         filt = PHASE_FILTERS[phase]
-        stmt = _build_weekly_sql(phase, filt, weeks_filter=weeks)
+        stmt = _build_phase_sql(phase, filt, granularity="weekly", weeks_filter=weeks)
         with conn.cursor() as cur:
             cur.execute(stmt, {"season": season, "weeks": weeks or []})
-            total += cur.rowcount if cur.rowcount > 0 else 0
+            total += max(cur.rowcount, 0)
     return total
 
 
@@ -93,70 +94,77 @@ def recompute_season(conn: psycopg.Connection, *, season: int) -> int:
     total = 0
     for phase in PHASES:
         filt = PHASE_FILTERS[phase]
-        stmt = _build_season_sql(phase, filt)
+        stmt = _build_phase_sql(phase, filt, granularity="season")
         with conn.cursor() as cur:
             cur.execute(stmt, {"season": season})
-            total += cur.rowcount if cur.rowcount > 0 else 0
+            total += max(cur.rowcount, 0)
     return total
 
 
-def _metric_expr(metric: MetricKind) -> sql.Composed:
-    """Return the SQL expression for the phase's primary metric.
+# -----------------------------------------------------------------------------
+# SQL builder — one parameterized template drives both granularities.
+# -----------------------------------------------------------------------------
 
-    For EPA phases: AVG(epa).
-    For rate phases: AVG(is_explosive_pass OR is_explosive_run as 1/0).
-    """
-    if metric == "epa":
-        return sql.SQL("AVG(epa)::double precision")
-    return sql.SQL(
-        "AVG(CASE WHEN coalesce(is_explosive, false) THEN 1.0 ELSE 0.0 END)::double precision"
-    )
-
-
-def _filtered_select(metric: MetricKind) -> sql.Composed:
-    """Project the minimum columns each metric type needs."""
-    base = sql.SQL("{group_col} AS team, season, week, epa, success")
-    if metric == "epa":
-        return base
-    return sql.SQL(
-        "{group_col} AS team, season, week, epa, success, "
-        "(coalesce(is_explosive_pass, false) OR coalesce(is_explosive_run, false)) AS is_explosive"
-    )
-
-
-def _filtered_select_season(metric: MetricKind) -> sql.Composed:
-    """Same as _filtered_select but without the week column (season rollup)."""
-    base = sql.SQL("{group_col} AS team, season, epa, success")
-    if metric == "epa":
-        return base
-    return sql.SQL(
-        "{group_col} AS team, season, epa, success, "
-        "(coalesce(is_explosive_pass, false) OR coalesce(is_explosive_run, false)) AS is_explosive"
-    )
-
-
-def _build_weekly_sql(
+def _build_phase_sql(
     phase: str,
     filt: PhaseFilter,
     *,
-    weeks_filter: list[int] | None,
+    granularity: Granularity,
+    weeks_filter: list[int] | None = None,
 ) -> sql.Composed:
-    metric = _metric_expr(filt.metric)
-    predicate = sql.SQL(filt.predicate)
-    group_col = sql.Identifier(filt.group_by)
-    weekly_min = sql.Literal(WEEKLY_MIN_PLAYS)
-    phase_literal = sql.Literal(phase)
+    """Return the INSERT…SELECT statement for one (phase, granularity).
+
+    Same CTE pipeline for both weekly and season: filter plays, roll up by
+    team + partition, flag insufficient-sample rows, rank with deterministic
+    tiebreak, compute percentile. Partition + threshold + target table vary
+    with granularity; everything else is shared so the two rollups can't
+    drift (SPEC §3.5a).
+    """
+    is_weekly = granularity == "weekly"
+
+    # Varying parts ------------------------------------------------------------
+    target_table = sql.Identifier("team_phase_weekly" if is_weekly else "team_phase_season")
+    partition_cols = sql.SQL("season, week") if is_weekly else sql.SQL("season")
+    group_cols = sql.SQL("team, season, week") if is_weekly else sql.SQL("team, season")
+    threshold = sql.Literal(WEEKLY_MIN_PLAYS if is_weekly else SEASON_MIN_PLAYS)
+    week_projection = sql.SQL(", week") if is_weekly else sql.SQL("")
+    week_select = sql.SQL("week,") if is_weekly else sql.SQL("")
+    insert_cols = sql.SQL(
+        "(team, season, week, phase, plays, epa_per_play, success_rate, "
+        "rank, percentile, insufficient_sample, updated_at)"
+    ) if is_weekly else sql.SQL(
+        "(team, season, phase, plays, epa_per_play, success_rate, "
+        "rank, percentile, insufficient_sample, updated_at)"
+    )
+    conflict_cols = sql.SQL("(team, season, week, phase)") if is_weekly else sql.SQL("(team, season, phase)")
     week_filter = (
         sql.SQL("AND week = ANY(%(weeks)s::int[])")
-        if weeks_filter
+        if (is_weekly and weeks_filter)
         else sql.SQL("")
     )
 
-    filtered_select = _filtered_select(filt.metric).format(group_col=group_col)
+    # Shared parts -------------------------------------------------------------
+    group_col = sql.Identifier(filt.group_by)
+    predicate = sql.SQL(filt.predicate)
+    phase_literal = sql.Literal(phase)
+
+    # `is_explosive` only needed for rate phases. Project conditionally so the
+    # EPA phases don't carry a dead column through the CTE.
+    if filt.metric == "rate":
+        extra_projection = sql.SQL(
+            ", (coalesce(is_explosive_pass, false) OR coalesce(is_explosive_run, false)) AS is_explosive"
+        )
+        metric_expr = sql.SQL(
+            "AVG(CASE WHEN coalesce(is_explosive, false) THEN 1.0 ELSE 0.0 END)::double precision"
+        )
+    else:
+        extra_projection = sql.SQL("")
+        metric_expr = sql.SQL("AVG(epa)::double precision")
+
     return sql.SQL(
         """
         WITH filtered AS (
-            SELECT {filtered_select}
+            SELECT {group_col} AS team, season{week_projection}, epa, success{extra_projection}
             FROM plays
             WHERE season = %(season)s
               {week_filter}
@@ -165,22 +173,22 @@ def _build_weekly_sql(
               AND {group_col} IS NOT NULL
         ),
         rollups AS (
-            SELECT team, season, week,
+            SELECT {group_cols},
                    COUNT(*)::int AS plays,
-                   {metric} AS epa_per_play,
+                   {metric_expr} AS epa_per_play,
                    AVG(CASE WHEN success THEN 1.0 ELSE 0.0 END)::double precision AS success_rate
             FROM filtered
-            GROUP BY team, season, week
+            GROUP BY {group_cols}
         ),
         flagged AS (
-            SELECT *, (plays < {weekly_min}) AS insufficient_sample
+            SELECT *, (plays < {threshold}) AS insufficient_sample
             FROM rollups
         ),
         ranked AS (
             SELECT *,
                    CASE WHEN insufficient_sample THEN NULL::smallint
                         ELSE ROW_NUMBER() OVER (
-                             PARTITION BY season, week
+                             PARTITION BY {partition_cols}
                              ORDER BY
                                CASE WHEN insufficient_sample THEN 1 ELSE 0 END,
                                ROUND(epa_per_play::numeric, 6) DESC NULLS LAST,
@@ -192,13 +200,11 @@ def _build_weekly_sql(
             FROM flagged
         ),
         with_k AS (
-            SELECT *,
-                   MAX(rank) OVER (PARTITION BY season, week) AS k
+            SELECT *, MAX(rank) OVER (PARTITION BY {partition_cols}) AS k
             FROM ranked
         )
-        INSERT INTO team_phase_weekly
-            (team, season, week, phase, plays, epa_per_play, success_rate, rank, percentile, insufficient_sample, updated_at)
-        SELECT team, season, week, {phase_literal}::phase_enum, plays,
+        INSERT INTO {target_table} {insert_cols}
+        SELECT team, season, {week_select} {phase_literal}::phase_enum, plays,
                CASE WHEN insufficient_sample THEN NULL ELSE epa_per_play END,
                CASE WHEN insufficient_sample THEN NULL ELSE success_rate END,
                rank,
@@ -208,7 +214,7 @@ def _build_weekly_sql(
                insufficient_sample,
                now()
         FROM with_k
-        ON CONFLICT (team, season, week, phase) DO UPDATE SET
+        ON CONFLICT {conflict_cols} DO UPDATE SET
             plays = EXCLUDED.plays,
             epa_per_play = EXCLUDED.epa_per_play,
             success_rate = EXCLUDED.success_rate,
@@ -218,94 +224,19 @@ def _build_weekly_sql(
             updated_at = now()
         """
     ).format(
-        filtered_select=filtered_select,
         group_col=group_col,
-        predicate=predicate,
-        garbage=GARBAGE_PLAY_PREDICATE,
-        metric=metric,
-        weekly_min=weekly_min,
-        phase_literal=phase_literal,
+        week_projection=week_projection,
+        extra_projection=extra_projection,
         week_filter=week_filter,
-    )
-
-
-def _build_season_sql(phase: str, filt: PhaseFilter) -> sql.Composed:
-    metric = _metric_expr(filt.metric)
-    predicate = sql.SQL(filt.predicate)
-    group_col = sql.Identifier(filt.group_by)
-    season_min = sql.Literal(SEASON_MIN_PLAYS)
-    phase_literal = sql.Literal(phase)
-
-    filtered_select = _filtered_select_season(filt.metric).format(group_col=group_col)
-    return sql.SQL(
-        """
-        WITH filtered AS (
-            SELECT {filtered_select}
-            FROM plays
-            WHERE season = %(season)s
-              AND {predicate}
-              AND {garbage}
-              AND {group_col} IS NOT NULL
-        ),
-        rollups AS (
-            SELECT team, season,
-                   COUNT(*)::int AS plays,
-                   {metric} AS epa_per_play,
-                   AVG(CASE WHEN success THEN 1.0 ELSE 0.0 END)::double precision AS success_rate
-            FROM filtered
-            GROUP BY team, season
-        ),
-        flagged AS (
-            SELECT *, (plays < {season_min}) AS insufficient_sample
-            FROM rollups
-        ),
-        ranked AS (
-            SELECT *,
-                   CASE WHEN insufficient_sample THEN NULL::smallint
-                        ELSE ROW_NUMBER() OVER (
-                             PARTITION BY season
-                             ORDER BY
-                               CASE WHEN insufficient_sample THEN 1 ELSE 0 END,
-                               epa_per_play DESC NULLS LAST,
-                               plays DESC,
-                               success_rate DESC NULLS LAST,
-                               team ASC
-                        )::smallint
-                   END AS rank
-            FROM flagged
-        ),
-        with_k AS (
-            SELECT *,
-                   MAX(rank) OVER (PARTITION BY season) AS k
-            FROM ranked
-        )
-        INSERT INTO team_phase_season
-            (team, season, phase, plays, epa_per_play, success_rate, rank, percentile, insufficient_sample, updated_at)
-        SELECT team, season, {phase_literal}::phase_enum, plays,
-               CASE WHEN insufficient_sample THEN NULL ELSE epa_per_play END,
-               CASE WHEN insufficient_sample THEN NULL ELSE success_rate END,
-               rank,
-               CASE WHEN rank IS NULL OR k IS NULL OR k = 0 THEN NULL
-                    ELSE ((k - rank + 1)::double precision / k::double precision)
-               END,
-               insufficient_sample,
-               now()
-        FROM with_k
-        ON CONFLICT (team, season, phase) DO UPDATE SET
-            plays = EXCLUDED.plays,
-            epa_per_play = EXCLUDED.epa_per_play,
-            success_rate = EXCLUDED.success_rate,
-            rank = EXCLUDED.rank,
-            percentile = EXCLUDED.percentile,
-            insufficient_sample = EXCLUDED.insufficient_sample,
-            updated_at = now()
-        """
-    ).format(
-        filtered_select=filtered_select,
-        group_col=group_col,
         predicate=predicate,
         garbage=GARBAGE_PLAY_PREDICATE,
-        metric=metric,
-        season_min=season_min,
+        group_cols=group_cols,
+        metric_expr=metric_expr,
+        threshold=threshold,
+        partition_cols=partition_cols,
+        target_table=target_table,
+        insert_cols=insert_cols,
+        week_select=week_select,
         phase_literal=phase_literal,
+        conflict_cols=conflict_cols,
     )
