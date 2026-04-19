@@ -3,11 +3,13 @@
 Filter definitions live in docs/phase-definitions.md (versioned contract).
 Rank + tiebreak semantics come from SPEC §3.5a.
 
-Structure:
-  - PHASE_FILTERS: per-phase SQL predicates + group-by column + metric type.
-  - _build_phase_sql: single parameterized aggregation query used for both
-    weekly and season granularities; same tiebreak semantics either way.
-  - recompute_weekly / recompute_season: loop over phases, execute SQL.
+Three metric kinds:
+  - 'epa':         AVG(epa) over plays matching <phase_filter>, grouped by
+                   <posteam|defteam>. Majority of phases.
+  - 'rate':        AVG(is_explosive_pass OR is_explosive_run as 1/0). For
+                   explosive_offense + explosive_defense.
+  - 'differential': offensive AVG(epa) - defensive AVG(epa allowed), per
+                   (team, season[, week]). For `overall` per SPEC §3.2 #12.
 """
 
 from __future__ import annotations
@@ -20,7 +22,7 @@ from psycopg import sql
 
 from etl.constants import PHASES
 
-MetricKind = Literal["epa", "rate"]
+MetricKind = Literal["epa", "rate", "differential"]
 Granularity = Literal["weekly", "season"]
 
 # Sample-size thresholds per SPEC §3.5a.
@@ -32,16 +34,17 @@ SEASON_MIN_PLAYS = 30
 class PhaseFilter:
     """One row per phase in docs/phase-definitions.md §2."""
 
-    predicate: str        # raw SQL predicate; trust-sourced from phase-definitions.md
-    group_by: str         # 'posteam' or 'defteam'
-    metric: MetricKind    # 'epa' (avg(epa)) or 'rate' (avg of explosive flag)
+    predicate: str        # raw SQL predicate on `plays`
+    group_by: str         # 'posteam' or 'defteam' (ignored for 'differential')
+    metric: MetricKind
 
 
-# Matches docs/phase-definitions.md §2. Keep in sync.
 PHASE_FILTERS: dict[str, PhaseFilter] = {
     "pass_offense":        PhaseFilter("qb_dropback = true", "posteam", "epa"),
     "rush_offense":        PhaseFilter("rush_attempt = true", "posteam", "epa"),
-    "overall_offense":     PhaseFilter("(qb_dropback = true OR rush_attempt = true)", "posteam", "epa"),
+    # `overall` (E3-16): team EPA differential. predicate scopes the plays that
+    # count toward either side; group_by is unused (built differently).
+    "overall":             PhaseFilter("(qb_dropback = true OR rush_attempt = true)", "posteam", "differential"),
     "pass_defense":        PhaseFilter("qb_dropback = true", "defteam", "epa"),
     "run_defense":         PhaseFilter("rush_attempt = true", "defteam", "epa"),
     "redzone_offense":     PhaseFilter("(qb_dropback = true OR rush_attempt = true) AND is_redzone = true", "posteam", "epa"),
@@ -53,7 +56,6 @@ PHASE_FILTERS: dict[str, PhaseFilter] = {
     "special_teams":       PhaseFilter("special_teams_play = true", "posteam", "epa"),
 }
 
-# Belt-and-suspenders: keep in sync with the enum definition in schema.ts.
 assert set(PHASE_FILTERS) == set(PHASES), "PHASE_FILTERS drifted from PHASES"
 
 # Global rules §1: REG only, exclude garbage plays.
@@ -74,11 +76,6 @@ def recompute_weekly(
     season: int,
     weeks: list[int] | None = None,
 ) -> int:
-    """Recompute team_phase_weekly for the given season (and optional week subset).
-
-    Returns total row count written across all phases. Runs inside the caller's
-    transaction; no commit here.
-    """
     total = 0
     for phase in PHASES:
         filt = PHASE_FILTERS[phase]
@@ -90,7 +87,6 @@ def recompute_weekly(
 
 
 def recompute_season(conn: psycopg.Connection, *, season: int) -> int:
-    """Recompute team_phase_season for the given season. Returns rows written."""
     total = 0
     for phase in PHASES:
         filt = PHASE_FILTERS[phase]
@@ -102,7 +98,9 @@ def recompute_season(conn: psycopg.Connection, *, season: int) -> int:
 
 
 # -----------------------------------------------------------------------------
-# SQL builder — one parameterized template drives both granularities.
+# SQL builders — two templates. Keep single-side (epa/rate) and differential
+# separate; they have materially different CTE shapes. Shared UPSERT tail
+# helpers prevent drift between granularities.
 # -----------------------------------------------------------------------------
 
 def _build_phase_sql(
@@ -112,44 +110,49 @@ def _build_phase_sql(
     granularity: Granularity,
     weeks_filter: list[int] | None = None,
 ) -> sql.Composed:
-    """Return the INSERT…SELECT statement for one (phase, granularity).
+    if filt.metric == "differential":
+        return _build_differential_sql(phase, filt, granularity, weeks_filter)
+    return _build_single_side_sql(phase, filt, granularity, weeks_filter)
 
-    Same CTE pipeline for both weekly and season: filter plays, roll up by
-    team + partition, flag insufficient-sample rows, rank with deterministic
-    tiebreak, compute percentile. Partition + threshold + target table vary
-    with granularity; everything else is shared so the two rollups can't
-    drift (SPEC §3.5a).
-    """
+
+def _granularity_parts(granularity: Granularity, weeks_filter: list[int] | None) -> dict:
     is_weekly = granularity == "weekly"
-
-    # Varying parts ------------------------------------------------------------
-    target_table = sql.Identifier("team_phase_weekly" if is_weekly else "team_phase_season")
-    partition_cols = sql.SQL("season, week") if is_weekly else sql.SQL("season")
-    group_cols = sql.SQL("team, season, week") if is_weekly else sql.SQL("team, season")
-    threshold = sql.Literal(WEEKLY_MIN_PLAYS if is_weekly else SEASON_MIN_PLAYS)
-    week_projection = sql.SQL(", week") if is_weekly else sql.SQL("")
-    week_select = sql.SQL("week,") if is_weekly else sql.SQL("")
-    insert_cols = sql.SQL(
-        "(team, season, week, phase, plays, epa_per_play, success_rate, "
-        "rank, percentile, insufficient_sample, updated_at)"
-    ) if is_weekly else sql.SQL(
-        "(team, season, phase, plays, epa_per_play, success_rate, "
-        "rank, percentile, insufficient_sample, updated_at)"
+    return dict(
+        target_table=sql.Identifier("team_phase_weekly" if is_weekly else "team_phase_season"),
+        partition_cols=sql.SQL("season, week") if is_weekly else sql.SQL("season"),
+        group_cols=sql.SQL("team, season, week") if is_weekly else sql.SQL("team, season"),
+        threshold=sql.Literal(WEEKLY_MIN_PLAYS if is_weekly else SEASON_MIN_PLAYS),
+        week_projection=sql.SQL(", week") if is_weekly else sql.SQL(""),
+        week_select=sql.SQL("week,") if is_weekly else sql.SQL(""),
+        insert_cols=sql.SQL(
+            "(team, season, week, phase, plays, epa_per_play, success_rate, "
+            "rank, percentile, insufficient_sample, updated_at)"
+        ) if is_weekly else sql.SQL(
+            "(team, season, phase, plays, epa_per_play, success_rate, "
+            "rank, percentile, insufficient_sample, updated_at)"
+        ),
+        conflict_cols=(
+            sql.SQL("(team, season, week, phase)") if is_weekly
+            else sql.SQL("(team, season, phase)")
+        ),
+        week_filter=(
+            sql.SQL("AND week = ANY(%(weeks)s::int[])")
+            if (is_weekly and weeks_filter) else sql.SQL("")
+        ),
     )
-    conflict_cols = sql.SQL("(team, season, week, phase)") if is_weekly else sql.SQL("(team, season, phase)")
-    week_filter = (
-        sql.SQL("AND week = ANY(%(weeks)s::int[])")
-        if (is_weekly and weeks_filter)
-        else sql.SQL("")
-    )
 
-    # Shared parts -------------------------------------------------------------
+
+def _build_single_side_sql(
+    phase: str,
+    filt: PhaseFilter,
+    granularity: Granularity,
+    weeks_filter: list[int] | None,
+) -> sql.Composed:
+    parts = _granularity_parts(granularity, weeks_filter)
     group_col = sql.Identifier(filt.group_by)
     predicate = sql.SQL(filt.predicate)
     phase_literal = sql.Literal(phase)
 
-    # `is_explosive` only needed for rate phases. Project conditionally so the
-    # EPA phases don't carry a dead column through the CTE.
     if filt.metric == "rate":
         extra_projection = sql.SQL(
             ", (coalesce(is_explosive_pass, false) OR coalesce(is_explosive_run, false)) AS is_explosive"
@@ -179,7 +182,94 @@ def _build_phase_sql(
                    AVG(CASE WHEN success THEN 1.0 ELSE 0.0 END)::double precision AS success_rate
             FROM filtered
             GROUP BY {group_cols}
+        )
+        {insert_tail}
+        """
+    ).format(
+        group_col=group_col,
+        week_projection=parts["week_projection"],
+        extra_projection=extra_projection,
+        week_filter=parts["week_filter"],
+        predicate=predicate,
+        garbage=GARBAGE_PLAY_PREDICATE,
+        group_cols=parts["group_cols"],
+        metric_expr=metric_expr,
+        insert_tail=_insert_tail(phase_literal, parts),
+    )
+
+
+def _build_differential_sql(
+    phase: str,
+    filt: PhaseFilter,
+    granularity: Granularity,
+    weeks_filter: list[int] | None,
+) -> sql.Composed:
+    """EPA differential = avg(epa where posteam=team) - avg(epa where defteam=team).
+
+    Both sides use the same predicate (typically offensive + defensive plays
+    counted identically). success_rate is NULL for `overall` rows — a single
+    success-rate figure across both sides of the ball isn't a real stat.
+    """
+    parts = _granularity_parts(granularity, weeks_filter)
+    predicate = sql.SQL(filt.predicate)
+    phase_literal = sql.Literal(phase)
+
+    return sql.SQL(
+        """
+        WITH off AS (
+            SELECT posteam AS team, season{week_projection},
+                   COUNT(*)::int AS off_plays,
+                   AVG(epa)::double precision AS off_epa
+            FROM plays
+            WHERE season = %(season)s
+              {week_filter}
+              AND {predicate}
+              AND {garbage}
+              AND posteam IS NOT NULL
+            GROUP BY posteam, season{week_projection}
         ),
+        def AS (
+            SELECT defteam AS team, season{week_projection},
+                   COUNT(*)::int AS def_plays,
+                   AVG(epa)::double precision AS def_epa
+            FROM plays
+            WHERE season = %(season)s
+              {week_filter}
+              AND {predicate}
+              AND {garbage}
+              AND defteam IS NOT NULL
+            GROUP BY defteam, season{week_projection}
+        ),
+        rollups AS (
+            SELECT COALESCE(off.team, def.team) AS team,
+                   COALESCE(off.season, def.season) AS season
+                   {rollups_week_col},
+                   COALESCE(off.off_plays, 0) + COALESCE(def.def_plays, 0) AS plays,
+                   (COALESCE(off.off_epa, 0) - COALESCE(def.def_epa, 0))::double precision AS epa_per_play,
+                   NULL::double precision AS success_rate
+            FROM off
+            FULL OUTER JOIN def USING (team, season{week_using})
+        )
+        {insert_tail}
+        """
+    ).format(
+        week_projection=parts["week_projection"],
+        week_filter=parts["week_filter"],
+        predicate=predicate,
+        garbage=GARBAGE_PLAY_PREDICATE,
+        rollups_week_col=sql.SQL(", COALESCE(off.week, def.week) AS week")
+            if granularity == "weekly" else sql.SQL(""),
+        week_using=sql.SQL(", week") if granularity == "weekly" else sql.SQL(""),
+        insert_tail=_insert_tail(phase_literal, parts),
+    )
+
+
+def _insert_tail(phase_literal: sql.Literal, parts: dict) -> sql.Composed:
+    """Shared rank + percentile + upsert logic. Same for all phase kinds —
+    the differences live upstream in the rollups CTE."""
+    return sql.SQL(
+        """
+        ,
         flagged AS (
             SELECT *, (plays < {threshold}) AS insufficient_sample
             FROM rollups
@@ -224,19 +314,11 @@ def _build_phase_sql(
             updated_at = now()
         """
     ).format(
-        group_col=group_col,
-        week_projection=week_projection,
-        extra_projection=extra_projection,
-        week_filter=week_filter,
-        predicate=predicate,
-        garbage=GARBAGE_PLAY_PREDICATE,
-        group_cols=group_cols,
-        metric_expr=metric_expr,
-        threshold=threshold,
-        partition_cols=partition_cols,
-        target_table=target_table,
-        insert_cols=insert_cols,
-        week_select=week_select,
+        threshold=parts["threshold"],
+        partition_cols=parts["partition_cols"],
+        target_table=parts["target_table"],
+        insert_cols=parts["insert_cols"],
+        week_select=parts["week_select"],
         phase_literal=phase_literal,
-        conflict_cols=conflict_cols,
+        conflict_cols=parts["conflict_cols"],
     )

@@ -25,7 +25,7 @@ SeasonType = Literal["REG", "POST"]
 Phase = Literal[
     "pass_offense",
     "rush_offense",
-    "overall_offense",
+    "overall",
     "pass_defense",
     "run_defense",
     "redzone_offense",

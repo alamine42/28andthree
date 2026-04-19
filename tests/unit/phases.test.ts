@@ -18,7 +18,7 @@ describe('lib/constants/phases', () => {
       [
         'pass_offense',
         'rush_offense',
-        'overall_offense',
+        'overall',             // E3-16: EPA differential per SPEC §3.2 #12
         'pass_defense',
         'run_defense',
         'redzone_offense',

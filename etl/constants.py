@@ -9,7 +9,10 @@ from __future__ import annotations
 PHASES: tuple[str, ...] = (
     "pass_offense",
     "rush_offense",
-    "overall_offense",
+    # `overall` replaced `overall_offense` in E3-16 — now the team EPA
+    # differential (offensive EPA/play - defensive EPA/play allowed) per
+    # SPEC §3.2 #12, not an offensive-plays-only rollup.
+    "overall",
     "pass_defense",
     "run_defense",
     "redzone_offense",

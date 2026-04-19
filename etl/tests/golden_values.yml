@@ -22,41 +22,41 @@ entries:
   # --- 2020 ---
   - { season: 2020, team: NE, phase: pass_offense,    expected_rank: 28, source: self, recorded_on: 2026-04-19 }
   - { season: 2020, team: NE, phase: rush_offense,    expected_rank: 4,  source: self, recorded_on: 2026-04-19 }
-  - { season: 2020, team: NE, phase: overall_offense, expected_rank: 21, source: self, recorded_on: 2026-04-19 }
+  - { season: 2020, team: NE, phase: overall, expected_rank: pending, source: self, recorded_on: 2026-04-19 }
   - { season: 2020, team: NE, phase: pass_defense,    expected_rank: 14, source: self, recorded_on: 2026-04-19 }
   - { season: 2020, team: NE, phase: run_defense,     expected_rank: 3,  source: self, recorded_on: 2026-04-19 }
 
   # --- 2021 ---
   - { season: 2021, team: NE, phase: pass_offense,    expected_rank: 11, source: self, recorded_on: 2026-04-19 }
   - { season: 2021, team: NE, phase: rush_offense,    expected_rank: 9,  source: self, recorded_on: 2026-04-19 }
-  - { season: 2021, team: NE, phase: overall_offense, expected_rank: 10, source: self, recorded_on: 2026-04-19 }
+  - { season: 2021, team: NE, phase: overall, expected_rank: pending, source: self, recorded_on: 2026-04-19 }
   - { season: 2021, team: NE, phase: pass_defense,    expected_rank: 28, source: self, recorded_on: 2026-04-19 }
   - { season: 2021, team: NE, phase: run_defense,     expected_rank: 17, source: self, recorded_on: 2026-04-19 }
 
   # --- 2022 ---
   - { season: 2022, team: NE, phase: pass_offense,    expected_rank: 23, source: self, recorded_on: 2026-04-19 }
   - { season: 2022, team: NE, phase: rush_offense,    expected_rank: 21, source: self, recorded_on: 2026-04-19 }
-  - { season: 2022, team: NE, phase: overall_offense, expected_rank: 24, source: self, recorded_on: 2026-04-19 }
+  - { season: 2022, team: NE, phase: overall, expected_rank: pending, source: self, recorded_on: 2026-04-19 }
   - { season: 2022, team: NE, phase: pass_defense,    expected_rank: 30, source: self, recorded_on: 2026-04-19 }
   - { season: 2022, team: NE, phase: run_defense,     expected_rank: 26, source: self, recorded_on: 2026-04-19 }
 
   # --- 2023 ---
   - { season: 2023, team: NE, phase: pass_offense,    expected_rank: 31, source: self, recorded_on: 2026-04-19 }
   - { season: 2023, team: NE, phase: rush_offense,    expected_rank: 23, source: self, recorded_on: 2026-04-19 }
-  - { season: 2023, team: NE, phase: overall_offense, expected_rank: 31, source: self, recorded_on: 2026-04-19 }
+  - { season: 2023, team: NE, phase: overall, expected_rank: pending, source: self, recorded_on: 2026-04-19 }
   - { season: 2023, team: NE, phase: pass_defense,    expected_rank: 17, source: self, recorded_on: 2026-04-19 }
   - { season: 2023, team: NE, phase: run_defense,     expected_rank: 32, source: self, recorded_on: 2026-04-19 }
 
   # --- 2024 ---
   - { season: 2024, team: NE, phase: pass_offense,    expected_rank: 23, source: self, recorded_on: 2026-04-19 }
   - { season: 2024, team: NE, phase: rush_offense,    expected_rank: 24, source: self, recorded_on: 2026-04-19 }
-  - { season: 2024, team: NE, phase: overall_offense, expected_rank: 27, source: self, recorded_on: 2026-04-19 }
+  - { season: 2024, team: NE, phase: overall, expected_rank: pending, source: self, recorded_on: 2026-04-19 }
   - { season: 2024, team: NE, phase: pass_defense,    expected_rank: 4,  source: self, recorded_on: 2026-04-19 }
   - { season: 2024, team: NE, phase: run_defense,     expected_rank: 15, source: self, recorded_on: 2026-04-19 }
 
   # --- 2025 ---
   - { season: 2025, team: NE, phase: pass_offense,    expected_rank: 1,  source: self, recorded_on: 2026-04-19 }
   - { season: 2025, team: NE, phase: rush_offense,    expected_rank: 14, source: self, recorded_on: 2026-04-19 }
-  - { season: 2025, team: NE, phase: overall_offense, expected_rank: 1,  source: self, recorded_on: 2026-04-19 }
+  - { season: 2025, team: NE, phase: overall, expected_rank: pending,  source: self, recorded_on: 2026-04-19 }
   - { season: 2025, team: NE, phase: pass_defense,    expected_rank: 22, source: self, recorded_on: 2026-04-19 }
   - { season: 2025, team: NE, phase: run_defense,     expected_rank: 18, source: self, recorded_on: 2026-04-19 }
