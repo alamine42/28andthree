@@ -45,3 +45,6 @@ coverage
 .nyc_output
 .vercel
 .env*.local
+
+# E2 ETL run logs (local ops traces)
+.backfill-logs/

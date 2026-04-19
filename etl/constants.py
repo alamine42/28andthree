@@ -30,6 +30,9 @@ NFL_TEAMS: tuple[str, ...] = (
 
 TEAM_ABBREVIATION_ALIAS: dict[str, str] = {
     "WSH": "WAS",
+    # nflverse PBP uses bare 'LA' for the Rams in every 2020–2025 season
+    # alongside 'LAR'. The Chargers are always 'LAC', so LA→LAR is unambiguous.
+    "LA": "LAR",
 }
 
 

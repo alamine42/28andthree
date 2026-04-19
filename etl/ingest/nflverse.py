@@ -54,9 +54,39 @@ _PLAY_COLUMN_RENAMES: Final[dict[str, str]] = {
 EXPLOSIVE_PASS_YARDS: Final[int] = 20
 EXPLOSIVE_RUN_YARDS: Final[int] = 15
 
+# nflverse stores these as float64 (0.0 / 1.0 / null) for historical pandas-
+# compat reasons. Cast to bool on read so downstream expressions + Pydantic
+# models see the semantic type they expect.
+_BOOLEAN_PLAY_COLUMNS: Final[tuple[str, ...]] = (
+    "qb_dropback", "qb_kneel", "qb_spike", "two_point_attempt",
+    "pass_attempt", "rush_attempt", "success",
+    "qb_hit", "sack", "was_pressure",
+    "shotgun", "no_huddle", "pre_snap_motion", "play_action",
+    "special_teams_play",
+)
+
 
 def required_play_columns() -> tuple[str, ...]:
     return _REQUIRED_PLAY_COLUMNS
+
+
+def _cast_booleans(df: pl.DataFrame) -> pl.DataFrame:
+    """Cast known boolean-semantic columns from float64 (nflverse convention)
+    to proper Boolean. Columns that are already bool or absent are no-ops."""
+    casts: list[pl.Expr] = []
+    for col in _BOOLEAN_PLAY_COLUMNS:
+        if col not in df.columns:
+            continue
+        if df.schema[col] == pl.Boolean:
+            continue
+        # Any non-zero, non-null value → true. Null stays null.
+        casts.append(
+            pl.when(pl.col(col).is_null())
+            .then(None)
+            .otherwise(pl.col(col) != 0)
+            .alias(col)
+        )
+    return df.with_columns(casts) if casts else df
 
 
 # ---- fetch (network I/O) ----------------------------------------------------
@@ -71,16 +101,29 @@ def fetch_pbp(seasons: Iterable[int]) -> pl.DataFrame:
     # nflreadpy returns polars; subset to the columns we need (intersected
     # with what the release actually exposes — defensive against schema drift).
     available = tuple(c for c in _REQUIRED_PLAY_COLUMNS if c in pbp.columns)
-    return pbp.select(available)
+    return _cast_booleans(pbp.select(available))
 
 
 def fetch_schedules(seasons: Iterable[int]) -> pl.DataFrame:
-    """Fetch schedule rows for the given seasons via nflreadpy."""
+    """Fetch schedule rows for the given seasons via nflreadpy.
+
+    nflverse schedules expose `game_type` (REG, WC, DIV, CON, SB). Our schema
+    collapses post-season variants into `season_type='POST'`. Map here so the
+    downstream normalizer / models don't carry the nflverse taxonomy.
+    """
     import nflreadpy
 
     seasons = tuple(seasons)
     sched = nflreadpy.load_schedules(seasons=seasons)
-    # Keep the columns normalize_games cares about. Everything else is dropped.
+
+    if "game_type" in sched.columns:
+        sched = sched.with_columns(
+            pl.when(pl.col("game_type") == "REG")
+            .then(pl.lit("REG"))
+            .otherwise(pl.lit("POST"))
+            .alias("season_type")
+        )
+
     keep = [
         c for c in (
             "game_id", "season", "week", "season_type", "home_team", "away_team",

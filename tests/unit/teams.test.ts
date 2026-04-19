@@ -45,6 +45,12 @@ describe('lib/constants/teams', () => {
     assert.equal(normalizeTeamAbbr('WSH'), 'WAS');
   });
 
+  it('normalizeTeamAbbr_should_map_bare_LA_to_LAR', () => {
+    // nflverse PBP uses 'LA' alongside 'LAR' across all 2020–2025 seasons.
+    // Aggregations would double-count without this alias.
+    assert.equal(normalizeTeamAbbr('LA'), 'LAR');
+  });
+
   it('normalizeTeamAbbr_should_pass_through_canonical_abbrs_unchanged', () => {
     assert.equal(normalizeTeamAbbr('NE'), 'NE');
     assert.equal(normalizeTeamAbbr('LV'), 'LV');

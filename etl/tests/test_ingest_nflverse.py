@@ -139,6 +139,99 @@ def test_normalize_games_marks_incomplete_when_scores_null() -> None:
     assert rows[0].completed is False
 
 
+# ---- fetch_schedules game_type → season_type mapping ----------------------
+
+def _stub_nflreadpy_schedules(fixture: pl.DataFrame) -> None:
+    """Install a stub nflreadpy module so fetch_schedules returns `fixture`
+    without hitting the network."""
+    import sys
+    import types
+
+    stub = types.ModuleType("nflreadpy")
+    stub.load_schedules = lambda seasons: fixture  # type: ignore[attr-defined]
+    sys.modules["nflreadpy"] = stub
+
+
+def test_fetch_schedules_maps_game_type_REG_to_season_type_REG() -> None:
+    from etl.ingest.nflverse import fetch_schedules
+
+    _stub_nflreadpy_schedules(
+        pl.DataFrame(
+            {
+                "game_id": ["2020_01_HOU_KC"],
+                "season": [2020],
+                "week": [1],
+                "game_type": ["REG"],
+                "home_team": ["KC"],
+                "away_team": ["HOU"],
+                "home_score": [34],
+                "away_score": [20],
+                "gameday": ["2020-09-10"],
+            }
+        )
+    )
+    sched = fetch_schedules([2020])
+    assert sched.get_column("season_type").to_list() == ["REG"]
+
+
+def test_fetch_pbp_casts_float64_boolean_columns_to_bool() -> None:
+    """nflverse stores pass_attempt/qb_dropback/etc. as float64 (0.0/1.0/null)
+    for pandas-era compat. Derived expressions (is_explosive_pass) need real
+    bool columns; casting happens in fetch_pbp."""
+    from etl.ingest.nflverse import fetch_pbp
+    import types, sys
+
+    fixture = pl.DataFrame(
+        {
+            "game_id": ["g1", "g2"],
+            "play_id": [1, 2],
+            "season": [2020, 2020],
+            "week": [1, 1],
+            "season_type": ["REG", "REG"],
+            "pass_attempt": [1.0, 0.0],
+            "rush_attempt": [0.0, 1.0],
+            "qb_dropback": [1.0, 0.0],
+            "success": [1.0, 0.0],
+            "yards_gained": [25, 5],
+        }
+    )
+
+    stub = types.ModuleType("nflreadpy")
+    stub.load_pbp = lambda seasons: fixture  # type: ignore[attr-defined]
+    sys.modules["nflreadpy"] = stub
+
+    result = fetch_pbp([2020])
+    # Post-cast: the float columns should be Boolean.
+    assert result.schema["pass_attempt"] == pl.Boolean
+    assert result.schema["qb_dropback"] == pl.Boolean
+    assert result.schema["success"] == pl.Boolean
+    # And the values preserved.
+    assert result.get_column("pass_attempt").to_list() == [True, False]
+    assert result.get_column("success").to_list() == [True, False]
+
+
+def test_fetch_schedules_collapses_WC_DIV_CON_SB_to_POST() -> None:
+    from etl.ingest.nflverse import fetch_schedules
+
+    _stub_nflreadpy_schedules(
+        pl.DataFrame(
+            {
+                "game_id": ["g1", "g2", "g3", "g4"],
+                "season": [2020, 2020, 2020, 2020],
+                "week": [19, 20, 21, 22],
+                "game_type": ["WC", "DIV", "CON", "SB"],
+                "home_team": ["KC", "GB", "TB", "TB"],
+                "away_team": ["CLE", "TB", "GB", "KC"],
+                "home_score": [22, 26, 31, 31],
+                "away_score": [17, 31, 26, 9],
+                "gameday": ["2021-01-17", "2021-01-16", "2021-01-24", "2021-02-07"],
+            }
+        )
+    )
+    sched = fetch_schedules([2020])
+    assert sched.get_column("season_type").to_list() == ["POST", "POST", "POST", "POST"]
+
+
 # ---- normalize_plays --------------------------------------------------------
 
 def test_normalize_plays_yields_one_row_per_play(pbp_frame: pl.DataFrame) -> None:

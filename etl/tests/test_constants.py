@@ -49,6 +49,12 @@ def test_normalize_team_abbr_maps_WSH_to_WAS() -> None:
     assert normalize_team_abbr("WSH") == "WAS"
 
 
+def test_normalize_team_abbr_maps_bare_LA_to_LAR() -> None:
+    # nflverse uses 'LA' alongside 'LAR' for the Rams in every 2020–2025 season.
+    # Without this alias, phase aggregations double-count the franchise.
+    assert normalize_team_abbr("LA") == "LAR"
+
+
 def test_normalize_team_abbr_passes_canonical_through() -> None:
     assert normalize_team_abbr("NE") == "NE"
     assert normalize_team_abbr("LV") == "LV"
