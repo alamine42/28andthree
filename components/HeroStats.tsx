@@ -10,11 +10,13 @@ type Props = {
  * Handles week-1-of-season gracefully — rank + delta render as em-dash
  * when the season rollup isn't available yet (review finding #7). */
 export function HeroStats({ overview }: Props) {
-  const { record, pointDiff, currentSeasonRank, currentSeasonEpa, prevSeasonRank } = overview;
+  const { season, record, pointDiff, currentSeasonRank, currentSeasonEpa, prevSeasonRank } = overview;
   const rankDelta =
     currentSeasonRank != null && prevSeasonRank != null
       ? prevSeasonRank - currentSeasonRank
       : null;
+  const prevSeason = season - 1;
+  const showDelta = rankDelta != null && rankDelta !== 0;
 
   return (
     <dl
@@ -22,22 +24,28 @@ export function HeroStats({ overview }: Props) {
       data-testid="hero-stats"
     >
       <Cell label="Overall rank">
-        <div className="flex items-baseline gap-4">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <RankNumber
             rank={currentSeasonRank}
             className="text-display leading-none"
           />
           <span
             data-testid="hero-overall-rank-delta"
+            className="flex items-baseline gap-1.5"
             title={
               currentSeasonRank == null
                 ? 'Season rank available after week 3'
                 : prevSeasonRank == null
-                  ? 'No prior season data'
+                  ? `No ${prevSeason} season data`
                   : undefined
             }
           >
             <Delta value={rankDelta} />
+            {showDelta ? (
+              <span className="font-mono text-2xs uppercase tracking-widest text-text-muted">
+                vs {prevSeason}
+              </span>
+            ) : null}
           </span>
         </div>
       </Cell>

@@ -5,15 +5,16 @@ import { expect, test } from '@playwright/test';
 // covers the exhaustive numeric-sanity crawl.
 
 test.describe('E3 smoke', () => {
-  test('home renders hero stats + 12 phase cards with real data', async ({ page }) => {
+  test('home renders hero stats + 11 phase cards with real data', async ({ page }) => {
     await page.goto('/');
 
     // Eyebrow + H1 render
     await expect(page.getByTestId('season-eyebrow')).toBeVisible();
 
-    // Phase grid present with 12 cards.
+    // Phase grid present with 11 cards. `overall` is shown in the hero above
+    // the grid; rendering it again as a card would double-count it.
     const cards = page.locator('[data-testid^="phase-card-"]');
-    await expect(cards).toHaveCount(12);
+    await expect(cards).toHaveCount(11);
 
     // At least one card shows a real two-digit rank.
     const firstRank = page.getByTestId('phase-card-pass_offense').locator('[data-numeric="true"]').first();

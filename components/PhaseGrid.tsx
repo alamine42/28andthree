@@ -7,6 +7,11 @@ type Props = {
   sparklines: PatsSparklines;
 };
 
+// `overall` is already the hero stat at the top of the page; showing it again
+// as a card here double-counts it and invites confusion with the 11 phase-
+// specific ranks beneath.
+const GRID_PHASES = PHASES.filter((p) => p !== 'overall');
+
 export function PhaseGrid({ snapshot, sparklines }: Props) {
   const byPhase = new Map<Phase, PhaseSnapshot>(snapshot.map((s) => [s.phase, s]));
 
@@ -16,7 +21,7 @@ export function PhaseGrid({ snapshot, sparklines }: Props) {
         League rank across phases
       </h2>
       <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-4">
-        {PHASES.map((phase) => {
+        {GRID_PHASES.map((phase) => {
           const s = byPhase.get(phase);
           const points = sparklines.get(phase) ?? [];
           return (
@@ -26,7 +31,6 @@ export function PhaseGrid({ snapshot, sparklines }: Props) {
               rank={s?.rank ?? null}
               epaPerPlay={s?.epaPerPlay ?? null}
               sparkline={points}
-              deltaRank={s?.deltaRank ?? null}
               insufficientSample={s ? s.plays < 30 : false}
             />
           );

@@ -3,18 +3,16 @@ import { PHASES, type Phase } from '@/lib/constants/phases';
 import { teamPhaseSeason, teamPhaseWeekly } from '@/db/schema';
 import { getDb } from '@/lib/db';
 
-// ---- Snapshot: 12 rows for the home-page rank grid --------------------------
+// ---- Snapshot: one row per phase for the home-page rank grid ---------------
 
 export type PhaseSnapshot = {
   phase: Phase;
   plays: number;
   epaPerPlay: number | null;
   rank: number | null;
-  deltaRank: number | null; // vs. prior week (null for week 1 or insufficient)
 };
 
-/** One row per phase for the given team-season. Delta is computed via SQL
- * LAG over per-week ranks: last-week's rank minus the week-before-last. */
+/** Season-to-date rank for every phase of a given team-season. */
 export async function getPhaseRankSnapshot(
   team: string,
   season: number,
@@ -22,7 +20,6 @@ export async function getPhaseRankSnapshot(
   const db = getDb();
   if (!db) return [];
 
-  // Season-level rank for the headline number; delta needs the weekly table.
   const seasonRows = await db
     .select({
       phase: teamPhaseSeason.phase,
@@ -33,39 +30,9 @@ export async function getPhaseRankSnapshot(
     .from(teamPhaseSeason)
     .where(and(eq(teamPhaseSeason.team, team), eq(teamPhaseSeason.season, season)));
 
-  // Per-phase delta: prev_rank - last_rank (weekly grain). Positive = improved
-  // (e.g., 12 → 5 = +7), negative = declined. Matches the Delta component's
-  // convention where ▲ / amber = good and ▼ / cranberry = bad.
-  const deltaRows = await db.execute<{ phase: Phase; delta: number | null }>(sql`
-    SELECT phase,
-           (prev_rank - last_rank)::int AS delta
-    FROM (
-      SELECT phase,
-             rank AS last_rank,
-             LAG(rank) OVER (PARTITION BY phase ORDER BY week) AS prev_rank,
-             ROW_NUMBER() OVER (PARTITION BY phase ORDER BY week DESC) AS rn
-      FROM team_phase_weekly
-      WHERE team = ${team} AND season = ${season} AND rank IS NOT NULL
-    ) x
-    WHERE rn = 1
-  `);
-
-  const deltaByPhase = new Map<Phase, number | null>();
-  for (const r of deltaRows.rows ?? deltaRows) {
-    deltaByPhase.set(r.phase, r.delta ?? null);
-  }
-
-  // Return rows in canonical PHASE order (stable for the UI grid).
-  const snapshotByPhase = new Map<Phase, PhaseSnapshot>();
-  for (const r of seasonRows) {
-    snapshotByPhase.set(r.phase, {
-      phase: r.phase,
-      plays: r.plays,
-      epaPerPlay: r.epaPerPlay,
-      rank: r.rank,
-      deltaRank: deltaByPhase.get(r.phase) ?? null,
-    });
-  }
+  const snapshotByPhase = new Map<Phase, PhaseSnapshot>(
+    seasonRows.map((r) => [r.phase, r]),
+  );
 
   return PHASES.map(
     (p): PhaseSnapshot =>
@@ -74,7 +41,6 @@ export async function getPhaseRankSnapshot(
         plays: 0,
         epaPerPlay: null,
         rank: null,
-        deltaRank: null,
       },
   );
 }

@@ -4,7 +4,7 @@ import { rankTier } from '@/lib/color/rank';
 import { type Phase } from '@/lib/constants/phases';
 import { phaseDisplayName } from '@/lib/format/phase';
 import { formatEpa } from '@/lib/format/number';
-import { Delta, MetricValue, RankNumber } from '@/components/numeric';
+import { MetricValue, RankNumber } from '@/components/numeric';
 import { Sparkline } from '@/components/charts/Sparkline';
 import type { SparklinePoint } from '@/lib/data/phases';
 
@@ -13,17 +13,19 @@ type Props = {
   rank: number | null;
   epaPerPlay: number | null;
   sparkline: ReadonlyArray<SparklinePoint>;
-  /** Rank delta vs. prior week. Positive = improved, negative = declined. */
-  deltaRank?: number | null;
   insufficientSample?: boolean;
 };
 
-export function PhaseCard({ phase, rank, epaPerPlay, sparkline, deltaRank, insufficientSample }: Props) {
+export function PhaseCard({ phase, rank, epaPerPlay, sparkline, insufficientSample }: Props) {
   const tier = rankTier(rank);
   const slug = phase;
   const display = phaseDisplayName(phase);
   const values = sparkline.map((p) => p.value);
 
+  // No trend arrow on the headline rank: the big number is a season-to-date
+  // cumulative rank but the weekly delta would compare isolated single-week
+  // ranks — different metrics on the same tile produced "01 ▼ 1" paradoxes.
+  // The sparkline below carries the trend signal on a matched timescale.
   return (
     <Link
       href={`/phases/${slug}` as Route}
@@ -35,9 +37,6 @@ export function PhaseCard({ phase, rank, epaPerPlay, sparkline, deltaRank, insuf
       </p>
       <div className="flex items-baseline gap-3">
         <RankNumber rank={rank} className="text-3xl leading-none md:text-display" />
-        {deltaRank != null && deltaRank !== 0 ? (
-          <Delta value={deltaRank} className="text-xs" />
-        ) : null}
         {insufficientSample ? (
           <span className="font-mono text-2xs uppercase tracking-widest text-text-muted">
             n &lt; 30
