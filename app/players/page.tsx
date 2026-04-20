@@ -14,7 +14,7 @@ export default async function PlayersHubPage() {
           className="font-mono text-2xs uppercase tracking-widest text-text-muted"
           data-testid="players-eyebrow"
         >
-          {season != null ? `${season} SEASON · ACTIVE ROSTER` : 'ROSTER · AWAITING DATA'}
+          {season != null ? `${season} SEASON · CURRENT ROSTER` : 'ROSTER · AWAITING DATA'}
         </p>
         <h1 className="max-w-4xl font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
           Patriots, the whole roster.

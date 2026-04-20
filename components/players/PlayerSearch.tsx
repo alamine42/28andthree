@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
 import type { RosterEntry } from '@/lib/data/players-hub';
 import { playerHref } from '@/lib/format/player-routes';
 import { RosterCardBody } from './RosterCardBody';
@@ -25,12 +25,17 @@ export function PlayerSearch({ roster }: Props) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (q.length < MIN_QUERY) return [];
+    // Exclude 'special' role entries: clicking them would be a silent no-op
+    // (playerHref returns null for ST until a unit page exists). The ST chip
+    // in the grid still surfaces them for browsing; search is for reaching a
+    // destination, so leaving a dead-end match in the listbox is worse UX
+    // than omitting them. Review pass-1 finding #2.
     return roster
+      .filter((p) => p.role !== 'special')
       .filter((p) => p.displayName.toLowerCase().includes(q))
       .slice(0, MAX_RESULTS);
   }, [roster, query]);
@@ -59,6 +64,10 @@ export function PlayerSearch({ roster }: Props) {
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (matches.length === 0) return;
+      // Symmetric with ArrowDown — opens the listbox if it was collapsed
+      // (e.g., after Escape) so aria-activedescendant points at a rendered
+      // option. Review pass-1 finding #1.
+      setOpen(true);
       setActiveIdx((prev) => (prev == null ? matches.length - 1 : Math.max(prev - 1, 0)));
       return;
     }
@@ -88,15 +97,18 @@ export function PlayerSearch({ roster }: Props) {
   };
 
   const showEmptyState = query.trim().length >= MIN_QUERY && matches.length === 0;
+  // aria-expanded must mirror the actual popup state (review pass-1
+  // finding #4): the popup isn't rendered when matches is empty, so
+  // reporting true would be a lie to assistive tech.
+  const popupOpen = open && matches.length > 0;
 
   return (
     <div className="relative w-full max-w-md">
       <input
-        ref={inputRef}
         type="text"
         role="combobox"
         aria-label="Search players"
-        aria-expanded={open}
+        aria-expanded={popupOpen}
         aria-controls={listboxId}
         aria-autocomplete="list"
         aria-activedescendant={
@@ -126,7 +138,7 @@ export function PlayerSearch({ roster }: Props) {
           specificity over the UA `[hidden] { display: none }` rule and keep
           the element visible. Unmounting also avoids stale aria-activedescendant
           references pointing to nodes that are no longer focusable targets. */}
-      {open && matches.length > 0 ? (
+      {popupOpen ? (
         <ul
           id={listboxId}
           role="listbox"
