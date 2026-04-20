@@ -31,6 +31,7 @@ from etl.freshness import FreshnessResult, check_freshness, now_utc
 from etl.ingest.nflverse import fetch_pbp, fetch_schedules, normalize_games, normalize_plays
 from etl.load.plays import upsert_games, upsert_plays
 from etl.settings import EtlSettings
+from etl.transform.games_epa import recompute_games_epa
 from etl.transform.phases import recompute_season, recompute_weekly
 
 logger = logging.getLogger("etl")
@@ -180,12 +181,16 @@ def run_season(
         weeks_filter = [week] if week is not None else None
         weekly_written = recompute_weekly(conn, season=season, weeks=weeks_filter)
         season_written = recompute_season(conn, season=season)
+        # E3-15: denormalize per-game offensive EPA into games; feeds home-page
+        # Last-6-Games strip. Must come after plays are loaded.
+        games_epa_written = recompute_games_epa(conn, season=season)
 
         row_counts = {
             "plays": plays_written,
             "games": games_written,
             "team_phase_weekly": weekly_written,
             "team_phase_season": season_written,
+            "games_epa_updated": games_epa_written,
         }
         for phase_name in ("offense_base", "defense_base", "situational", "explosive_st"):
             logger.info(

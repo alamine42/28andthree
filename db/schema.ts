@@ -71,8 +71,12 @@ export const games = pgTable(
     awayScore: smallint('away_score'),
     gameDate: date('game_date').notNull(),
     completed: boolean('completed').notNull().default(false),
-    posteamEpa: doublePrecision('posteam_epa'),
-    defteamEpa: doublePrecision('defteam_epa'),
+    // Per-game offensive EPA/play. E3-15: renamed from posteam_epa/defteam_epa
+    // (which were always null under E2). Populated at end of ETL by avg(epa)
+    // over REG qualifying plays per team for that game — same garbage-play
+    // filter as phase aggregations. Feeds the home-page Last-6-Games strip.
+    homeOffenseEpaPerPlay: doublePrecision('home_offense_epa_per_play'),
+    awayOffenseEpaPerPlay: doublePrecision('away_offense_epa_per_play'),
   },
   (table) => [
     check('games_season_type_chk', sql`${table.seasonType} IN ('REG', 'POST')`),

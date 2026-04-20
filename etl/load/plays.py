@@ -33,7 +33,7 @@ _PLAYS_WRITE_COLUMNS: tuple[str, ...] = (
 _GAMES_WRITE_COLUMNS: tuple[str, ...] = (
     "game_id", "season", "week", "season_type",
     "home_team", "away_team", "home_score", "away_score",
-    "game_date", "completed", "posteam_epa", "defteam_epa",
+    "game_date", "completed", "home_offense_epa_per_play", "away_offense_epa_per_play",
 )
 
 

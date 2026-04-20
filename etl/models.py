@@ -72,8 +72,8 @@ class Game(BaseModel):
     away_score: int | None = None
     game_date: date
     completed: bool = False
-    posteam_epa: float | None = None
-    defteam_epa: float | None = None
+    home_offense_epa_per_play: float | None = None
+    away_offense_epa_per_play: float | None = None
 
 
 class Play(BaseModel):

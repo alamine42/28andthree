@@ -346,6 +346,24 @@ def test_c14_every_plays_defteam_is_in_canonical_nfl_team_list(
     assert not extra, f"plays.defteam contains non-canonical values: {sorted(extra)}"
 
 
+def test_c15_every_completed_REG_game_has_both_per_game_offense_epa_columns(
+    loaded_db: psycopg.Connection,
+) -> None:
+    """E3-15: home_offense_epa_per_play + away_offense_epa_per_play populated."""
+    row = _fetchone(
+        loaded_db,
+        """
+        SELECT COUNT(*) FROM games
+        WHERE completed = true AND season_type = 'REG'
+          AND (home_offense_epa_per_play IS NULL OR away_offense_epa_per_play IS NULL)
+        """,
+    )
+    if row is None:
+        pytest.skip("games empty")
+    missing = int(row[0])
+    assert missing == 0, f"{missing} completed REG games missing per-team EPA"
+
+
 # ---- Sanity meta ------------------------------------------------------------
 
 
