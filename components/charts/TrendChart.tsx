@@ -179,7 +179,7 @@ function ToggleButton({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className={`bg-bg px-3 py-1.5 font-mono text-2xs uppercase tracking-widest transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive ${
+      className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center bg-bg px-3 py-3 font-mono text-2xs uppercase tracking-widest transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive ${
         pressed ? 'text-text' : 'text-text-muted hover:text-text'
       }`}
     >

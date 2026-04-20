@@ -71,7 +71,7 @@ export function SiteHeader() {
           aria-controls={panelId}
           data-testid="mobile-nav-toggle"
           onClick={() => setOpen((v) => !v)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-sm text-text-muted transition-colors hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive md:hidden"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-sm text-text-muted transition-colors hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive md:hidden"
         >
           {open ? <CloseIcon /> : <HamburgerIcon />}
         </button>
@@ -90,7 +90,7 @@ export function SiteHeader() {
               <Link
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className="block py-3 font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive"
+                className="flex min-h-[44px] items-center font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive"
               >
                 {link.label}
               </Link>

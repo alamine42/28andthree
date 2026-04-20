@@ -73,8 +73,14 @@ export default async function PhaseDetailPage({ params }: { params: Params }) {
 
   return (
     <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
-      <nav aria-label="Breadcrumb" className="font-mono text-2xs uppercase tracking-widest text-text-muted">
-        <Link href="/" className="underline underline-offset-4 decoration-border-strong hover:decoration-text hover:text-text">
+      <nav
+        aria-label="Breadcrumb"
+        className="flex items-center font-mono text-2xs uppercase tracking-widest text-text-muted"
+      >
+        <Link
+          href="/"
+          className="inline-flex min-h-[44px] items-center underline underline-offset-4 decoration-border-strong hover:decoration-text hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
+        >
           Season overview
         </Link>
         <span className="mx-2 text-text-muted">/</span>
