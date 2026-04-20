@@ -648,9 +648,9 @@ function TableOfContents() {
       <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">
         On this page
       </p>
-      <ol className="grid grid-cols-1 gap-x-6 gap-y-1.5 md:grid-cols-2">
+      <ol className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
         {TOC.map((item, i) => (
-          <li key={item.id} className="flex items-baseline gap-2">
+          <li key={item.id} className="flex items-center gap-2">
             <span
               aria-hidden="true"
               className="font-mono text-2xs tabular-nums text-text-muted"
@@ -659,7 +659,7 @@ function TableOfContents() {
             </span>
             <a
               href={`#${item.id}`}
-              className="text-sm text-text transition-colors hover:text-positive focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
+              className="flex min-h-[44px] flex-1 items-center text-sm text-text transition-colors hover:text-positive focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
             >
               {item.label}
             </a>
