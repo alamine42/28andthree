@@ -42,8 +42,10 @@ export default async function PhaseDetailPage({ params }: { params: Params }) {
   return (
     <section className="flex flex-col gap-16 py-12 md:gap-20 md:py-16">
       <nav aria-label="Breadcrumb" className="font-mono text-2xs uppercase tracking-widest text-text-muted">
-        <Link href="/" className="hover:text-text">Season overview</Link>
-        <span className="mx-2 text-text-dim">/</span>
+        <Link href="/" className="underline underline-offset-4 decoration-border-strong hover:decoration-text hover:text-text">
+          Season overview
+        </Link>
+        <span className="mx-2 text-text-muted">/</span>
         <span className="text-text">{display}</span>
       </nav>
 
@@ -54,7 +56,7 @@ export default async function PhaseDetailPage({ params }: { params: Params }) {
         <p className="font-mono text-xs text-text-muted">
           EPA per play · regular season {season}
           {detail.totalQualified !== 32 ? (
-            <span className="ml-2 text-text-dim">
+            <span className="ml-2 text-text-muted">
               of {detail.totalQualified} qualified teams
             </span>
           ) : null}

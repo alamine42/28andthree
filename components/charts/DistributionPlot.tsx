@@ -109,7 +109,7 @@ export function DistributionPlot({ rows, highlightTeam, phaseLabel }: Props) {
         <text
           x={0}
           y={PLOT_HEIGHT - MARGIN.top - MARGIN.bottom + 18}
-          className="fill-current font-mono text-[10px] text-text-dim"
+          className="fill-current font-mono text-[10px] text-text-muted"
           data-numeric="true"
         >
           {formatEpa(xLo)}
@@ -118,7 +118,7 @@ export function DistributionPlot({ rows, highlightTeam, phaseLabel }: Props) {
           x={innerW}
           y={PLOT_HEIGHT - MARGIN.top - MARGIN.bottom + 18}
           textAnchor="end"
-          className="fill-current font-mono text-[10px] text-text-dim"
+          className="fill-current font-mono text-[10px] text-text-muted"
           data-numeric="true"
         >
           {formatEpa(xHi)}

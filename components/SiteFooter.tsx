@@ -22,7 +22,7 @@ export function SiteFooter({ lastRefreshIso }: FooterProps = {}) {
     <footer className="border-t border-border">
       <div className="mx-auto flex w-full max-w-content flex-col gap-3 px-4 py-6 md:px-6 lg:px-8">
         <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">{DISCLAIMER}</p>
-        <div className="flex flex-col gap-2 font-mono text-2xs uppercase tracking-widest text-text-dim md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-2 font-mono text-2xs uppercase tracking-widest text-text-muted md:flex-row md:items-center md:justify-between">
           <span>
             Data:{' '}
             <a

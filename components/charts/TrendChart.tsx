@@ -93,7 +93,7 @@ export function TrendChart({ points, phaseLabel }: Props) {
                   y={yPos}
                   dy="0.35em"
                   textAnchor="end"
-                  className="fill-current font-mono text-[10px] text-text-dim"
+                  className="fill-current font-mono text-[10px] text-text-muted"
                   data-numeric="true"
                 >
                   {formatEpa(y)}
@@ -137,7 +137,7 @@ export function TrendChart({ points, phaseLabel }: Props) {
                   x={x}
                   y={10}
                   textAnchor="middle"
-                  className="fill-current font-mono text-[10px] text-text-dim"
+                  className="fill-current font-mono text-[10px] text-text-muted"
                 >
                   W{w}
                 </text>
@@ -158,7 +158,7 @@ export function TrendChart({ points, phaseLabel }: Props) {
         </span>
       </div>
 
-      <p className="font-mono text-2xs uppercase tracking-widest text-text-dim">
+      <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">
         Weeks {minWeek}–{maxWeek}
       </p>
     </div>

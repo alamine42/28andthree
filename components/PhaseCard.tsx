@@ -39,7 +39,7 @@ export function PhaseCard({ phase, rank, epaPerPlay, sparkline, deltaRank, insuf
           <Delta value={deltaRank} className="text-xs" />
         ) : null}
         {insufficientSample ? (
-          <span className="font-mono text-2xs uppercase tracking-widest text-text-dim">
+          <span className="font-mono text-2xs uppercase tracking-widest text-text-muted">
             n &lt; 30
           </span>
         ) : null}
@@ -55,7 +55,7 @@ export function PhaseCard({ phase, rank, epaPerPlay, sparkline, deltaRank, insuf
       )}
       <p className="font-mono text-xs text-text-muted">
         <MetricValue value={epaPerPlay} format={formatEpa} />
-        <span className="ml-1 text-text-dim">EPA/play</span>
+        <span className="ml-1 text-text-muted">EPA/play</span>
       </p>
     </Link>
   );

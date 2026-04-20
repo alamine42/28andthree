@@ -14,10 +14,14 @@ type RankNumberProps = {
   className?: string;
 };
 
+// --negative cranberry at 2.84:1 on --bg fails WCAG AA Large (3:1 required
+// for text ≥24px). We keep positive amber (8.7:1 passes both AA+AAA) and
+// route the negative signal through the adjacent sparkline + card context
+// instead. Review finding #11.
 const TIER_CLASS = {
   positive: 'text-positive',
   neutral: 'text-text',
-  negative: 'text-negative',
+  negative: 'text-text',
 } as const;
 
 /** Large numeric rank (two-digit padded). Colored by `rankTier()`. */

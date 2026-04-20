@@ -55,7 +55,7 @@ function Cell({ game }: { game: GameResult }) {
       </p>
       <p className="font-mono text-2xs text-text-muted">
         <MetricValue value={epaDiff} format={formatEpa} />
-        <span className="ml-1 text-text-dim">EPA diff</span>
+        <span className="ml-1 text-text-muted">EPA diff</span>
       </p>
     </li>
   );
