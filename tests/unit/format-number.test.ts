@@ -5,6 +5,7 @@ import {
   formatEpa,
   formatPercent,
   formatRank,
+  formatSignedInt,
   NO_DATA,
 } from '../../lib/format/number';
 
@@ -98,6 +99,29 @@ describe('lib/format/number — formatPercent', () => {
 
   it('should_return_em_dash_for_null', () => {
     assert.equal(formatPercent(null), NO_DATA);
+  });
+});
+
+describe('lib/format/number — formatSignedInt', () => {
+  it('should_render_positive_with_plus_prefix', () => {
+    assert.equal(formatSignedInt(87), '+87');
+  });
+
+  it('should_render_negative_with_U_2212', () => {
+    assert.equal(formatSignedInt(-12), '−12');
+  });
+
+  it('should_render_zero_as_bare_zero_no_sign', () => {
+    // Point diff of exactly 0 is not really "directional"; treat as neutral.
+    assert.equal(formatSignedInt(0), '0');
+  });
+
+  it('should_return_em_dash_for_null', () => {
+    assert.equal(formatSignedInt(null), NO_DATA);
+  });
+
+  it('should_truncate_fractional_input', () => {
+    assert.equal(formatSignedInt(3.7), '+3');
   });
 });
 

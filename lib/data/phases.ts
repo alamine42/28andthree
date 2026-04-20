@@ -33,10 +33,12 @@ export async function getPhaseRankSnapshot(
     .from(teamPhaseSeason)
     .where(and(eq(teamPhaseSeason.team, team), eq(teamPhaseSeason.season, season)));
 
-  // Per-phase delta: last recorded rank minus the one before it (weekly grain).
+  // Per-phase delta: prev_rank - last_rank (weekly grain). Positive = improved
+  // (e.g., 12 → 5 = +7), negative = declined. Matches the Delta component's
+  // convention where ▲ / amber = good and ▼ / cranberry = bad.
   const deltaRows = await db.execute<{ phase: Phase; delta: number | null }>(sql`
     SELECT phase,
-           (last_rank - prev_rank)::int AS delta
+           (prev_rank - last_rank)::int AS delta
     FROM (
       SELECT phase,
              rank AS last_rank,

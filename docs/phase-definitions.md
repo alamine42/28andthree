@@ -63,14 +63,35 @@ GROUP BY posteam
 
 Includes QB-designed runs. Excludes scrambles (they're dropbacks, not rushes).
 
-### 2.3 `overall_offense` — metric: EPA/play
+### 2.3 `overall` — metric: team EPA differential (SPEC §3.2 #12)
 
 ```sql
-(qb_dropback = true OR rush_attempt = true)
-GROUP BY posteam
+-- offense side
+SELECT posteam AS team, AVG(epa) AS off_epa
+FROM plays
+WHERE (qb_dropback = true OR rush_attempt = true)
+  AND <global rules §1>
+  AND posteam IS NOT NULL
+GROUP BY posteam;
+
+-- defense side
+SELECT defteam AS team, AVG(epa) AS def_epa
+FROM plays
+WHERE (qb_dropback = true OR rush_attempt = true)
+  AND <global rules §1>
+  AND defteam IS NOT NULL
+GROUP BY defteam;
+
+-- final: off_epa − def_epa per team
 ```
 
-Union of 2.1 and 2.2. Not a weighted average — a team with 50/50 pass/rush split and a team with 80/20 both contribute their raw plays. This is correct (the ranking compares *on the plays you ran*, which is the tendency we want to credit or penalize).
+**Renamed from `overall_offense` in E3-16** to match SPEC §3.2 #12: *"Overall (team EPA differential)"*. Old value semantics (offensive EPA per play, grouped by posteam only) no longer exist in the enum.
+
+- Metric stored in `epa_per_play` slot on `team_phase_*` is the **differential**: `(offensive EPA/play) − (defensive EPA/play allowed)`. A team that plays great offense and average defense scores positive; a team that's bad on both sides scores negative.
+- `success_rate` is NULL for `overall` rows — the concept "success rate differential" isn't a standard measure and would mislead.
+- Sample-size guards use combined plays (offense plays + defense plays) against the same 10/30 thresholds; teams that play any games at all easily clear.
+
+Implementation: `etl/transform/phases.py` handles this via `metric_kind='differential'` in `PHASE_FILTERS['overall']` and a FULL OUTER JOIN CTE in `_build_differential_sql`.
 
 ### 2.4 `pass_defense` — metric: EPA/dropback allowed
 
@@ -173,7 +194,10 @@ A: Same reason — a scramble is a dropback that didn't find a throw. It's a pas
 **Q: Why not filter out the last two minutes of the 4th quarter to avoid end-of-half hail-mary noise?**
 A: Hail-mary plays have large negative EPA but are a small fraction of dropbacks; the aggregate effect is bounded. No widely-adopted filter for this exists, and codifying one here would drift our ranks from rbsdm/FTN without clear benefit.
 
-**Q: Why is `overall_offense` not a weighted blend of EPA/dropback and EPA/rush?**
+**Q: Before E3-16 there was an `overall_offense` phase — why rename?**
+A: The SPEC §3.2 #12 phase is explicitly *team EPA differential* (offense − defense), not offensive-only. The original shipped aggregation matched a different metric than the spec name implied. Renamed + redefined in E3-16 to eliminate the divergence.
+
+**Q: Why is the old `overall_offense` (offensive-only EPA) not a weighted blend of EPA/dropback and EPA/rush?**
 A: The raw-average approach already weights by usage — a team with 50 dropbacks and 10 runs contributes 60 plays at their mix. A weighted blend would require picking weights ("league average pass rate") and would mask the effect of a team being run-heavy or pass-heavy, which is itself information.
 
 ---

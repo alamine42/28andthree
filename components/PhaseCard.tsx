@@ -28,7 +28,7 @@ export function PhaseCard({ phase, rank, epaPerPlay, sparkline, deltaRank, insuf
     <Link
       href={`/phases/${slug}` as Route}
       data-testid={`phase-card-${slug}`}
-      className="group flex min-h-[148px] flex-col gap-3 bg-bg p-5 transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive md:min-h-[172px] md:p-6"
+      className="flex min-h-[148px] flex-col gap-3 bg-bg p-5 transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive md:min-h-[172px] md:p-6"
     >
       <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">
         {display}

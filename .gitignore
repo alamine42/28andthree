@@ -48,3 +48,4 @@ coverage
 
 # E2 ETL run logs (local ops traces)
 .backfill-logs/
+.claude/scheduled_tasks.lock

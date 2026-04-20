@@ -40,7 +40,7 @@ export default async function PhaseDetailPage({ params }: { params: Params }) {
   const display = phaseDisplayName(phase);
 
   return (
-    <section className="flex flex-col gap-16 py-12 md:gap-20 md:py-16">
+    <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
       <nav aria-label="Breadcrumb" className="font-mono text-2xs uppercase tracking-widest text-text-muted">
         <Link href="/" className="underline underline-offset-4 decoration-border-strong hover:decoration-text hover:text-text">
           Season overview
@@ -53,12 +53,15 @@ export default async function PhaseDetailPage({ params }: { params: Params }) {
         <h1 className="font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
           {display}
         </h1>
-        <p className="font-mono text-xs text-text-muted">
-          EPA per play · regular season {season}
+        <p className="flex flex-wrap items-center gap-3 font-mono text-xs text-text-muted">
+          <span>EPA per play · regular season {season}</span>
           {detail.totalQualified !== 32 ? (
-            <span className="ml-2 text-text-muted">
+            <span className="text-text-muted">
               of {detail.totalQualified} qualified teams
             </span>
+          ) : null}
+          {detail.insufficientSample ? (
+            <InsufficientSampleChip plays={detail.plays} />
           ) : null}
         </p>
       </header>
@@ -71,12 +74,12 @@ export default async function PhaseDetailPage({ params }: { params: Params }) {
           <RankNumber rank={detail.rank} className="text-display leading-none" />
         </HairlineCell>
         <HairlineCell label="EPA / play">
-          <p className="font-display text-3xl font-bold tracking-tighter text-text md:text-display">
+          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
             <MetricValue value={detail.epaPerPlay} format={formatEpa} />
           </p>
         </HairlineCell>
         <HairlineCell label="Success rate">
-          <p className="font-display text-3xl font-bold tracking-tighter text-text md:text-display">
+          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
             <MetricValue value={detail.successRate} format={formatPercent} />
           </p>
         </HairlineCell>
@@ -98,6 +101,20 @@ export default async function PhaseDetailPage({ params }: { params: Params }) {
 
       <TopContributorsPlaceholder />
     </section>
+  );
+}
+
+function InsufficientSampleChip({ plays }: { plays: number }) {
+  // Surface the SPEC §3.5a small-sample state explicitly on the phase page.
+  // Home grid already shows an "n<30" badge; this brings the phase detail
+  // in sync so users know why the rank + EPA render as em-dashes.
+  return (
+    <span
+      title={`${plays} plays — below the 30-play season threshold (SPEC §3.5a)`}
+      className="rounded-sm border border-border-strong px-2 py-0.5 uppercase tracking-widest text-text-muted"
+    >
+      n&lt;30 · insufficient sample
+    </span>
   );
 }
 

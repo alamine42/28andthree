@@ -1,5 +1,5 @@
 import { Delta, MetricValue, RankNumber } from '@/components/numeric';
-import { formatEpa } from '@/lib/format/number';
+import { formatEpa, formatSignedInt } from '@/lib/format/number';
 import type { TeamSeasonOverview } from '@/lib/data/team';
 
 type Props = {
@@ -43,25 +43,19 @@ export function HeroStats({ overview }: Props) {
       </Cell>
 
       <Cell label="Record">
-        <p className="font-display text-3xl font-bold tracking-tighter text-text md:text-display">
+        <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
           <MetricValue
             value={`${record.wins}-${record.losses}${record.ties > 0 ? `-${record.ties}` : ''}`}
             format={(v) => String(v ?? '—')}
           />
         </p>
         <p className="font-mono text-xs text-text-muted">
-          Point diff <MetricValue
-            value={pointDiff}
-            format={(v) => {
-              if (v == null || !Number.isFinite(v)) return '—';
-              return v >= 0 ? `+${v}` : `\u2212${Math.abs(v)}`;
-            }}
-          />
+          Point diff <MetricValue value={pointDiff} format={formatSignedInt} />
         </p>
       </Cell>
 
       <Cell label="EPA / play (overall)">
-        <p className="font-display text-3xl font-bold tracking-tighter text-text md:text-display">
+        <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
           <MetricValue value={currentSeasonEpa} format={formatEpa} />
         </p>
       </Cell>

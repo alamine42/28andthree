@@ -39,3 +39,13 @@ export function formatPercent(frac: number | null | undefined): string {
   if (!isFiniteNumber(frac)) return NO_DATA;
   return `${Math.round(frac * 100)}%`;
 }
+
+/** Signed integer (e.g., point differential, score deltas). Uses U+2212
+ * for negatives per DESIGN.md §Content and "+" for positives so direction
+ * is always explicit. */
+export function formatSignedInt(v: number | null | undefined): string {
+  if (!isFiniteNumber(v)) return NO_DATA;
+  const n = Math.trunc(v);
+  if (n === 0) return '0';
+  return n > 0 ? `+${n}` : `${MINUS}${Math.abs(n)}`;
+}
