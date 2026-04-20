@@ -5,7 +5,14 @@ import { expect, test } from '@playwright/test';
 // serious/critical violation. Minor/moderate issues are surfaced in the
 // report but don't fail the test — catching the worst offenders first.
 
-const ROUTES = ['/', '/phases/pass_offense'] as const;
+const QB_ID = process.env.E4_TEST_QB_ID ?? '00-0039851';
+
+const ROUTES = [
+  '/',
+  '/phases/pass_offense',
+  `/players/qb/${QB_ID}`,
+  '/team/units/defense',
+] as const;
 
 test.describe('a11y — axe scan', () => {
   for (const route of ROUTES) {

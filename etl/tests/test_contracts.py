@@ -346,6 +346,85 @@ def test_c14_every_plays_defteam_is_in_canonical_nfl_team_list(
     assert not extra, f"plays.defteam contains non-canonical values: {sorted(extra)}"
 
 
+def test_c16_every_game_has_exactly_one_primary_starter_per_team(
+    loaded_db: psycopg.Connection,
+) -> None:
+    """E4 review #2: deterministic primary_starter rule must always produce
+    exactly one winner per (game_id, team)."""
+    rows = _fetchall(
+        loaded_db,
+        """
+        SELECT game_id, team, COUNT(*) FILTER (WHERE primary_starter) AS starter_count
+        FROM qb_weekly
+        GROUP BY game_id, team
+        HAVING COUNT(*) FILTER (WHERE primary_starter) <> 1
+        """,
+    )
+    assert not rows, f"{len(rows)} (game, team) rows with non-1 primary_starter: {rows[:5]}"
+
+
+def test_c17_qb_weekly_rows_are_unique_per_gsis_and_game(
+    loaded_db: psycopg.Connection,
+) -> None:
+    """E4 review #4: one row per (gsis_id, game_id). The unique index enforces
+    this; contract test is belt-and-suspenders."""
+    rows = _fetchall(
+        loaded_db,
+        "SELECT gsis_id, game_id, COUNT(*) FROM qb_weekly GROUP BY gsis_id, game_id HAVING COUNT(*) > 1",
+    )
+    assert not rows, f"duplicate (gsis_id, game_id) in qb_weekly: {rows[:5]}"
+
+
+def test_c18_skill_weekly_target_share_never_exceeds_one(
+    loaded_db: psycopg.Connection,
+) -> None:
+    """Target share = targets / team_dropbacks. Any row > 1.0 means we
+    miscounted dropbacks or misattributed targets."""
+    rows = _fetchall(
+        loaded_db,
+        "SELECT gsis_id, game_id, target_share FROM skill_weekly WHERE target_share > 1.0",
+    )
+    assert not rows, f"{len(rows)} skill_weekly rows with target_share > 1.0: {rows[:5]}"
+
+
+def test_c19_qb_weekly_pressure_rate_null_when_low_coverage(
+    loaded_db: psycopg.Connection,
+) -> None:
+    """Review #1: pressure stats must be NULL when participation coverage < 0.80
+    for the game. Catches a regression where we'd ship a confident-looking
+    pressure_rate from sparsely-tagged participation data."""
+    row = _fetchone(
+        loaded_db,
+        """
+        SELECT COUNT(*) FROM qb_weekly q
+        JOIN games g USING (game_id)
+        WHERE q.pressure_rate IS NOT NULL
+          AND (g.participation_coverage IS NULL OR g.participation_coverage < 0.80)
+        """,
+    )
+    bad = int(row[0]) if row else 0
+    assert bad == 0, f"{bad} qb_weekly rows have pressure_rate but game coverage < 0.80"
+
+
+def test_c20_unit_tables_have_rows_for_every_team_per_season(
+    loaded_db: psycopg.Connection,
+) -> None:
+    """Every unit table × every (team, season) should have a row once backfill
+    completes. Guards against a silent rollup failure on one unit."""
+    from etl.constants import NFL_TEAMS
+    for table in ("team_defense_season", "team_ol_season", "team_dl_season"):
+        row = _fetchone(
+            loaded_db,
+            f"""
+            SELECT season, COUNT(DISTINCT team) FROM {table}
+            GROUP BY season
+            HAVING COUNT(DISTINCT team) < {len(NFL_TEAMS)}
+            """,
+        )
+        if row:
+            pytest.fail(f"{table} season {row[0]}: only {row[1]}/{len(NFL_TEAMS)} teams")
+
+
 def test_c15_every_completed_REG_game_has_both_per_game_offense_epa_columns(
     loaded_db: psycopg.Connection,
 ) -> None:

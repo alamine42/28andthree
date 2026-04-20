@@ -1,4 +1,7 @@
 import { notFound } from 'next/navigation';
+import { and, eq } from 'drizzle-orm';
+import { skillSeason } from '@/db/schema';
+import { getDb } from '@/lib/db';
 import { getCurrentSeason } from '@/lib/data/current-season';
 import { getPlayer, getSkillUsage } from '@/lib/data/player';
 import { MetricValue } from '@/components/numeric';
@@ -9,6 +12,16 @@ import { SmallSampleBanner } from '@/components/SmallSampleBanner';
 export const revalidate = 3600;
 
 type Params = Promise<{ gsisId: string }>;
+
+export async function generateStaticParams() {
+  const db = getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({ gsisId: skillSeason.gsisId })
+    .from(skillSeason)
+    .where(and(eq(skillSeason.team, 'NE'), eq(skillSeason.season, 2025)));
+  return rows.map((r) => ({ gsisId: r.gsisId }));
+}
 
 export default async function SkillPage({ params }: { params: Params }) {
   const { gsisId } = await params;

@@ -1,15 +1,30 @@
 import { notFound } from 'next/navigation';
+import { and, eq } from 'drizzle-orm';
+import { qbSeason } from '@/db/schema';
+import { getDb } from '@/lib/db';
 import { getCurrentSeason } from '@/lib/data/current-season';
 import { getPlayer, getQbDeepDive } from '@/lib/data/player';
 import { MetricValue } from '@/components/numeric';
 import { formatEpa, formatPercent } from '@/lib/format/number';
 import { PlayerHeader } from '@/components/PlayerHeader';
 import { SmallSampleBanner } from '@/components/SmallSampleBanner';
-import { QbStarterToggle } from './QbStarterToggle';
+import { QbTrend } from './QbTrend';
 
 export const revalidate = 3600;
 
 type Params = Promise<{ gsisId: string }>;
+
+/** Pre-render current-season Pats QBs at build time (plan §3.12: cap
+ * pre-render to ~50 players, not 480). Other QBs ISR-on-demand. */
+export async function generateStaticParams() {
+  const db = getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({ gsisId: qbSeason.gsisId })
+    .from(qbSeason)
+    .where(and(eq(qbSeason.team, 'NE'), eq(qbSeason.season, 2025)));
+  return rows.map((r) => ({ gsisId: r.gsisId }));
+}
 
 export default async function QbDeepDivePage({ params }: { params: Params }) {
   const { gsisId } = await params;
@@ -52,7 +67,7 @@ export default async function QbDeepDivePage({ params }: { params: Params }) {
         </HairlineCell>
       </dl>
 
-      <QbStarterToggle gsisId={gsisId} season={season} />
+      <QbTrend weekly={deepDive.weekly} />
 
       <dl
         className="grid gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-2"
@@ -66,6 +81,22 @@ export default async function QbDeepDivePage({ params }: { params: Params }) {
         <HairlineCell label="Under pressure (EPA/dropback)">
           <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
             <MetricValue value={deepDive.pressuredEpaPerDropback} format={formatEpa} />
+          </p>
+        </HairlineCell>
+      </dl>
+
+      <dl
+        className="grid gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-2"
+        data-testid="qb-deep-ball"
+      >
+        <HairlineCell label="Deep-ball EPA (20+ air yds)">
+          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
+            <MetricValue value={deepDive.deepEpaPerAttempt} format={formatEpa} />
+          </p>
+        </HairlineCell>
+        <HairlineCell label="Success rate">
+          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
+            <MetricValue value={deepDive.successRate} format={formatPercent} />
           </p>
         </HairlineCell>
       </dl>

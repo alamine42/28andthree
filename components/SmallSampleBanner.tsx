@@ -20,9 +20,17 @@ export function SmallSampleBanner({ kind, n, threshold = DEFAULT_THRESHOLD }: Pr
         Small sample
       </p>
       <p className="text-sm text-text">
-        {n} {kind} season-to-date. Below the {threshold}-{kind.replace(/s$/, '')} threshold;
+        {n} {kind} season-to-date. Below the {threshold}-{singularize(kind)} threshold;
         stats may swing game-to-game.
       </p>
     </aside>
   );
+}
+
+function singularize(word: string): string {
+  // "carries" → "carry", "plays" → "play", "snaps" → "snap". Naive two-rule
+  // handler — we only pass the 5 kinds below so we don't need full inflection.
+  if (word.endsWith('ies')) return word.slice(0, -3) + 'y';
+  if (word.endsWith('s')) return word.slice(0, -1);
+  return word;
 }

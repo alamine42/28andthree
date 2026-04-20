@@ -8,13 +8,16 @@ type Props = {
 };
 
 export function TopContributorCard({ card }: Props) {
-  const href: Route | '#' = hrefFor(card);
+  const href = hrefFor(card);
+  const testId = card.gsisId ? `contributor-card-${card.gsisId}` : 'contributor-card-unit';
+  // Focus + hover styles sit on the actual focusable element (<a>) — putting
+  // them on a `display:contents` wrapper hides them from keyboard users
+  // (WCAG 2.4.7). Non-clickable variants render as a plain <div>.
+  const shared =
+    'flex flex-col items-start gap-3 bg-bg p-5 transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive';
 
-  const Inner = (
-    <div
-      data-testid={card.gsisId ? `contributor-card-${card.gsisId}` : 'contributor-card-unit'}
-      className="flex flex-col items-start gap-3 bg-bg p-5 transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
-    >
+  const Body = (
+    <>
       <PlayerAvatar displayName={card.displayName} headshotUrl={card.headshotUrl} size={56} />
       <div className="flex flex-col gap-1">
         <p className="font-display text-lg font-bold tracking-tight text-text">
@@ -30,14 +33,19 @@ export function TopContributorCard({ card }: Props) {
           {card.primaryStat}
         </p>
       </div>
-    </div>
+    </>
   );
 
-  return href === '#' ? (
-    Inner
-  ) : (
-    <Link href={href} className="contents">
-      {Inner}
+  if (href === '#') {
+    return (
+      <div data-testid={testId} className={shared}>
+        {Body}
+      </div>
+    );
+  }
+  return (
+    <Link href={href} data-testid={testId} className={shared}>
+      {Body}
     </Link>
   );
 }
