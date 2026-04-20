@@ -74,6 +74,7 @@ class Game(BaseModel):
     completed: bool = False
     home_offense_epa_per_play: float | None = None
     away_offense_epa_per_play: float | None = None
+    participation_coverage: float | None = None
 
 
 class Play(BaseModel):
@@ -135,8 +136,8 @@ class Play(BaseModel):
     no_huddle: bool | None = None
     pre_snap_motion: bool | None = None
     play_action: bool | None = None
-    personnel_offense: str | None = Field(default=None, max_length=16)
-    personnel_defense: str | None = Field(default=None, max_length=16)
+    personnel_offense: str | None = Field(default=None, max_length=96)
+    personnel_defense: str | None = Field(default=None, max_length=96)
     defenders_in_box: int | None = None
 
     # E5-nfl4th-dep
@@ -146,6 +147,17 @@ class Play(BaseModel):
     defteam_timeouts_remaining: int | None = None
     roof: str | None = Field(default=None, max_length=12)
     surface: str | None = Field(default=None, max_length=16)
+
+    # E4-dep
+    passer_player_id: str | None = None
+    passer_player_name: str | None = None
+    receiver_player_id: str | None = None
+    receiver_player_name: str | None = None
+    rusher_player_id: str | None = None
+    rusher_player_name: str | None = None
+    yards_after_catch: int | None = None
+    complete_pass: bool | None = None
+    incomplete_pass: bool | None = None
 
 
 class TeamPhaseWeekly(BaseModel):
@@ -163,6 +175,38 @@ class TeamPhaseWeekly(BaseModel):
     rank: int | None = None
     percentile: float | None = None
     insufficient_sample: bool = False
+    updated_at: datetime | None = None
+
+
+class Player(BaseModel):
+    """Mirror of db/schema.ts `players`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    gsis_id: str
+    display_name: str
+    first_name: str | None = None
+    last_name: str | None = None
+    position: str | None = Field(default=None, max_length=3)
+    current_team: str | None = Field(default=None, max_length=3)
+    current_jersey_number: int | None = None
+    rookie_year: int | None = None
+    headshot_url: str | None = None
+    updated_at: datetime | None = None
+
+
+class RosterSnapshot(BaseModel):
+    """Mirror of db/schema.ts `roster_snapshots`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    gsis_id: str
+    season: int
+    team: str = Field(max_length=3)
+    jersey_number: int | None = None
+    position: str | None = Field(default=None, max_length=3)
+    display_name: str
+    headshot_url: str | None = None
     updated_at: datetime | None = None
 
 

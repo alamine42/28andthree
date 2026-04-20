@@ -1,6 +1,6 @@
 {
-  "id": "6f3da478-6a2e-4353-b725-c73d0b17218d",
-  "prevId": "e80601ce-3ee2-49ae-8259-71f9f89ebc75",
+  "id": "d44050db-8602-409c-bdcf-1c009827b84f",
+  "prevId": "13242b9b-38c3-4a13-a02b-1c7030c45c43",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -720,7 +720,7 @@
       "values": [
         "pass_offense",
         "rush_offense",
-        "overall_offense",
+        "overall",
         "pass_defense",
         "run_defense",
         "redzone_offense",

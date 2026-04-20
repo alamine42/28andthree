@@ -28,8 +28,19 @@ import psycopg
 
 from etl.constants import CONCURRENT_ETL_LOCK_ID
 from etl.freshness import FreshnessResult, check_freshness, now_utc
-from etl.ingest.nflverse import fetch_pbp, fetch_schedules, normalize_games, normalize_plays
+from etl.ingest.nflverse import (
+    compute_participation_coverage,
+    fetch_pbp,
+    fetch_schedules,
+    normalize_games,
+    normalize_plays,
+)
+from etl.ingest.rosters import fetch_rosters, normalize_current_players, normalize_snapshots
 from etl.load.plays import upsert_games, upsert_plays
+from etl.load.players import upsert_players, upsert_roster_snapshots
+from etl.transform.qb_rollups import recompute_qb_season, recompute_qb_weekly
+from etl.transform.skill_rollups import recompute_skill_season, recompute_skill_weekly
+from etl.transform.unit_rollups import recompute_unit_rollups
 from etl.settings import EtlSettings
 from etl.transform.games_epa import recompute_games_epa
 from etl.transform.phases import recompute_season, recompute_weekly
@@ -166,10 +177,17 @@ def run_season(
     logger.info("fetch_start season=%d week=%s", season, week)
     pbp_df = fetch_pbp([season])
     sched_df = fetch_schedules([season])
+    roster_df = fetch_rosters([season])
+    coverage_df = compute_participation_coverage(pbp_df)
 
     games = normalize_games(sched_df)
     plays = normalize_plays(pbp_df)
-    logger.info("fetch_done season=%d plays=%d games=%d", season, len(plays), len(games))
+    current_players = normalize_current_players(roster_df)
+    snapshots = normalize_snapshots(roster_df)
+    logger.info(
+        "fetch_done season=%d plays=%d games=%d players=%d snapshots=%d",
+        season, len(plays), len(games), len(current_players), len(snapshots),
+    )
 
     with psycopg.connect(settings.etl_database_url, autocommit=False) as conn:
         if not _acquire_run_lock(conn):
@@ -178,19 +196,40 @@ def run_season(
 
         games_written = upsert_games(conn, games)
         plays_written = upsert_plays(conn, plays)
+        players_written = upsert_players(conn, current_players)
+        snapshots_written = upsert_roster_snapshots(conn, snapshots)
+        # Participation coverage: UPDATE games rows with coverage fraction.
+        coverage_rows = coverage_df.to_dicts() if coverage_df.height > 0 else []
+        if coverage_rows:
+            with conn.cursor() as cur:
+                cur.executemany(
+                    "UPDATE games SET participation_coverage = %s WHERE game_id = %s",
+                    [(r["participation_coverage"], r["game_id"]) for r in coverage_rows],
+                )
         weeks_filter = [week] if week is not None else None
         weekly_written = recompute_weekly(conn, season=season, weeks=weeks_filter)
         season_written = recompute_season(conn, season=season)
-        # E3-15: denormalize per-game offensive EPA into games; feeds home-page
-        # Last-6-Games strip. Must come after plays are loaded.
         games_epa_written = recompute_games_epa(conn, season=season)
+        # E4: player + unit rollups. All depend on plays + games being loaded.
+        qb_weekly_written = recompute_qb_weekly(conn, season=season)
+        qb_season_written = recompute_qb_season(conn, season=season)
+        skill_weekly_written = recompute_skill_weekly(conn, season=season)
+        skill_season_written = recompute_skill_season(conn, season=season)
+        unit_written = recompute_unit_rollups(conn, season=season)
 
         row_counts = {
             "plays": plays_written,
             "games": games_written,
+            "players": players_written,
+            "roster_snapshots": snapshots_written,
             "team_phase_weekly": weekly_written,
             "team_phase_season": season_written,
             "games_epa_updated": games_epa_written,
+            "qb_weekly": qb_weekly_written,
+            "qb_season": qb_season_written,
+            "skill_weekly": skill_weekly_written,
+            "skill_season": skill_season_written,
+            "team_unit_rows": unit_written,
         }
         for phase_name in ("offense_base", "defense_base", "situational", "explosive_st"):
             logger.info(

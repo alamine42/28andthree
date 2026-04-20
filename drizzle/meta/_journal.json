@@ -43,6 +43,34 @@
       "when": 1776620100000,
       "tag": "0005_0005_e3_games_epa_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776691973078,
+      "tag": "0006_0006_e4_player_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776695090294,
+      "tag": "0007_0007_e4_complete_pass",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776695264409,
+      "tag": "0008_0008_e4_personnel_length",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776695500842,
+      "tag": "0009_0009_e4_personnel_96",
+      "breakpoints": true
     }
   ]
 }

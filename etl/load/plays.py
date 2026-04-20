@@ -28,6 +28,11 @@ _PLAYS_WRITE_COLUMNS: tuple[str, ...] = (
     "score_differential", "game_seconds_remaining",
     "posteam_timeouts_remaining", "defteam_timeouts_remaining",
     "roof", "surface",
+    # E4 additions
+    "passer_player_id", "passer_player_name",
+    "receiver_player_id", "receiver_player_name",
+    "rusher_player_id", "rusher_player_name",
+    "yards_after_catch", "complete_pass", "incomplete_pass",
 )
 
 _GAMES_WRITE_COLUMNS: tuple[str, ...] = (

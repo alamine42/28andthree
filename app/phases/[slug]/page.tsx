@@ -12,6 +12,8 @@ import { MetricValue, RankNumber } from '@/components/numeric';
 import { formatEpa, formatPercent } from '@/lib/format/number';
 import { TrendChart } from '@/components/charts/TrendChart';
 import { DistributionPlot } from '@/components/charts/DistributionPlot';
+import { TopContributorCard } from '@/components/TopContributorCard';
+import { getTopContributors } from '@/lib/data/contributors';
 
 export const revalidate = 3600;
 
@@ -29,10 +31,11 @@ export default async function PhaseDetailPage({ params }: { params: Params }) {
   const phase = slug as Phase;
   const season = await getCurrentSeason();
 
-  const [detail, trend, distribution] = await Promise.all([
+  const [detail, trend, distribution, contributors] = await Promise.all([
     getPhaseDetail(phase, 'NE', season),
     getPhaseWeeklyTrend(phase, 'NE', season),
     getLeagueDistribution(phase, season),
+    getTopContributors(phase, 'NE', season, 3),
   ]);
 
   if (!detail) notFound();
@@ -99,7 +102,20 @@ export default async function PhaseDetailPage({ params }: { params: Params }) {
         <DistributionPlot rows={distribution} highlightTeam="NE" phaseLabel={display} />
       </section>
 
-      <TopContributorsPlaceholder />
+      <section className="flex flex-col gap-4">
+        <h2 className="font-mono text-2xs uppercase tracking-widest text-text-muted">
+          Top contributors
+        </h2>
+        {contributors.length === 0 ? (
+          <p className="text-text-muted">No contributor data yet.</p>
+        ) : (
+          <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
+            {contributors.map((c, i) => (
+              <TopContributorCard key={c.gsisId || `unit-${i}`} card={c} />
+            ))}
+          </div>
+        )}
+      </section>
     </section>
   );
 }
@@ -127,16 +143,3 @@ function HairlineCell({ label, children }: { label: string; children: React.Reac
   );
 }
 
-function TopContributorsPlaceholder() {
-  return (
-    <section className="flex flex-col gap-3 rounded-md border border-dashed border-border p-6">
-      <h2 className="font-mono text-2xs uppercase tracking-widest text-text-muted">
-        Top contributors
-      </h2>
-      <p className="max-w-prose text-base text-text">
-        Requires player aggregates. Coming in Sprint 4 with QB, skill, and unit
-        deep dives.
-      </p>
-    </section>
-  );
-}

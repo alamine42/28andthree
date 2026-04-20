@@ -33,6 +33,12 @@ _REQUIRED_PLAY_COLUMNS: Final[tuple[str, ...]] = (
     "qb_dropback", "qb_kneel", "qb_spike", "two_point_attempt",
     "pass_attempt", "rush_attempt", "pass_length", "air_yards",
     "special_teams_play",
+    # E4 player IDs — populated from base PBP, not participation
+    "passer_player_id", "passer_player_name",
+    "receiver_player_id", "receiver_player_name",
+    "rusher_player_id", "rusher_player_name",
+    "yards_after_catch",
+    "complete_pass", "incomplete_pass",
     # E4-dep
     "qb_hit", "sack", "was_pressure", "number_of_pass_rushers",
     # E5-dep
@@ -63,6 +69,7 @@ _BOOLEAN_PLAY_COLUMNS: Final[tuple[str, ...]] = (
     "qb_hit", "sack", "was_pressure",
     "shotgun", "no_huddle", "pre_snap_motion", "play_action",
     "special_teams_play",
+    "complete_pass", "incomplete_pass",
 )
 
 
@@ -93,15 +100,81 @@ def _cast_booleans(df: pl.DataFrame) -> pl.DataFrame:
 
 def fetch_pbp(seasons: Iterable[int]) -> pl.DataFrame:
     """Fetch league-wide PBP for the given seasons via nflreadpy. Subset to
-    the columns in `_REQUIRED_PLAY_COLUMNS` that are actually present."""
+    the columns in `_REQUIRED_PLAY_COLUMNS` that are actually present.
+
+    E4-00a: also joins participation data to populate was_pressure,
+    defenders_in_box, personnel groupings, pre_snap_motion, play_action.
+    """
     import nflreadpy  # lazy: nflreadpy imports polars + pyarrow eagerly
 
     seasons = tuple(seasons)
     pbp = nflreadpy.load_pbp(seasons=seasons)
-    # nflreadpy returns polars; subset to the columns we need (intersected
-    # with what the release actually exposes — defensive against schema drift).
+    part = _load_participation_safe(seasons)
+    if part is not None:
+        pbp = _join_participation(pbp, part)
     available = tuple(c for c in _REQUIRED_PLAY_COLUMNS if c in pbp.columns)
     return _cast_booleans(pbp.select(available))
+
+
+def _load_participation_safe(seasons: tuple[int, ...]) -> pl.DataFrame | None:
+    """Participation data is optional — coverage is "spotty" per SPEC §3.3.
+    If nflreadpy doesn't have it (API change, release lag), return None so
+    the ETL continues with base PBP only. Contract test #22 will flag any
+    downstream stats that silently depend on this data."""
+    import nflreadpy
+    try:
+        return nflreadpy.load_participation(seasons=seasons)
+    except Exception:  # noqa: BLE001 - defensive: any participation error degrades gracefully
+        return None
+
+
+def _join_participation(pbp: pl.DataFrame, part: pl.DataFrame) -> pl.DataFrame:
+    """Left-join participation onto PBP, preferring participation-sourced
+    columns when both PBP and participation report the same field."""
+    keep = [
+        c for c in (
+            "nflverse_game_id", "play_id", "was_pressure", "number_of_pass_rushers",
+            "defenders_in_box", "offense_personnel", "defense_personnel",
+            "offense_players", "defense_players",
+        )
+        if c in part.columns
+    ]
+    if not keep or "nflverse_game_id" not in part.columns:
+        return pbp
+    part_slim = part.select(keep).rename({"nflverse_game_id": "game_id"})
+    # Drop PBP columns we intend to overwrite, then left-join.
+    overlap = [
+        c for c in ("was_pressure", "number_of_pass_rushers", "defenders_in_box",
+                    "offense_personnel", "defense_personnel")
+        if c in pbp.columns and c in part_slim.columns
+    ]
+    if overlap:
+        pbp = pbp.drop(overlap)
+    # PBP's play_id is f64 (float-with-NaN legacy); participation ships it as
+    # i32. Cast both to i64 before the join so polars doesn't refuse.
+    pbp = pbp.with_columns(pl.col("play_id").cast(pl.Int64))
+    part_slim = part_slim.with_columns(pl.col("play_id").cast(pl.Int64))
+    return pbp.join(part_slim, on=["game_id", "play_id"], how="left")
+
+
+def compute_participation_coverage(pbp: pl.DataFrame) -> pl.DataFrame:
+    """Compute per-game participation_coverage: fraction of plays with a
+    non-null `was_pressure` or `offense_personnel`. Returns DF keyed by
+    game_id; upserted into games.participation_coverage by the load step.
+    """
+    if "was_pressure" not in pbp.columns and "offense_personnel" not in pbp.columns:
+        return pl.DataFrame({"game_id": [], "participation_coverage": []})
+    signal_col = "was_pressure" if "was_pressure" in pbp.columns else "offense_personnel"
+    # Only count plays where a player was on the field (has a passer or rusher).
+    relevant = pbp.filter(
+        pl.col("passer_player_id").is_not_null() | pl.col("rusher_player_id").is_not_null()
+    )
+    if relevant.height == 0:
+        return pl.DataFrame({"game_id": [], "participation_coverage": []})
+    return relevant.group_by("game_id").agg(
+        (pl.col(signal_col).is_not_null().sum() / pl.len())
+        .alias("participation_coverage")
+    )
 
 
 def fetch_schedules(seasons: Iterable[int]) -> pl.DataFrame:
