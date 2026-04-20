@@ -55,7 +55,7 @@ export function RosterBrowser({ roster }: Props) {
               aria-pressed={active}
               onClick={() => setCategory(chip.value)}
               className={
-                'whitespace-nowrap rounded-sm border px-3 py-1.5 font-mono text-2xs uppercase tracking-widest transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive ' +
+                'inline-flex min-h-[44px] items-center whitespace-nowrap rounded-sm border px-4 font-mono text-2xs uppercase tracking-widest transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive ' +
                 (active
                   ? 'border-positive bg-surface text-text'
                   : 'border-border bg-bg text-text-muted hover:text-text')
