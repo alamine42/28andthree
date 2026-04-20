@@ -33,6 +33,9 @@ const serverSchema = z.object({
   // Vercel injects this. Used to gate /status/data to preview-only for the
   // first 30 days post-E2 per plan §3.9.
   VERCEL_ENV: z.enum(['development', 'preview', 'production']).optional(),
+
+  // Shared secret for /api/revalidate (E3-10). Constant-time compare.
+  REVALIDATE_TOKEN: z.string().min(16).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;

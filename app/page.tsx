@@ -1,41 +1,62 @@
-const UPCOMING = [
-  { label: 'Team + phase pages', eta: 'Sprint 3' },
-  { label: 'Player deep dives', eta: 'Sprint 4' },
-  { label: 'Draft ROI', eta: 'Sprint 5' },
-  { label: 'Coaching tendencies', eta: 'Sprint 5' },
-] as const;
+import { HeroStats } from '@/components/HeroStats';
+import { PhaseGrid } from '@/components/PhaseGrid';
+import { WeekResultsStrip } from '@/components/WeekResultsStrip';
+import { getCurrentSeason } from '@/lib/data/current-season';
+import { getPatsPhaseSparklines, getPhaseRankSnapshot } from '@/lib/data/phases';
+import { getRecentGames, getTeamSeasonOverview } from '@/lib/data/team';
 
-export default function HomePage() {
+// Fallback TTL if on-demand revalidation misses (one hour — plan §3.2).
+export const revalidate = 3600;
+
+const TEAM = 'NE' as const;
+
+export default async function HomePage() {
+  const season = await getCurrentSeason();
+
+  const [overview, snapshot, sparklines, games] = await Promise.all([
+    getTeamSeasonOverview(TEAM, season),
+    getPhaseRankSnapshot(TEAM, season),
+    getPatsPhaseSparklines(TEAM, season),
+    getRecentGames(TEAM, season, 6),
+  ]);
+
+  const eyebrow = buildEyebrow(season, snapshot);
+
   return (
-    <section className="flex flex-col gap-16 py-16 md:gap-24 md:py-24 lg:py-32">
-      <div className="flex flex-col gap-5">
-        <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">
-          Season starts soon
+    <section className="flex flex-col gap-16 py-16 md:gap-24 md:py-24">
+      <header className="flex flex-col gap-5">
+        <p
+          className="font-mono text-2xs uppercase tracking-widest text-text-muted"
+          data-testid="season-eyebrow"
+        >
+          {eyebrow}
         </p>
-        <h1 className="max-w-5xl font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display lg:text-hero">
-          Something worth reading twice.
+        <h1 className="max-w-4xl font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
+          New England, 2025 in one page.
         </h1>
         <p className="max-w-prose text-base text-text-muted md:text-lg">
-          Advanced analytics for the New England Patriots — team phases, player deep dives, draft
-          ROI, and coaching tendencies. Built for fans who read the box score twice.
+          League rank across every phase of play. Weekly trend, recent results, and
+          where the Pats sit in the 32-team distribution. Advanced analytics for
+          fans who read the box score twice.
         </p>
-      </div>
+      </header>
 
-      <div className="flex flex-col gap-5">
-        <h2 className="font-mono text-2xs uppercase tracking-widest text-text-muted">
-          Shipping this season
-        </h2>
-        <ul className="grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-          {UPCOMING.map((item) => (
-            <li key={item.label} className="flex flex-col gap-1 bg-bg p-4 md:p-6">
-              <span className="font-mono text-2xs uppercase tracking-widest text-text-muted">
-                {item.eta}
-              </span>
-              <span className="text-base text-text">{item.label}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <HeroStats overview={overview} />
+
+      <PhaseGrid snapshot={snapshot} sparklines={sparklines} />
+
+      <WeekResultsStrip games={games} />
     </section>
   );
+}
+
+function buildEyebrow(
+  season: number,
+  snapshot: ReadonlyArray<{ plays: number }>,
+): string {
+  // If the season rollup has meaningful data (any phase has >=100 plays), we
+  // call the season "final"; otherwise it's still in progress.
+  const meaningfulPlays = snapshot.some((s) => s.plays >= 100);
+  const label = meaningfulPlays ? 'FINAL' : 'IN PROGRESS';
+  return `${season} SEASON · ${label}`;
 }

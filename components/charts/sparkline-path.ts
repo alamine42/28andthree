@@ -56,8 +56,8 @@ export function buildSparklinePath(
 
   return segments
     .map((seg) => {
-      if (seg.length === 0) return '';
       const [head, ...rest] = seg;
+      if (head === undefined) return '';
       const start = `M${fmt(head.x)},${fmt(head.y)}`;
       const lines = rest.map((p) => `L${fmt(p.x)},${fmt(p.y)}`).join('');
       return start + lines;

@@ -1,0 +1,123 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { isValidPhase, type Phase } from '@/lib/constants/phases';
+import { phaseDisplayName } from '@/lib/format/phase';
+import { getCurrentSeason } from '@/lib/data/current-season';
+import {
+  getLeagueDistribution,
+  getPhaseDetail,
+  getPhaseWeeklyTrend,
+} from '@/lib/data/phases';
+import { MetricValue, RankNumber } from '@/components/numeric';
+import { formatEpa, formatPercent } from '@/lib/format/number';
+import { TrendChart } from '@/components/charts/TrendChart';
+import { DistributionPlot } from '@/components/charts/DistributionPlot';
+
+export const revalidate = 3600;
+
+type Params = Promise<{ slug: string }>;
+
+export async function generateStaticParams() {
+  // Pre-render the 12 known phases for SSG path hints.
+  const { PHASES } = await import('@/lib/constants/phases');
+  return PHASES.map((slug) => ({ slug }));
+}
+
+export default async function PhaseDetailPage({ params }: { params: Params }) {
+  const { slug } = await params;
+  if (!isValidPhase(slug)) notFound();
+  const phase = slug as Phase;
+  const season = await getCurrentSeason();
+
+  const [detail, trend, distribution] = await Promise.all([
+    getPhaseDetail(phase, 'NE', season),
+    getPhaseWeeklyTrend(phase, 'NE', season),
+    getLeagueDistribution(phase, season),
+  ]);
+
+  if (!detail) notFound();
+
+  const display = phaseDisplayName(phase);
+
+  return (
+    <section className="flex flex-col gap-16 py-12 md:gap-20 md:py-16">
+      <nav aria-label="Breadcrumb" className="font-mono text-2xs uppercase tracking-widest text-text-muted">
+        <Link href="/" className="hover:text-text">Season overview</Link>
+        <span className="mx-2 text-text-dim">/</span>
+        <span className="text-text">{display}</span>
+      </nav>
+
+      <header className="flex flex-col gap-3">
+        <h1 className="font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
+          {display}
+        </h1>
+        <p className="font-mono text-xs text-text-muted">
+          EPA per play · regular season {season}
+          {detail.totalQualified !== 32 ? (
+            <span className="ml-2 text-text-dim">
+              of {detail.totalQualified} qualified teams
+            </span>
+          ) : null}
+        </p>
+      </header>
+
+      <dl
+        className="grid gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-3"
+        data-testid="phase-rank-card"
+      >
+        <HairlineCell label="Rank">
+          <RankNumber rank={detail.rank} className="text-display leading-none" />
+        </HairlineCell>
+        <HairlineCell label="EPA / play">
+          <p className="font-display text-3xl font-bold tracking-tighter text-text md:text-display">
+            <MetricValue value={detail.epaPerPlay} format={formatEpa} />
+          </p>
+        </HairlineCell>
+        <HairlineCell label="Success rate">
+          <p className="font-display text-3xl font-bold tracking-tighter text-text md:text-display">
+            <MetricValue value={detail.successRate} format={formatPercent} />
+          </p>
+        </HairlineCell>
+      </dl>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="font-mono text-2xs uppercase tracking-widest text-text-muted">
+          Weekly trend
+        </h2>
+        <TrendChart points={trend} phaseLabel={display} />
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="font-mono text-2xs uppercase tracking-widest text-text-muted">
+          League distribution
+        </h2>
+        <DistributionPlot rows={distribution} highlightTeam="NE" phaseLabel={display} />
+      </section>
+
+      <TopContributorsPlaceholder />
+    </section>
+  );
+}
+
+function HairlineCell({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2 bg-bg p-6 md:p-8">
+      <dt className="font-mono text-2xs uppercase tracking-widest text-text-muted">{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
+function TopContributorsPlaceholder() {
+  return (
+    <section className="flex flex-col gap-3 rounded-md border border-dashed border-border p-6">
+      <h2 className="font-mono text-2xs uppercase tracking-widest text-text-muted">
+        Top contributors
+      </h2>
+      <p className="max-w-prose text-base text-text">
+        Requires player aggregates. Coming in Sprint 4 with QB, skill, and unit
+        deep dives.
+      </p>
+    </section>
+  );
+}

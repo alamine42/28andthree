@@ -99,3 +99,19 @@ jobs:
         env:
           TEST_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
         run: uv run --project etl pytest etl/tests/test_contracts.py --tb=short
+
+      - name: Revalidate ISR cache
+        if: ${{ success() && github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && inputs.mode != 'freshness-gate' && inputs.mode != 'heartbeat') }}
+        env:
+          REVALIDATE_TOKEN: ${{ secrets.REVALIDATE_TOKEN }}
+        run: |
+          if [ -z "$REVALIDATE_TOKEN" ]; then
+            echo "REVALIDATE_TOKEN not set — skipping cache flush (pages will self-heal within 1h via ISR TTL)."
+            exit 0
+          fi
+          # Empty paths array → endpoint revalidates the full allowlist
+          # (lib/revalidation/tags.ts). Single source of truth stays in TS.
+          curl -fsS -X POST https://28andthree.com/api/revalidate \
+            -H "x-revalidate-token: $REVALIDATE_TOKEN" \
+            -H "content-type: application/json" \
+            -d '{"paths":[]}'
