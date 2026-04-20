@@ -5,15 +5,15 @@ import type { Route } from 'next';
 import { useEffect, useId, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
-// Top nav links for the header. Team = home; Players = E7 hub. Phases, Draft,
-// and Coaching remain '/' placeholders until their index pages land (E5/E6).
+// Top nav links for the header. Team = home; Players = E7 hub; Draft + Coaching
+// = E5 pages. Phases has no index yet (all phase content lives on /phases/[slug]).
 type NavLink = { label: string; href: Route };
 const NAV_LINKS: ReadonlyArray<NavLink> = [
   { label: 'Team', href: '/' as Route },
   { label: 'Phases', href: '/' as Route },
   { label: 'Players', href: '/players' as Route },
-  { label: 'Draft', href: '/' as Route },
-  { label: 'Coaching', href: '/' as Route },
+  { label: 'Draft', href: '/draft-roi' as Route },
+  { label: 'Coaching', href: '/coaching' as Route },
 ];
 
 function Wordmark() {

@@ -10,6 +10,8 @@ const QB_ID = process.env.E4_TEST_QB_ID ?? '00-0039851';
 const ROUTES = [
   '/',
   '/players',
+  '/draft-roi',
+  '/coaching',
   '/phases/pass_offense',
   `/players/qb/${QB_ID}`,
   '/team/units/defense',

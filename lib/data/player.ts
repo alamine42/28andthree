@@ -199,7 +199,31 @@ export async function getSkillUsage(
   const where = [eq(skillSeason.gsisId, gsisId), eq(skillSeason.season, opts.season)];
   if (opts.team) where.push(eq(skillSeason.team, opts.team));
 
-  const [s] = await db.select().from(skillSeason).where(and(...where)).limit(1);
+  // Explicit column list: the E5-04a migration adds epaReceiving/epaRushing
+  // which the skill page doesn't consume yet. Listing only what we need
+  // keeps the build green pre-migration.
+  const [s] = await db
+    .select({
+      season: skillSeason.season,
+      team: skillSeason.team,
+      position: skillSeason.position,
+      gamesPlayed: skillSeason.gamesPlayed,
+      targets: skillSeason.targets,
+      receptions: skillSeason.receptions,
+      yardsReceiving: skillSeason.yardsReceiving,
+      yacTotal: skillSeason.yacTotal,
+      yacPerReception: skillSeason.yacPerReception,
+      targetShare: skillSeason.targetShare,
+      adotOnTargets: skillSeason.adotOnTargets,
+      redzoneTargets: skillSeason.redzoneTargets,
+      redzoneReceptions: skillSeason.redzoneReceptions,
+      carries: skillSeason.carries,
+      yardsRushing: skillSeason.yardsRushing,
+      ypc: skillSeason.ypc,
+    })
+    .from(skillSeason)
+    .where(and(...where))
+    .limit(1);
   if (!s) return null;
 
   const weeklyWhere = [eq(skillWeekly.gsisId, gsisId), eq(skillWeekly.season, opts.season)];

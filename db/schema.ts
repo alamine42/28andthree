@@ -144,8 +144,8 @@ export const plays = pgTable(
     noHuddle: boolean('no_huddle'),
     preSnapMotion: boolean('pre_snap_motion'),
     playAction: boolean('play_action'),
-    personnelOffense: varchar('personnel_offense', { length: 96 }),
-    personnelDefense: varchar('personnel_defense', { length: 96 }),
+    personnelOffense: varchar('personnel_offense', { length: 128 }),
+    personnelDefense: varchar('personnel_defense', { length: 128 }),
     defendersInBox: smallint('defenders_in_box'),
     // E5-nfl4th-dep
     scoreDifferential: smallint('score_differential'),
@@ -376,6 +376,11 @@ export const skillWeekly = pgTable(
     carries: smallint('carries'),
     yardsRushing: smallint('yards_rushing'),
     ypc: doublePrecision('ypc'),
+    // E5-04a: per-player EPA attribution so Draft ROI grading has a real
+    // actual-value to compare against slot-EV. Summed in the skill rollup
+    // transform over plays where the player was the receiver / rusher.
+    epaReceiving: doublePrecision('epa_receiving'),
+    epaRushing: doublePrecision('epa_rushing'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -409,6 +414,9 @@ export const skillSeason = pgTable(
     carries: integer('carries'),
     yardsRushing: integer('yards_rushing'),
     ypc: doublePrecision('ypc'),
+    // E5-04a: season-summed EPA for Draft ROI grading.
+    epaReceiving: doublePrecision('epa_receiving'),
+    epaRushing: doublePrecision('epa_rushing'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -507,3 +515,129 @@ export const teamDlSeason = pgTable(
   },
   (table) => [uniqueIndex('team_dl_season_unique').on(table.team, table.season)],
 );
+
+// =============================================================================
+// E5: Pats Differentiators — draft ROI + coaching tendencies
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// draft_picks — Pats picks 2021..current. gsis_id nullable for trade-out
+// slots where the pick was traded away (no resulting NE player).
+// See docs/plans/e5-pats-differentiators-plan.md §3.1 + review finding #5.
+// -----------------------------------------------------------------------------
+export const draftPicks = pgTable(
+  'draft_picks',
+  {
+    draftSeason: smallint('draft_season').notNull(),
+    round: smallint('round').notNull(),
+    pickOverall: smallint('pick_overall').notNull(),
+    gsisId: text('gsis_id').references(() => players.gsisId), // nullable (trade-out)
+    position: varchar('position', { length: 3 }),             // nullable (trade-out)
+    tradedTo: varchar('traded_to', { length: 3 }),            // NULL when the Pats kept the pick
+    playerName: text('player_name'),                          // display name cached at seed time
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.draftSeason, table.pickOverall] }),
+  ],
+);
+
+export type DraftPick = typeof draftPicks.$inferSelect;
+
+// -----------------------------------------------------------------------------
+// draft_outcomes_historical — league-wide draft results 2015–2024 used to
+// fit the slot-expected-value curve. `career_epa` is NULL when the player's
+// career ended before our PBP window (pre-2020); `career_seasons` is the
+// longevity-proxy fallback in that case.
+// -----------------------------------------------------------------------------
+export const draftOutcomesHistorical = pgTable(
+  'draft_outcomes_historical',
+  {
+    draftSeason: smallint('draft_season').notNull(),
+    pickOverall: smallint('pick_overall').notNull(),
+    gsisId: text('gsis_id'),                                  // nullable when feed can't resolve
+    position: varchar('position', { length: 3 }),
+    team: varchar('team', { length: 3 }),                     // team that drafted
+    careerEpa: doublePrecision('career_epa'),                 // nullable
+    careerSeasons: smallint('career_seasons'),                // longevity proxy
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.draftSeason, table.pickOverall] }),
+  ],
+);
+
+// -----------------------------------------------------------------------------
+// draft_expected_value — the fitted slot-EV curve. One row per
+// (slot, position_bucket); emits ~260 slots × 6 buckets = 1,560 rows.
+// PK composite per review finding #1.
+// -----------------------------------------------------------------------------
+export const draftExpectedValue = pgTable(
+  'draft_expected_value',
+  {
+    pickOverall: smallint('pick_overall').notNull(),
+    positionBucket: varchar('position_bucket', { length: 10 }).notNull(), // QB | OFF_SKILL | OL | DL | LB | DB
+    expectedValue: doublePrecision('expected_value').notNull(),
+    fitVersion: smallint('fit_version').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.pickOverall, table.positionBucket] }),
+  ],
+);
+
+export type DraftExpectedValue = typeof draftExpectedValue.$inferSelect;
+
+// -----------------------------------------------------------------------------
+// coaching_tendencies_weekly — one row per (team, season, week, coach_role).
+// Wide table; all metric columns nullable because different roles report
+// different subsets (HC/OC: offensive metrics; DC: blitz + defensive).
+// See plan §3.1.
+// -----------------------------------------------------------------------------
+export const coachingTendenciesWeekly = pgTable(
+  'coaching_tendencies_weekly',
+  {
+    team: varchar('team', { length: 3 }).notNull(),
+    season: smallint('season').notNull(),
+    week: smallint('week').notNull(),
+    coachRole: varchar('coach_role', { length: 3 }).notNull(), // HC | OC | DC
+    coachId: text('coach_id'),                                  // stable id from nflreadpy; nullable
+    coachName: text('coach_name').notNull(),                    // display fallback
+    // Down × distance-bucket pass rates (6 cells)
+    passRate1Short: doublePrecision('pass_rate_1_short'),
+    passRate1Mid: doublePrecision('pass_rate_1_mid'),
+    passRate1Long: doublePrecision('pass_rate_1_long'),
+    passRate2Short: doublePrecision('pass_rate_2_short'),
+    passRate2Mid: doublePrecision('pass_rate_2_mid'),
+    passRate2Long: doublePrecision('pass_rate_2_long'),
+    passRate3Short: doublePrecision('pass_rate_3_short'),
+    passRate3Mid: doublePrecision('pass_rate_3_mid'),
+    passRate3Long: doublePrecision('pass_rate_3_long'),
+    // Situational
+    shotgunRate: doublePrecision('shotgun_rate'),
+    playActionRate: doublePrecision('play_action_rate'),
+    motionRate: doublePrecision('motion_rate'),
+    noHuddleRate: doublePrecision('no_huddle_rate'),
+    // Score-state pass rates (5 cells)
+    scoreLeadingBigPassRate: doublePrecision('score_leading_big_pass_rate'),
+    scoreLeadingSmallPassRate: doublePrecision('score_leading_small_pass_rate'),
+    scoreTiedPassRate: doublePrecision('score_tied_pass_rate'),
+    scoreTrailingSmallPassRate: doublePrecision('score_trailing_small_pass_rate'),
+    scoreTrailingBigPassRate: doublePrecision('score_trailing_big_pass_rate'),
+    // Tempo + personnel
+    secondsPerSnap: doublePrecision('seconds_per_snap'),
+    personnelTopGroups: jsonb('personnel_top_groups'), // [{grouping: '11', share: 0.64}, ...]
+    // Defensive-only
+    blitzRate: doublePrecision('blitz_rate'),          // NULL for HC/OC rows
+    // 4th-down (Pats only; league context via a reference line)
+    fourthDownDecisions: jsonb('fourth_down_decisions'), // [{week, wpBoostGo, wentForIt, goRecommended, result}, ...]
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.team, table.season, table.week, table.coachRole] }),
+    check('coach_role_chk', sql`${table.coachRole} IN ('HC', 'OC', 'DC')`),
+  ],
+);
+
+export type CoachingTendencyWeekly = typeof coachingTendenciesWeekly.$inferSelect;
+

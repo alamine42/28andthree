@@ -71,6 +71,13 @@
       "when": 1776695500842,
       "tag": "0009_0009_e4_personnel_96",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776710294064,
+      "tag": "0010_elite_genesis",
+      "breakpoints": true
     }
   ]
 }

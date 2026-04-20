@@ -8,7 +8,14 @@ import { PHASES } from '../../lib/constants/phases';
 const BAD_NUMBER = /\bNaN\b|\bundefined\b|\bnull\b|^0\.0+$|^-?\.?Infinity$/;
 const EM_DASH = '\u2014';
 
-const ROUTES = ['/', '/players', '/status', ...PHASES.map((p) => `/phases/${p}`)];
+const ROUTES = [
+  '/',
+  '/players',
+  '/draft-roi',
+  '/coaching',
+  '/status',
+  ...PHASES.map((p) => `/phases/${p}`),
+];
 
 test.describe('no-bad-numbers crawler', () => {
   for (const route of ROUTES) {

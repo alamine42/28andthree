@@ -9,6 +9,8 @@ import { PHASES } from '@/lib/constants/phases';
 export const REVALIDATE_PATHS: readonly string[] = [
   '/',
   '/players',
+  '/draft-roi',
+  '/coaching',
   ...PHASES.map((p) => `/phases/${p}`),
 ];
 
