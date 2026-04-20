@@ -1,6 +1,7 @@
 import { getCurrentSeason } from '@/lib/data/current-season';
-import { getDraftClassSummary, getDraftRoiByClass } from '@/lib/data/draft';
+import { type DraftClassSummary, type DraftRoiRow, getDraftRoiByClass } from '@/lib/data/draft';
 import { ClassTable } from '@/components/draft/ClassTable';
+import { DraftClassStrip } from '@/components/draft/DraftClassStrip';
 
 export const revalidate = 3600;
 
@@ -9,14 +10,18 @@ const DRAFT_CLASS_YEARS: readonly number[] = [2025, 2024, 2023, 2022, 2021];
 export default async function DraftRoiPage() {
   const currentSeason = await getCurrentSeason();
   const classes = await Promise.all(
-    DRAFT_CLASS_YEARS.map(async (year) => ({
-      year,
-      rows: await getDraftRoiByClass(year, currentSeason),
-      summary: await getDraftClassSummary(year, currentSeason),
-    })),
+    DRAFT_CLASS_YEARS.map(async (year) => {
+      const rows = await getDraftRoiByClass(year, currentSeason);
+      return { year, rows, summary: summarize(rows) };
+    }),
   );
 
   const anyData = classes.some((c) => c.rows.length > 0);
+  const stripData = classes.map((c) => ({
+    year: c.year,
+    total: c.rows.length,
+    summary: c.summary,
+  }));
 
   return (
     <section className="flex flex-col gap-12 py-12 md:gap-16 md:py-16">
@@ -40,25 +45,24 @@ export default async function DraftRoiPage() {
       </header>
 
       {!anyData ? (
-        <p
-          data-testid="draft-empty-state"
-          className="max-w-prose font-mono text-2xs uppercase tracking-widest text-text-muted"
-        >
-          Draft data unavailable — check back after the next ETL run.
-        </p>
+        <DraftEmptyState />
       ) : (
-        <div className="flex flex-col gap-14">
-          {classes.map(({ year, rows, summary }) =>
-            rows.length > 0 ? (
-              <ClassTable
-                key={year}
-                draftSeason={year}
-                rows={rows}
-                summary={summary}
-              />
-            ) : null,
-          )}
-        </div>
+        <>
+          <DraftClassStrip classes={stripData} />
+
+          <div className="flex flex-col gap-14">
+            {classes.map(({ year, rows, summary }) =>
+              rows.length > 0 ? (
+                <ClassTable
+                  key={year}
+                  draftSeason={year}
+                  rows={rows}
+                  summary={summary}
+                />
+              ) : null,
+            )}
+          </div>
+        </>
       )}
 
       <aside
@@ -73,7 +77,7 @@ export default async function DraftRoiPage() {
           PENDING for sub-2-season picks and K/P/LS.{' '}
           <a
             href="/methodology#draft-grade"
-            className="text-positive underline underline-offset-2"
+            className="text-positive underline underline-offset-2 hover:text-text"
           >
             Full methodology
           </a>
@@ -81,5 +85,38 @@ export default async function DraftRoiPage() {
         </p>
       </aside>
     </section>
+  );
+}
+
+function summarize(rows: ReadonlyArray<DraftRoiRow>): DraftClassSummary {
+  const counts: DraftClassSummary = { hit: 0, fair: 0, miss: 0, pending: 0 };
+  for (const r of rows) {
+    if (r.grade === 'HIT') counts.hit++;
+    else if (r.grade === 'FAIR') counts.fair++;
+    else if (r.grade === 'MISS') counts.miss++;
+    else counts.pending++;
+  }
+  return counts;
+}
+
+function DraftEmptyState() {
+  return (
+    <div
+      data-testid="draft-empty-state"
+      className="flex flex-col items-start gap-4 rounded-md border border-border bg-surface px-6 py-8 md:px-8 md:py-10"
+    >
+      <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">
+        DRAFT DATA — AWAITING ETL
+      </p>
+      <p className="max-w-prose text-base text-text md:text-lg">
+        The slot-expected-value curve and the Pats pick roster haven&rsquo;t
+        landed yet. Once the ingest runs, each draft class renders as a
+        HIT&thinsp;/&thinsp;FAIR&thinsp;/&thinsp;MISS table with actual vs.
+        expected contribution.
+      </p>
+      <p className="font-mono text-xs text-text-muted">
+        Next ETL: Tuesday 14:00 UTC · docs/runbook.md#etl-rollback
+      </p>
+    </div>
   );
 }

@@ -84,21 +84,6 @@ export async function getDraftRoiByClass(
   });
 }
 
-export async function getDraftClassSummary(
-  draftSeason: number,
-  currentSeason: number,
-): Promise<DraftClassSummary> {
-  const rows = await getDraftRoiByClass(draftSeason, currentSeason);
-  const counts: DraftClassSummary = { hit: 0, fair: 0, miss: 0, pending: 0 };
-  for (const r of rows) {
-    if (r.grade === 'HIT') counts.hit++;
-    else if (r.grade === 'FAIR') counts.fair++;
-    else if (r.grade === 'MISS') counts.miss++;
-    else counts.pending++;
-  }
-  return counts;
-}
-
 // ---- Internals -------------------------------------------------------------
 
 async function fetchActualValues(gsisIds: string[]): Promise<Map<string, number>> {

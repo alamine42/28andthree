@@ -19,80 +19,161 @@ const UNIT_PROXY_BUCKETS = new Set(['OL', 'DL', 'LB', 'DB']);
 export function ClassTable({ draftSeason, rows, summary }: Props) {
   return (
     <section
+      id={`class-${draftSeason}`}
       data-testid={`draft-class-${draftSeason}`}
-      className="flex flex-col gap-4"
+      className="flex scroll-mt-24 flex-col gap-4"
     >
-      <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border pb-3">
-        <h2 className="font-display text-2xl font-bold tracking-tightest text-text md:text-3xl">
-          {draftSeason} class
-        </h2>
+      <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border-strong pb-3">
+        <div className="flex items-baseline gap-3">
+          <h2 className="font-display text-2xl font-bold tracking-tightest text-text md:text-3xl">
+            {draftSeason} class
+          </h2>
+          <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">
+            {rows.length} {rows.length === 1 ? 'PICK' : 'PICKS'}
+          </p>
+        </div>
         <p
           data-testid={`draft-class-summary-${draftSeason}`}
-          className="font-mono text-2xs uppercase tracking-widest text-text-muted"
+          className="flex items-center gap-2 font-mono text-2xs uppercase tracking-widest"
         >
-          {summary.hit} HIT · {summary.fair} FAIR · {summary.miss} MISS
-          {summary.pending > 0 ? ` · ${summary.pending} PENDING` : ''}
+          <span className={summary.hit === 0 ? 'text-text-muted' : 'text-positive'}>
+            {summary.hit} HIT
+          </span>
+          <span className="text-text-muted">·</span>
+          <span className="text-text-muted">{summary.fair} FAIR</span>
+          <span className="text-text-muted">·</span>
+          <span className={summary.miss === 0 ? 'text-text-muted' : 'text-negative'}>
+            {summary.miss} MISS
+          </span>
+          {summary.pending > 0 ? (
+            <>
+              <span className="text-text-muted">·</span>
+              <span className="text-text-muted">{summary.pending} PENDING</span>
+            </>
+          ) : null}
         </p>
       </header>
 
       <ul className="flex flex-col">
         {rows.map((r) => (
-          <li
-            key={`${r.draftSeason}-${r.pickOverall}`}
-            data-testid={`draft-pick-${r.pickOverall}`}
-            className="grid grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-border py-3 last:border-b-0 md:grid-cols-[3rem_minmax(0,2fr)_3rem_minmax(0,1fr)_auto]"
-          >
-            <span className="font-mono text-xs text-text-muted tabular-nums">
-              #{r.pickOverall}
-            </span>
-            <span className="flex min-w-0 flex-col">
-              {r.gsisId && r.position ? (
-                <PlayerLink row={r} />
-              ) : (
-                <span className="truncate text-text-muted">
-                  {r.tradedTo ? `Traded to ${r.tradedTo}` : 'Unassigned'}
-                </span>
-              )}
-              <span className="font-mono text-2xs uppercase tracking-widest text-text-muted">
-                {r.position ?? '—'}
-                {r.tradedTo && r.gsisId ? ` · traded ${r.tradedTo}` : ''}
-              </span>
-            </span>
-            <span className="hidden font-mono text-2xs uppercase tracking-widest text-text-muted md:inline">
-              R{r.round}
-            </span>
-            <span className="hidden font-mono text-xs text-text-muted tabular-nums md:block">
-              {formatValuePair(r)}
-            </span>
-            <GradeBadge
-              grade={r.grade}
-              unitProxy={
-                r.position
-                  ? UNIT_PROXY_BUCKETS.has(bucketForPosition(r.position) ?? '')
-                  : false
-              }
-            />
-          </li>
+          <PickRow key={`${r.draftSeason}-${r.pickOverall}`} row={r} />
         ))}
       </ul>
     </section>
   );
 }
 
+function PickRow({ row: r }: { row: DraftRoiRow }) {
+  const bucket = r.position ? bucketForPosition(r.position) : null;
+  const unitProxy = bucket ? UNIT_PROXY_BUCKETS.has(bucket) : false;
+  const ratio = computeRatio(r.actualValue, r.expectedValue);
+  const ratioTitle =
+    ratio !== null && Math.abs(ratio) > 9.99
+      ? `Exact ratio ${ratio.toFixed(2)} (display clamped)`
+      : 'Actual value \u00F7 Slot-expected value';
+  return (
+    <li
+      data-testid={`draft-pick-${r.pickOverall}`}
+      className={`grid items-center gap-3 border-b border-border py-3 last:border-b-0 transition-colors hover:bg-surface ${ROW_GRID}`}
+    >
+      {/* Column 1: pick # — always visible; includes round on mobile */}
+      <span className="flex flex-col gap-0.5 font-mono text-xs text-text-muted tabular-nums">
+        <span className="text-text">#{r.pickOverall}</span>
+        <span className="text-2xs uppercase tracking-widest text-text-muted md:hidden">
+          R{r.round}
+        </span>
+      </span>
+
+      {/* Column 2: player name + position */}
+      <span className="flex min-w-0 flex-col">
+        {r.gsisId && r.position ? (
+          <PlayerLink row={r} />
+        ) : (
+          <span className="truncate text-text-muted">
+            {r.tradedTo ? `Traded to ${r.tradedTo}` : 'Unassigned'}
+          </span>
+        )}
+        <span className="font-mono text-2xs uppercase tracking-widest text-text-muted">
+          {r.position ?? '\u2014'}
+          {r.tradedTo && r.gsisId ? ` · traded ${r.tradedTo}` : ''}
+        </span>
+      </span>
+
+      {/* Column 3 (desktop only): round */}
+      <span className="hidden font-mono text-2xs uppercase tracking-widest text-text-muted md:inline">
+        R{r.round}
+      </span>
+
+      {/* Column 4 (desktop only): actual / expected pair */}
+      <span
+        className="hidden font-mono text-xs text-text-muted tabular-nums md:block"
+        title="Actual value / Slot-expected value"
+      >
+        {formatValuePair(r)}
+      </span>
+
+      {/* Column 5: ratio — compact on all breakpoints */}
+      <span
+        data-numeric="true"
+        className={`font-mono text-xs tabular-nums ${ratioToneClass(ratio)} justify-self-end`}
+        title={ratioTitle}
+      >
+        {formatRatio(ratio)}
+      </span>
+
+      {/* Column 6: grade badge */}
+      <GradeBadge grade={r.grade} unitProxy={unitProxy} />
+    </li>
+  );
+}
+
+// 6-col on desktop, 4-col on mobile (round folded into col 1; value pair hidden).
+const ROW_GRID =
+  'grid-cols-[3.25rem_minmax(0,1fr)_3rem_auto] md:grid-cols-[3.25rem_minmax(0,2fr)_2.5rem_minmax(0,1fr)_3.5rem_auto]';
+
 function PlayerLink({ row }: { row: DraftRoiRow }) {
-  if (!row.gsisId) return <span>{row.displayName ?? '—'}</span>;
+  if (!row.gsisId) return <span>{row.displayName ?? '\u2014'}</span>;
   const role = roleFor(row.position);
   const href = playerHref({ role, gsisId: row.gsisId });
   const label = row.displayName ?? row.gsisId;
   if (href === null) return <span className="truncate text-text">{label}</span>;
   return (
-    <Link href={href as Route} className="truncate font-display text-base font-bold text-text hover:text-positive">
+    <Link
+      href={href as Route}
+      className="truncate font-display text-base font-bold text-text transition-colors hover:text-positive focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
+    >
       {label}
     </Link>
   );
 }
 
 function formatValuePair(row: DraftRoiRow): string {
-  const fmt = (v: number | null) => (v === null ? '—' : v.toFixed(1));
+  const fmt = (v: number | null) => (v === null ? '\u2014' : v.toFixed(1));
   return `${fmt(row.actualValue)} / ${fmt(row.expectedValue)}`;
+}
+
+function computeRatio(
+  actual: number | null,
+  expected: number | null,
+): number | null {
+  if (actual === null || expected === null) return null;
+  if (expected === 0) return null;
+  return actual / expected;
+}
+
+function formatRatio(ratio: number | null): string {
+  if (ratio === null) return '\u2014';
+  // Clamp extreme ratios so column width stays stable on rookie outliers;
+  // title attr carries the exact value when clamped.
+  const clamped = Math.max(-9.99, Math.min(9.99, ratio));
+  const sign = ratio < 0 ? '\u2212' : '';
+  const prefix = Math.abs(ratio) > 9.99 ? '>' : '';
+  return `${prefix}${sign}${Math.abs(clamped).toFixed(2)}\u00D7`;
+}
+
+function ratioToneClass(ratio: number | null): string {
+  if (ratio === null) return 'text-text-muted';
+  if (ratio >= 1.25) return 'text-positive';
+  if (ratio < 0.75) return 'text-negative';
+  return 'text-text-muted';
 }
