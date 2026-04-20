@@ -2,6 +2,15 @@
 // token assertion in tests/e2e/e1.spec.ts. Not linked from navigation; excluded
 // from sitemap later.
 
+import type { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo/page-metadata';
+
+export const metadata: Metadata = pageMetadata({
+  title: 'Design tokens',
+  description: 'Design system tokens — internal reference.',
+  noindex: true,
+});
+
 type TokenRow = { key: string; label: string; cssVar: string };
 
 const DARK_TOKENS: TokenRow[] = [

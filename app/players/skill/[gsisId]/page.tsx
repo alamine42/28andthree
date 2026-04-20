@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 import { skillSeason } from '@/db/schema';
@@ -8,6 +9,7 @@ import { MetricValue } from '@/components/numeric';
 import { formatPercent } from '@/lib/format/number';
 import { PlayerHeader } from '@/components/PlayerHeader';
 import { SmallSampleBanner } from '@/components/SmallSampleBanner';
+import { pageMetadata } from '@/lib/seo/page-metadata';
 
 export const revalidate = 3600;
 
@@ -21,6 +23,36 @@ export async function generateStaticParams() {
     .from(skillSeason)
     .where(and(eq(skillSeason.team, 'NE'), eq(skillSeason.season, 2025)));
   return rows.map((r) => ({ gsisId: r.gsisId }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Params;
+}): Promise<Metadata> {
+  const { gsisId } = await params;
+  const season = await getCurrentSeason();
+  const [player, usage] = await Promise.all([
+    getPlayer(gsisId, season),
+    getSkillUsage(gsisId, { season }),
+  ]);
+  if (!player) return {};
+  const name = player.displayName;
+  const position = usage?.position ?? player.position ?? 'Skill';
+  const stat =
+    usage?.targetShare != null
+      ? `${formatPercent(usage.targetShare)} target share`
+      : undefined;
+  return pageMetadata({
+    title: `${name} \u00B7 ${position}`,
+    description: `${name} skill-position deep dive: target share, YAC, aDOT, red-zone usage \u2014 ${season} season.`,
+    og: {
+      title: name,
+      eyebrow: `${position.toUpperCase()} \u00B7 ${season}`,
+      stat,
+    },
+    canonical: `/players/skill/${gsisId}`,
+  });
 }
 
 export default async function SkillPage({ params }: { params: Params }) {

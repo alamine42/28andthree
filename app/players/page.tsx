@@ -1,7 +1,20 @@
+import type { Metadata } from 'next';
 import { getCurrentRosterSeason, getPatsRoster } from '@/lib/data/players-hub';
 import { RosterBrowser } from '@/components/players/RosterBrowser';
+import { pageMetadata } from '@/lib/seo/page-metadata';
 
 export const revalidate = 3600;
+
+export const metadata: Metadata = pageMetadata({
+  title: 'Players',
+  description:
+    'Every player on the current-season Patriots roster. Click through for QB, skill-position, and unit-level deep dives.',
+  og: {
+    title: 'Patriots, the whole roster',
+    eyebrow: 'PLAYERS',
+  },
+  canonical: '/players',
+});
 
 export default async function PlayersHubPage() {
   const season = await getCurrentRosterSeason('NE');

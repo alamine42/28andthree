@@ -1,11 +1,17 @@
 import type { Metadata } from 'next';
 import { SectionHeader } from '@/components/SectionHeader';
+import { pageMetadata } from '@/lib/seo/page-metadata';
 
-export const metadata: Metadata = {
-  title: 'Methodology — 28 and Three',
+export const metadata: Metadata = pageMetadata({
+  title: 'Methodology',
   description:
-    'How we compute every number on 28 and Three: data sources, EPA, league rankings, draft ROI, and coaching tendencies.',
-};
+    'How every number on 28 and Three gets made: data sources (nflverse, nfl4th), EPA, league rankings, draft ROI, coaching tendencies, and the limits we ship honestly.',
+  og: {
+    title: 'How every number on this site gets made',
+    eyebrow: 'METHODOLOGY',
+  },
+  canonical: '/methodology',
+});
 
 // Static content page. No DB reads, no revalidation needed.
 export const dynamic = 'force-static';

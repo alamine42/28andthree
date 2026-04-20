@@ -1,9 +1,22 @@
+import type { Metadata } from 'next';
 import { getCurrentSeason } from '@/lib/data/current-season';
 import { type DraftClassSummary, type DraftRoiRow, getDraftRoiByClass } from '@/lib/data/draft';
 import { ClassTable } from '@/components/draft/ClassTable';
 import { DraftClassStrip } from '@/components/draft/DraftClassStrip';
+import { pageMetadata } from '@/lib/seo/page-metadata';
 
 export const revalidate = 3600;
+
+export const metadata: Metadata = pageMetadata({
+  title: 'Draft ROI',
+  description:
+    'Every Patriots pick 2021\u20132025 graded HIT / FAIR / MISS against a slot-expected-value curve fit from league-wide outcomes.',
+  og: {
+    title: 'Mayo & Wolf, by the draft class',
+    eyebrow: 'DRAFT \u00B7 2021\u20132025',
+  },
+  canonical: '/draft-roi',
+});
 
 const DRAFT_CLASS_YEARS: readonly number[] = [2025, 2024, 2023, 2022, 2021];
 

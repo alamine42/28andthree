@@ -1,12 +1,27 @@
+import type { Metadata } from 'next';
 import { HeroStats } from '@/components/HeroStats';
 import { PhaseGrid } from '@/components/PhaseGrid';
 import { WeekResultsStrip } from '@/components/WeekResultsStrip';
 import { getCurrentSeason } from '@/lib/data/current-season';
 import { getPatsPhaseSparklines, getPhaseRankSnapshot } from '@/lib/data/phases';
 import { getRecentGames, getTeamSeasonOverview } from '@/lib/data/team';
+import { pageMetadata } from '@/lib/seo/page-metadata';
 
 // Fallback TTL if on-demand revalidation misses (one hour — plan §3.2).
 export const revalidate = 3600;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const season = await getCurrentSeason();
+  return pageMetadata({
+    title: `New England, ${season} in one page`,
+    description: `League rank across every phase of play for the ${season} New England Patriots, weekly trends, and recent results. Advanced analytics for fans who read the box score twice.`,
+    og: {
+      title: `New England, ${season} in one page`,
+      eyebrow: `TEAM · ${season} SEASON`,
+    },
+    canonical: '/',
+  });
+}
 
 const TEAM = 'NE' as const;
 

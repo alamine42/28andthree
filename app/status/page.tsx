@@ -1,11 +1,19 @@
+import type { Metadata } from 'next';
 import { desc } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { type EtlStatus, ETL_STATUSES, metaRefresh, type MetaRefresh } from '@/db/schema';
 import { getDb } from '@/lib/db';
 import { getServerEnv } from '@/lib/env';
+import { pageMetadata } from '@/lib/seo/page-metadata';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+export const metadata: Metadata = pageMetadata({
+  title: 'Status',
+  description: 'ETL heartbeat and refresh log — internal operations page.',
+  noindex: true,
+});
 
 type StatusPageProps = {
   searchParams: Promise<{ debug?: string }>;

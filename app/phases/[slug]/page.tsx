@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { isValidPhase, type Phase } from '@/lib/constants/phases';
@@ -14,6 +15,7 @@ import { TrendChart } from '@/components/charts/TrendChart';
 import { DistributionPlot } from '@/components/charts/DistributionPlot';
 import { TopContributorCard } from '@/components/TopContributorCard';
 import { getTopContributors } from '@/lib/data/contributors';
+import { pageMetadata } from '@/lib/seo/page-metadata';
 
 export const revalidate = 3600;
 
@@ -23,6 +25,33 @@ export async function generateStaticParams() {
   // Pre-render the 12 known phases for SSG path hints.
   const { PHASES } = await import('@/lib/constants/phases');
   return PHASES.map((slug) => ({ slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Params;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  if (!isValidPhase(slug)) return {};
+  const phase = slug as Phase;
+  const display = phaseDisplayName(phase);
+  const season = await getCurrentSeason();
+  const detail = await getPhaseDetail(phase, 'NE', season);
+  const rank = detail?.rank != null ? String(detail.rank).padStart(2, '0') : undefined;
+  const epa = detail?.epaPerPlay != null ? formatEpa(detail.epaPerPlay) : null;
+
+  return pageMetadata({
+    title: display,
+    description: `Patriots ${display.toLowerCase()} rank and EPA per play, season-to-date ${season} against the 32-team league, with weekly trend and top contributors.`,
+    og: {
+      title: display,
+      eyebrow: `PHASES \u00B7 ${season}`,
+      rank,
+      stat: epa ? `${epa} EPA/play` : undefined,
+    },
+    canonical: `/phases/${slug}`,
+  });
 }
 
 export default async function PhaseDetailPage({ params }: { params: Params }) {

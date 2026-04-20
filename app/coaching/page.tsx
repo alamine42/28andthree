@@ -1,9 +1,11 @@
+import type { Metadata } from 'next';
 import { getCurrentSeason } from '@/lib/data/current-season';
 import {
   type CoachSegmentWithRollup,
   getCoachSegments,
   getFourthDownDecisions,
 } from '@/lib/data/coaching';
+import { pageMetadata } from '@/lib/seo/page-metadata';
 import { CoachSegmentBanner } from '@/components/coaching/CoachSegmentBanner';
 import { CoachingHero } from '@/components/coaching/CoachingHero';
 import { PlayCallMixTable } from '@/components/coaching/PlayCallMixTable';
@@ -19,6 +21,19 @@ export const revalidate = 3600;
 const TEAM = 'NE' as const;
 
 type Role = 'HC' | 'OC' | 'DC';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const season = await getCurrentSeason();
+  return pageMetadata({
+    title: 'Coaching tendencies',
+    description: `Patriots ${season} coaching: play-call splits by down, situational rates, score-state pressure, personnel groupings, blitz rate, and a 4th-down ledger vs. the nfl4th model.`,
+    og: {
+      title: 'Patriots coaching, the tendencies that decide games',
+      eyebrow: `COACHING \u00B7 ${season}`,
+    },
+    canonical: '/coaching',
+  });
+}
 
 export default async function CoachingPage() {
   const season = await getCurrentSeason();
