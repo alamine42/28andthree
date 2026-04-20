@@ -8,6 +8,7 @@ import { PHASES } from '@/lib/constants/phases';
 // given we have no query-string variants and a fixed URL set).
 export const REVALIDATE_PATHS: readonly string[] = [
   '/',
+  '/players',
   ...PHASES.map((p) => `/phases/${p}`),
 ];
 

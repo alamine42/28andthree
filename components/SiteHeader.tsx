@@ -1,17 +1,20 @@
 'use client';
 
 import Link from 'next/link';
+import type { Route } from 'next';
 import { useEffect, useId, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
-// Top nav links for the header. Placeholder hrefs; real routes land in E5+.
-const NAV_LINKS = [
-  { label: 'Team', href: '/' },
-  { label: 'Phases', href: '/' },
-  { label: 'Players', href: '/' },
-  { label: 'Draft', href: '/' },
-  { label: 'Coaching', href: '/' },
-] as const;
+// Top nav links for the header. Team = home; Players = E7 hub. Phases, Draft,
+// and Coaching remain '/' placeholders until their index pages land (E5/E6).
+type NavLink = { label: string; href: Route };
+const NAV_LINKS: ReadonlyArray<NavLink> = [
+  { label: 'Team', href: '/' as Route },
+  { label: 'Phases', href: '/' as Route },
+  { label: 'Players', href: '/players' as Route },
+  { label: 'Draft', href: '/' as Route },
+  { label: 'Coaching', href: '/' as Route },
+];
 
 function Wordmark() {
   return (
