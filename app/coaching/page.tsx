@@ -12,7 +12,7 @@ import { ScoreStatePanel } from '@/components/coaching/ScoreStatePanel';
 import { PersonnelPanel } from '@/components/coaching/PersonnelPanel';
 import { FourthDownLedger } from '@/components/coaching/FourthDownLedger';
 import { BlitzCard } from '@/components/coaching/BlitzCard';
-import { SectionHeader } from '@/components/coaching/SectionHeader';
+import { SectionHeader } from '@/components/SectionHeader';
 
 export const revalidate = 3600;
 

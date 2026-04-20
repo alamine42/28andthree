@@ -33,7 +33,14 @@ export function SiteFooter({ lastRefreshIso }: FooterProps = {}) {
             >
               nflverse
             </a>
-            {' · '}model inputs: nflfastR &amp; nfl4th
+            {' · '}model inputs: nflfastR &amp; nfl4th{' · '}
+            <a
+              href="/methodology"
+              className="text-text-muted hover:text-text"
+              data-testid="footer-methodology-link"
+            >
+              Methodology
+            </a>
           </span>
           <span className="flex items-center gap-2">
             <span
