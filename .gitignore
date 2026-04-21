@@ -49,3 +49,6 @@ coverage
 # E2 ETL run logs (local ops traces)
 .backfill-logs/
 .claude/scheduled_tasks.lock
+
+# Lighthouse CI local-run artifacts
+.lighthouseci/

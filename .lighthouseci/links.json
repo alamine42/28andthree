@@ -1,5 +1,0 @@
-{
-  "http://localhost:3000/": "https://storage.googleapis.com/lighthouse-infrastructure.appspot.com/reports/1776778876565-3540.report.html",
-  "http://localhost:3000/phases/pass_offense": "https://storage.googleapis.com/lighthouse-infrastructure.appspot.com/reports/1776778876962-37410.report.html",
-  "http://localhost:3000/players/qb/00-0039851": "https://storage.googleapis.com/lighthouse-infrastructure.appspot.com/reports/1776778877406-18740.report.html"
-}
