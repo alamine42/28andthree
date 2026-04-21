@@ -59,7 +59,7 @@ function ClassCard({ card, isLast }: { card: ClassCard; isLast: boolean }) {
             <span className="tabular-nums">{summary.fair}</span>F
           </span>
           <Dot />
-          <span className={summary.miss === 0 ? 'text-text-muted' : 'text-negative'}>
+          <span className={summary.miss === 0 ? 'text-text-muted' : 'text-text'}>
             <span className="tabular-nums">{summary.miss}</span>M
           </span>
           {summary.pending > 0 ? (

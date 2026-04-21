@@ -30,13 +30,13 @@ export function PhaseCard({ phase, rank, epaPerPlay, sparkline, insufficientSamp
     <Link
       href={`/phases/${slug}` as Route}
       data-testid={`phase-card-${slug}`}
-      className="flex min-h-[148px] flex-col gap-3 bg-bg p-5 transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive md:min-h-[172px] md:p-6"
+      className="flex min-h-[100px] flex-col gap-2 bg-bg p-3 transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive md:min-h-[120px] md:p-4"
     >
       <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">
         {display}
       </p>
-      <div className="flex items-baseline gap-3">
-        <RankNumber rank={rank} className="text-3xl leading-none md:text-display" />
+      <div className="flex items-baseline gap-2">
+        <RankNumber rank={rank} className="text-2xl leading-none md:text-3xl" />
         {insufficientSample ? (
           <span className="font-mono text-2xs uppercase tracking-widest text-text-muted">
             n &lt; 30
@@ -50,9 +50,9 @@ export function PhaseCard({ phase, rank, epaPerPlay, sparkline, insufficientSamp
           title={`${display} weekly trend, last ${values.length} weeks`}
         />
       ) : (
-        <div className="h-5" aria-hidden="true" />
+        <div className="h-4" aria-hidden="true" />
       )}
-      <p className="font-mono text-xs text-text-muted">
+      <p className="font-mono text-2xs text-text-muted">
         <MetricValue value={epaPerPlay} format={formatEpa} />
         <span className="ml-1 text-text-muted">EPA/play</span>
       </p>

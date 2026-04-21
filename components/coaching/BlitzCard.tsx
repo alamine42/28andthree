@@ -33,7 +33,7 @@ export function BlitzCard({ blitzRate }: Props) {
           <span className="font-mono text-2xs uppercase tracking-widest text-text-muted">
             {tone}
           </span>
-          <span className="font-mono text-2xs uppercase tracking-widest text-text-dim">
+          <span className="font-mono text-2xs uppercase tracking-widest text-text-muted">
             {caption}
           </span>
         </p>

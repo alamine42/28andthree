@@ -12,11 +12,15 @@ type Props = {
 export function GradeBadge({ grade, unitProxy }: Props) {
   const base =
     'inline-flex items-center rounded-sm border px-1.5 py-0.5 font-mono text-2xs uppercase tracking-widest';
+  // MISS uses --text inside the badge: the --negative cranberry on
+  // --surface sits at 2.59:1 (below WCAG AA 4.5:1). The border-negative
+  // on the pill carries the color signal; the word "MISS" stays in bone.
+  // Same pattern as numeric.tsx for delta glyphs.
   const tier =
     grade === 'HIT'
       ? 'border-positive bg-surface text-positive'
       : grade === 'MISS'
-        ? 'border-negative bg-surface text-negative'
+        ? 'border-negative bg-surface text-text'
         : 'border-border bg-surface text-text-muted';
   return (
     <span className={`${base} ${tier}`} data-testid={`grade-${grade.toLowerCase()}`}>

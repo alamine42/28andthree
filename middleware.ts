@@ -26,7 +26,12 @@ const RATE_LIMITED_PREFIXES = ['/api', '/status'] as const;
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const nonce = makeNonce();
-  const csp = buildCsp(currentCspEnv(), nonce);
+  // Only attach CSP when the request hits a Vercel deploy — local `next dev`
+  // can't serve inline hydration scripts with a nonce (Next doesn't
+  // propagate to them), so any CSP with a nonce breaks interactivity.
+  // Vercel sets `x-vercel-deployment-url` on every Edge Network request.
+  const runningOnVercel = req.headers.has('x-vercel-deployment-url');
+  const csp = runningOnVercel ? buildCsp(currentCspEnv(), nonce) : null;
   const pathname = req.nextUrl.pathname;
 
   const requestHeaders = new Headers(req.headers);
@@ -40,27 +45,25 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
     if (!success) {
       const retryAfterSeconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Retry-After': String(retryAfterSeconds),
+        'X-RateLimit-Limit': '60',
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset': String(Math.floor(reset / 1000)),
+      };
+      if (csp) headers['Content-Security-Policy'] = csp;
       return new NextResponse(
         JSON.stringify({
           error: 'rate limited',
           retry_after_seconds: retryAfterSeconds,
         }),
-        {
-          status: 429,
-          headers: {
-            'Content-Type': 'application/json',
-            'Retry-After': String(retryAfterSeconds),
-            'X-RateLimit-Limit': '60',
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': String(Math.floor(reset / 1000)),
-            'Content-Security-Policy': csp,
-          },
-        },
+        { status: 429, headers },
       );
     }
 
     const res = NextResponse.next({ request: { headers: requestHeaders } });
-    res.headers.set('Content-Security-Policy', csp);
+    if (csp) res.headers.set('Content-Security-Policy', csp);
     res.headers.set('X-RateLimit-Limit', '60');
     res.headers.set('X-RateLimit-Remaining', String(remaining));
     res.headers.set('X-RateLimit-Reset', String(Math.floor(reset / 1000)));
@@ -68,7 +71,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   }
 
   const res = NextResponse.next({ request: { headers: requestHeaders } });
-  res.headers.set('Content-Security-Policy', csp);
+  if (csp) res.headers.set('Content-Security-Policy', csp);
   return res;
 }
 

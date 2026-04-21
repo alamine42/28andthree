@@ -13,7 +13,10 @@ export const revalidate = 3600;
 export async function generateMetadata(): Promise<Metadata> {
   const season = await getCurrentSeason();
   return pageMetadata({
-    title: `New England, ${season} in one page`,
+    // Explicit brand suffix: Next's title.template from the root layout
+    // isn't applied to generateMetadata() return values on the index route
+    // in Next 16 (it works fine on deeper segments like /phases/[slug]).
+    title: `New England, ${season} in one page \u00B7 28 and Three`,
     description: `League rank across every phase of play for the ${season} New England Patriots, weekly trends, and recent results. Advanced analytics for fans who read the box score twice.`,
     og: {
       title: `New England, ${season} in one page`,
@@ -38,21 +41,20 @@ export default async function HomePage() {
   const eyebrow = buildEyebrow(season, snapshot);
 
   return (
-    <section className="flex flex-col gap-16 py-16 md:gap-[120px] md:py-24">
-      <header className="flex flex-col gap-5">
+    <section className="flex flex-col gap-10 py-8 md:gap-[60px] md:py-12">
+      <header className="flex flex-col gap-3">
         <p
           className="font-mono text-2xs uppercase tracking-widest text-text-muted"
           data-testid="season-eyebrow"
         >
           {eyebrow}
         </p>
-        <h1 className="max-w-4xl font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
+        <h1 className="max-w-4xl font-display text-2xl font-bold leading-tight tracking-tightest text-text md:text-3xl">
           New England, {season} in one page.
         </h1>
-        <p className="max-w-prose text-base text-text-muted md:text-lg">
-          League rank across every phase of play. Weekly trend, recent results, and
-          where the Pats sit in the 32-team distribution. Advanced analytics for
-          fans who read the box score twice.
+        <p className="max-w-prose text-sm text-text-muted md:text-base">
+          League rank across every phase of play. Weekly trend, recent results,
+          32-team distribution.
         </p>
       </header>
 

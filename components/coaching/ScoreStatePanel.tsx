@@ -82,6 +82,7 @@ function PassBar({ value, label }: { value: number | null; label: string }) {
   const runH = 64 - passH;
   return (
     <div
+      role="img"
       aria-label={`${label}: ${Math.round(value * 100)}% pass`}
       className="flex h-16 w-full flex-col items-stretch justify-end overflow-hidden rounded-sm bg-surface"
     >
@@ -89,7 +90,7 @@ function PassBar({ value, label }: { value: number | null; label: string }) {
         <div style={{ height: `${runH}px` }} className="w-full bg-surface-2" />
       ) : null}
       <div
-        style={{ height: `${passH}px`, backgroundColor: 'rgba(224, 180, 74, 0.85)' }}
+        style={{ height: `${passH}px`, backgroundColor: 'rgba(26, 190, 88, 0.85)' }}
         className="w-full"
       />
     </div>

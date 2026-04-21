@@ -92,6 +92,7 @@ function LedgerRow({ decision: d }: { decision: FourthDownDecision }) {
       </span>
 
       <span
+        role="img"
         aria-label={agreed ? 'Agreed with model' : 'Disagreed with model'}
         className={`justify-self-end font-mono text-xs font-bold ${agreed ? 'text-positive' : 'text-negative'}`}
       >

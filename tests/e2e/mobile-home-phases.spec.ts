@@ -77,8 +77,14 @@ test('mobile nav toggle meets 44x44', async ({ page }) => {
 
 test('mobile nav panel items meet 44x44 when open', async ({ page }) => {
   await page.goto('/');
+  // Wait for React to hydrate before firing the click — Next 16 +
+  // Turbopack dev can ship the HTML before the client bundle is ready,
+  // which silently drops the click.
+  await page.waitForLoadState('networkidle');
   await page.getByTestId('mobile-nav-toggle').click();
-  const links = page.getByTestId('mobile-nav-panel').getByRole('link');
+  const panel = page.getByTestId('mobile-nav-panel');
+  await expect(panel).toBeVisible();
+  const links = panel.getByRole('link');
   const count = await links.count();
   expect(count).toBeGreaterThan(0);
   for (let i = 0; i < count; i++) {

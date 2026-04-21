@@ -42,7 +42,7 @@ export function ClassTable({ draftSeason, rows, summary }: Props) {
           <span className="text-text-muted">·</span>
           <span className="text-text-muted">{summary.fair} FAIR</span>
           <span className="text-text-muted">·</span>
-          <span className={summary.miss === 0 ? 'text-text-muted' : 'text-negative'}>
+          <span className={summary.miss === 0 ? 'text-text-muted' : 'text-text'}>
             {summary.miss} MISS
           </span>
           {summary.pending > 0 ? (
@@ -172,8 +172,13 @@ function formatRatio(ratio: number | null): string {
 }
 
 function ratioToneClass(ratio: number | null): string {
+  // Positive ratios (HIT range) get the green tint — passes AA on both bg
+  // and surface. MISS ratios stay on --text instead of --negative: the
+  // cranberry on deep-ink bg fails WCAG AA (2.83:1). The MISS signal is
+  // carried by the adjacent GradeBadge + the summary header count; the
+  // ratio cell is just the exact magnitude. Same pattern as the negative-
+  // signal routing in lib/color/rank.ts.
   if (ratio === null) return 'text-text-muted';
   if (ratio >= 1.25) return 'text-positive';
-  if (ratio < 0.75) return 'text-negative';
-  return 'text-text-muted';
+  return 'text-text';
 }

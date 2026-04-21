@@ -25,11 +25,11 @@
 - **Line-height:** body 1.7, display 1.02–1.1, mono 1.9.
 
 ### Wordmark
-`28 and Three` — Cabinet Grotesk Bold. The word **and** is set italic (regular weight) in `--positive` (amber). This is the only styled departure in the mark and it ties every page back to the name's origin. Never replace the amber "and" with another color. The mark never sits on a Patriots logo.
+`28 and Three` — Cabinet Grotesk Bold. The word **and** is set italic (regular weight) in `--positive` (green). This is the only styled departure in the mark and it ties every page back to the positive signal used everywhere else on the site. The mark never sits on a Patriots logo.
 
 ## Color
 
-- **Approach:** Restrained. One accent (Pats red), one distinctive positive signal (amber), neutrals for everything else.
+- **Approach:** Restrained. One accent (Pats red), one positive signal (green), neutrals for everything else.
 - **Dark is default.** Light mode is optional and redesigned, not a simple invert.
 
 ### Dark mode (default)
@@ -45,8 +45,8 @@
 | `--text-dim` | `#5F6E80` | Tertiary, disclaimers. |
 | `--accent` | `#D21F3C` | Patriots red, desaturated for dark bg. **Used rarely** — live indicators, primary CTAs, critical alerts. |
 | `--accent-dim` | `#A23A4A` | Accent borders, hover states. |
-| `--positive` | `#E0B44A` | **Amber/gold.** Replaces green for "up / ranked well / improving." Trophy/terminal/scoreboard associations. |
-| `--positive-dim` | `#8B6F2E` | Positive borders on badges. |
+| `--positive` | `#1ABE58` | **Green.** "Up / ranked well / improving." Muted editorial green — not neon. Luminance tuned to pass WCAG AA Normal (4.5:1) on *both* `--bg` (7.3:1) and `--surface` (6.0:1), so positive text stays readable in card-hover + nested-card contexts. |
+| `--positive-dim` | `#0E5E2A` | Positive borders on badges. |
 | `--negative` | `#A23A4A` | Down trends, bottom-tier ranks. Muted cranberry, not screaming red. |
 | `--chart-neutral` | `#5F6E80` | League median lines, neutral series in charts. |
 
@@ -63,22 +63,22 @@ Redesigned surfaces, not inverted. Reduces saturation on accents by ~15%.
 | `--text-muted` | `#4D5A6B` |
 | `--text-dim` | `#7B8594` |
 | `--accent` | `#B0152D` |
-| `--positive` | `#8A6B1F` |
+| `--positive` | `#0E6B2F` |
 | `--negative` | `#8A2238` |
 
 ### Semantic mapping
 - Better-than-average, rank top-10, up-trend → `--positive`
 - Worse-than-average, rank bottom-10, down-trend → `--negative`
 - Neutral (middle 12 ranks, no change) → `--text-muted` or `--chart-neutral`
-- Never use green for positive. The amber choice is deliberate and category-differentiating.
+- We use green for positive. The shade is a muted editorial green (`#1ABE58` on dark bg, `#0E6B2F` on warm paper); not neon, not sports-fluorescent.
 
 ## Spacing
 - **Base unit:** 4px.
-- **Density:** Compact. Analyst-tool density — this is not a consumer app.
-- **Scale:** 2 / 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 / 96 / 120.
-- **Section rhythm:** 120px between top-level sections. 40px within section before content.
-- **Table row padding:** 18px vertical, 16px horizontal.
-- **Card padding:** 24–28px.
+- **Density:** Dense. Analyst-tool density — this is not a consumer app, and the home page in particular should read like a Bloomberg terminal rather than a marketing site.
+- **Scale:** 2 / 4 / 8 / 12 / 16 / 24 / 32 / 48 / 60 / 80 / 120.
+- **Section rhythm:** 60px between top-level sections on data-dense pages (home, phase detail, coaching, draft). 120px reserved for editorial / about pages. 40px within section before content.
+- **Table row padding:** 12–18px vertical, 16px horizontal.
+- **Card padding:** 16–20px standard; 24–28px only for hero-level cards.
 
 ## Layout
 - **Approach:** Hybrid. Editorial for team overview, phase intros, and marketing / about pages (asymmetric, generous whitespace, big display type). Grid-disciplined for tables, dashboards, player pages, draft ROI.
@@ -95,7 +95,7 @@ Redesigned surfaces, not inverted. Reduces saturation on accents by ~15%.
 
 ## Components (conventions)
 
-- **Rank card:** phase name (mono, muted, uppercase) → big numeric rank in Cabinet Grotesk Bold (colored by tier: top-third amber, middle neutral, bottom-third cranberry) → sparkline → hairline divider → metric name + value in mono.
+- **Rank card:** phase name (mono, muted, uppercase) → big numeric rank in Cabinet Grotesk Bold (colored by tier: top-third green, middle neutral, bottom-third cranberry) → sparkline → hairline divider → metric name + value in mono.
 - **Stat block:** label in mono uppercase (`--text-muted`) → value in Cabinet Grotesk Bold (30–56px) → context line in mono.
 - **Table:** mono uppercase headers, muted. Mono numeric cells right-aligned. Geist left-aligned cells for names. Hover fills the row with `--surface`.
 - **Rank badge:** mono 11px, tracked +0.08em, bordered pill. `.top` gets positive color, `.bot` gets negative, default is muted.
@@ -112,7 +112,8 @@ Redesigned surfaces, not inverted. Reduces saturation on accents by ~15%.
 - **Copy voice:** terse, specific, no exclamation points, no hype. The data does the talking.
 
 ## Anti-patterns (do not ship)
-- Green for "up/good." We use amber.
+- Neon or sports-fluorescent green for "up/good." Our positive green is `#1ABE58` — muted, editorial.
+- Amber/gold anywhere as a positive signal. That was the original call; we reversed it 2026-04-21 (see Decisions Log).
 - Pure-white text on pure-black bg. We use bone on deep ink.
 - Uniform rounded-corners everywhere. We use 2px default.
 - Purple or violet anywhere on the site.
@@ -133,6 +134,8 @@ Set in Geist Mono 11px, `--text-muted`, uppercase, tracked +0.14em.
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-04-14 | Initial design system created | From /design-consultation. Research references: sumersports.com, rbsdm.com, NGS. Category synthesis + first-principles fit for "fan instrument for a historic franchise." |
-| 2026-04-14 | Amber-for-positive instead of green | Terminal/trophy/scoreboard associations; category-distinctive; ties to the site's comeback-score name. |
+| 2026-04-14 | Amber-for-positive instead of green | Terminal/trophy/scoreboard associations; category-distinctive; ties to the site's comeback-score name. **Reversed 2026-04-21 — see below.** |
 | 2026-04-14 | All-sans typography (Cabinet Grotesk + Geist) | Serif-based display tried in v1 preview; read as too dense. All-sans with breathing room landed better. |
 | 2026-04-14 | Deep ink navy `#0B1520` instead of pure black | Quiet Patriots reference without uniform-cosplay; gentler on eyes for long tables. |
+| 2026-04-21 | Green-for-positive (`#1ABE58`) replaces amber | User preference after living with the site for a week: amber read as alert/warning in adjacent-context glances (ESPN-like). Green is the audience's default expectation for "good" in sports analytics; the visual cost of being less category-distinctive is worth the cognitive-load saving. Shade chosen muted (`#1ABE58` on dark bg, 6.0:1 AA; `#0E6B2F` on warm paper) so it reads editorial rather than neon. Wordmark "and" flips to green too. |
+| 2026-04-21 | Density increased across home + phase + coaching + draft | Section gap 120→60px, card padding 24-28→16-20px, phase-card min-height 148-172→100-120px. Dense/analyst-terminal read vs. marketing-site breathing room. Editorial pages (methodology, future about) keep the 120px rhythm. |

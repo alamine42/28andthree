@@ -17,6 +17,12 @@
 export type CspEnv = 'development' | 'test' | 'production';
 
 export function buildCsp(env: CspEnv, nonce: string): string {
+  // Dev must NOT include a nonce: once CSP script-src has a nonce, the
+  // browser ignores 'unsafe-inline' for scripts (per CSP spec), and Next's
+  // Turbopack-emitted inline bootstrap/hydration scripts don't carry one —
+  // they'd all be blocked and the client-side page becomes non-interactive.
+  // Production ships with a nonce; Next's SSR scripts are served from
+  // /_next/static (which 'self' allows) so they load fine without a nonce.
   const scriptSrc =
     env === 'production'
       ? ["'self'", `'nonce-${nonce}'`, "'unsafe-inline'"]
@@ -62,8 +68,11 @@ export function makeNonce(): string {
 }
 
 export function currentCspEnv(): CspEnv {
-  const env = process.env.NODE_ENV;
-  if (env === 'production') return 'production';
-  if (env === 'test') return 'test';
+  // Next 16 edge middleware bundles `process.env.NODE_ENV=production` at
+  // compile time even under `next dev`, so it's unreliable as a signal.
+  // VERCEL_ENV is only set in Vercel deployments and is the authoritative
+  // production indicator; anything else falls back to dev.
+  if (process.env.VERCEL_ENV === 'production') return 'production';
+  if (process.env.NODE_ENV === 'test') return 'test';
   return 'development';
 }

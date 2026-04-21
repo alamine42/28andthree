@@ -118,7 +118,7 @@ function HeatLegend() {
         {[0.15, 0.35, 0.55, 0.75].map((o, i) => (
           <span
             key={`pass-${i}`}
-            style={{ backgroundColor: `rgba(224, 180, 74, ${o})` }}
+            style={{ backgroundColor: `rgba(26, 190, 88, ${o})` }}
             className="h-2 w-4"
           />
         ))}
@@ -130,11 +130,13 @@ function HeatLegend() {
 
 function tintFor(value: number | null): React.CSSProperties {
   if (value === null) return {};
-  // 50/50 → no tint. Pass-heavy cells glow amber; run-heavy cells take a
-  // cranberry undertone. Alpha capped at 0.75 so the number stays legible.
+  // 50/50 → no tint. Pass-heavy cells glow positive green; run-heavy cells
+  // take a cranberry undertone. Alpha capped at 0.45 so bone text stays
+  // above AA 4.5:1 on the darkest blended background (at 0.75 the 91%
+  // cell fell to 4.11:1 — see a11y report 2026-04-21).
   const diff = value - 0.5;
-  const alpha = Math.min(Math.abs(diff) * 1.5, 0.75);
-  const color = diff >= 0 ? '224, 180, 74' : '162, 58, 74';
+  const alpha = Math.min(Math.abs(diff) * 0.9, 0.45);
+  const color = diff >= 0 ? '26, 190, 88' : '162, 58, 74';
   return { backgroundColor: `rgba(${color}, ${alpha})` };
 }
 

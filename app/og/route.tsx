@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 const BG = '#0B1520';
 const TEXT = '#E8E6E1';
 const TEXT_MUTED = '#8A96A3';
-const POSITIVE = '#E0B44A';
+const POSITIVE = '#1ABE58';
 const BORDER = '#2C3E55';
 
 export async function GET(req: Request): Promise<Response> {

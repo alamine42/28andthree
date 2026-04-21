@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext, type APIResponse } from '@playwright/test';
 
 // E6-08: burst test — 60/min/IP sliding window on /api/* and /status/*.
 // Each test uses a unique X-Forwarded-For IP so the middleware's in-memory
@@ -8,7 +8,7 @@ const LIMIT = 60;
 const BURST = 70;
 
 async function burst(
-  request: import('@playwright/test').APIRequestContext,
+  request: APIRequestContext,
   path: string,
   ip: string,
 ): Promise<number[]> {
@@ -54,7 +54,7 @@ test.describe('E6-08 rate limiting', () => {
     request,
   }) => {
     const ip = '10.0.0.3';
-    let limitedRes: import('@playwright/test').APIResponse | null = null;
+    let limitedRes: APIResponse | null = null;
     for (let i = 0; i < BURST; i++) {
       const res = await request.get('/api/revalidate', {
         headers: { 'X-Forwarded-For': ip },

@@ -51,11 +51,13 @@ test.describe('E1 smoke: /status', () => {
 });
 
 test.describe('E1 smoke: security headers', () => {
-  test('home carries CSP, HSTS, XFO, Referrer-Policy', async ({ request }) => {
+  test('home carries HSTS, XFO, Referrer-Policy (CSP is Vercel-only — see csp.spec.ts)', async ({ request }) => {
     const res = await request.get('/');
     const h = res.headers();
-    const csp = h['content-security-policy-report-only'] ?? h['content-security-policy'];
-    expect(csp).toBeTruthy();
+    // CSP intentionally not attached on localhost dev (breaks Next's
+    // nonce-less inline hydration scripts — see middleware.ts). Vercel
+    // previews + prod carry it; that path is covered by csp.spec.ts + a
+    // pre-release manual sweep against a preview URL.
     expect(h['strict-transport-security']).toBeTruthy();
     expect(h['x-frame-options']).toMatch(/DENY/i);
     expect(h['referrer-policy']).toBeTruthy();

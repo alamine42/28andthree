@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext } from '@playwright/test';
 
 // E6-03: metadata audit. Every public route must export a unique <title>
 // and <meta description>, and must emit a valid OG image URL pointing at
@@ -25,7 +25,7 @@ const ROUTES: ReadonlyArray<RouteSpec> = [
   { path: '/team/units/defense' },
 ];
 
-async function fetchMetadata(request: import('@playwright/test').APIRequestContext, path: string) {
+async function fetchMetadata(request: APIRequestContext, path: string) {
   const res = await request.get(path);
   const html = await res.text();
   return {

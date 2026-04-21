@@ -14,7 +14,7 @@ export function WeekResultsStrip({ games }: Props) {
   const ordered = [...games].reverse();
 
   return (
-    <section className="flex flex-col gap-5" data-testid="week-results">
+    <section className="flex flex-col gap-3" data-testid="week-results">
       <h2 className="font-mono text-2xs uppercase tracking-widest text-text-muted">
         Last {games.length} games
       </h2>
@@ -38,7 +38,7 @@ function Cell({ game }: { game: GameResult }) {
       : null;
 
   return (
-    <li className="flex flex-col gap-2 bg-bg p-4">
+    <li className="flex flex-col gap-1.5 bg-bg p-3">
       <div className="flex items-center justify-between">
         <span className="font-mono text-2xs uppercase tracking-widest text-text-muted">
           Wk {week}

@@ -33,8 +33,14 @@ test.describe('a11y — axe scan', () => {
 
       if (blocking.length > 0) {
         // Surface a concise list of problems so CI output is readable.
+        // Inline the first failing target per rule — helps triage without
+        // overwhelming the log when e.g. 25 nodes fail the same rule.
         const summary = blocking
-          .map((v) => `  [${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} node${v.nodes.length === 1 ? '' : 's'})`)
+          .map((v) => {
+            const first = v.nodes[0];
+            const sel = first?.target?.join(' ') ?? '';
+            return `  [${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} node${v.nodes.length === 1 ? '' : 's'}${sel ? ` — first: ${sel}` : ''})`;
+          })
           .join('\n');
         throw new Error(`axe found ${blocking.length} blocking issue(s) on ${route}:\n${summary}`);
       }
