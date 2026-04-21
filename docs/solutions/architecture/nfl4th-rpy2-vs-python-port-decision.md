@@ -78,3 +78,32 @@ capture the migration steps.
 - Plan §3.7 — nfl4th integration details
 - `etl/transform/nfl4th.py` — wrapper module
 - `etl/tests/test_nfl4th.py` — output-parity contract test
+
+---
+
+## 2026-04-21 addendum: `py4thdown` is not on PyPI
+
+Verified by `uv pip install py4thdown` during the E5 build-out:
+
+```
+× No solution found when resolving dependencies:
+╰─▶ Because py4thdown was not found in the package registry and you require
+    py4thdown, we can conclude that your requirements are unsatisfiable.
+```
+
+The package this decision assumed would ship to PyPI never did. The decision
+itself still stands (port > rpy2 for our CI profile); the dependency just
+doesn't exist yet. `etl/transform/nfl4th.py` already ships the fallback path
+— `_load_port()` returns `None` on import failure and
+`score_fourth_downs()` returns `[]`, which the `/coaching` page renders as
+a "4th down — model pending" callout. That fallback is E5-08c and is live.
+
+**Deferred:** E5-08b (actual integration) until one of:
+
+1. Someone credible publishes the Python port to PyPI. Track via
+   https://pypi.org/search/?q=nfl4th .
+2. We revisit the rpy2 route if 4th-down analysis becomes load-bearing
+   enough to justify an R runtime on GH Actions.
+
+No functional regression today — the feature degrades gracefully and the
+UI already advertises the "pending" state.

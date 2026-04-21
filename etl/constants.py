@@ -39,6 +39,36 @@ TEAM_ABBREVIATION_ALIAS: dict[str, str] = {
 }
 
 
+# PFR uses its own team codes in the draft-picks feed (distinct from
+# nflfastR's PBP codes). Only the handful that differ are listed; the
+# remaining 27 codes match exactly. Applied by etl.ingest.drafts when
+# pulling nflreadpy.load_draft_picks.
+PFR_TEAM_ALIAS: dict[str, str] = {
+    "NWE": "NE",
+    "NOR": "NO",
+    "SFO": "SF",
+    "TAM": "TB",
+    "GNB": "GB",
+    "KAN": "KC",
+    "LVR": "LV",
+    "SDG": "LAC",
+    "OAK": "LV",
+    "STL": "LAR",
+    "RAM": "LAR",
+    "HTX": "HOU",
+    "RAV": "BAL",
+    "CLT": "IND",
+    "CRD": "ARI",
+}
+
+
+def normalize_pfr_team_abbr(abbr: str | None) -> str | None:
+    """Map PFR team code to the canonical nflfastR code used across our DB."""
+    if abbr is None or abbr == "":
+        return None
+    return PFR_TEAM_ALIAS.get(abbr, abbr)
+
+
 def normalize_team_abbr(abbr: str | None) -> str | None:
     """Canonicalize team abbreviations (WSH -> WAS). Preserves unknowns so
     contract tests can flag them rather than having them silently remapped."""

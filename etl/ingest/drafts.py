@@ -23,6 +23,8 @@ from dataclasses import dataclass
 import nflreadpy as nfl
 import polars as pl
 
+from etl.constants import normalize_pfr_team_abbr
+
 
 @dataclass(frozen=True, slots=True)
 class HistoricalDraftOutcome:
@@ -78,7 +80,7 @@ def normalize_historical(
                 pick_overall=int(row["pick"]),
                 gsis_id=gsis,
                 position=_nullable_str(row.get("position")),
-                team=_nullable_str(row.get("team")),
+                team=normalize_pfr_team_abbr(_nullable_str(row.get("team"))),
                 career_epa=career_epa_by_gsis.get(gsis) if gsis else None,
                 career_seasons=career_seasons_by_gsis.get(gsis) if gsis else None,
             )
@@ -103,15 +105,22 @@ def normalize_pats_picks(
     `team` column in nflreadpy is the team that USED the pick post-trade; we
     additionally want the "original" slots the Pats held so ROI can reflect
     traded-away assets. Handling trade-out annotations is curator work.
+
+    nflreadpy.load_draft_picks ships PFR team codes ("NWE", "NOR", ...) rather
+    than nflfastR's PBP codes ("NE", "NO", ...) — we normalize both the
+    filter and the stored value so downstream joins line up.
     """
-    pats = draft_df.filter(
-        (pl.col("team") == "NE") & pl.col("season").is_in(seasons)
-    )
     out: list[PatsDraftPick] = []
-    for row in pats.iter_rows(named=True):
+    for row in draft_df.iter_rows(named=True):
+        season = int(row["season"]) if row.get("season") is not None else None
+        if season is None or season not in seasons:
+            continue
+        team = normalize_pfr_team_abbr(_nullable_str(row.get("team")))
+        if team != "NE":
+            continue
         out.append(
             PatsDraftPick(
-                draft_season=int(row["season"]),
+                draft_season=season,
                 round=int(row["round"]) if row.get("round") is not None else 0,
                 pick_overall=int(row["pick"]),
                 gsis_id=_nullable_str(row.get("gsis_id")),

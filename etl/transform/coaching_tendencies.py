@@ -15,7 +15,7 @@ The DB write goes through `etl.load.coaching.upsert_coaching_tendencies`.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import polars as pl
 
@@ -189,9 +189,12 @@ def _offense_rollup(plays: pl.DataFrame) -> CoachingRollup:
         return passes / n
 
     def rate(col: str) -> float | None:
-        if total == 0:
+        if total == 0 or col not in plays.columns:
             return None
-        return plays.filter(pl.col(col).is_true()).height / total
+        # polars 1.x: boolean Exprs don't have .is_true(); `pl.col(col) == True`
+        # is the canonical truthiness filter. Nulls count as "not true" (the
+        # desired behavior: an unknown shotgun status is not a shotgun snap).
+        return plays.filter(pl.col(col).eq(True)).height / total
 
     def score_pass_rate(state: str) -> float | None:
         lo, hi = _score_bounds(state)
@@ -256,13 +259,19 @@ def _defense_rollup(plays: pl.DataFrame) -> CoachingRollup:
 
 
 def _merge_coach_identity(base: CoachingRollup, coach: WeeklyCoach) -> CoachingRollup:
-    base.team = coach.team
-    base.season = coach.season
-    base.week = coach.week
-    base.coach_role = coach.role
-    base.coach_id = coach.coach_id
-    base.coach_name = coach.coach_name
-    return base
+    # Must return a fresh object: a single `base` is emitted per (team, week)
+    # and shared across the HC/OC/DC coach iterations. Mutating in place
+    # aliases every role to the last-assigned identity — bug caught by
+    # test_should_emit_one_rollup_per_role_for_a_single_week.
+    return replace(
+        base,
+        team=coach.team,
+        season=coach.season,
+        week=coach.week,
+        coach_role=coach.role,
+        coach_id=coach.coach_id,
+        coach_name=coach.coach_name,
+    )
 
 
 def _top_personnel(plays: pl.DataFrame, col: str) -> list[dict]:
