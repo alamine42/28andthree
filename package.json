@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.2",
+    "@lhci/cli": "^0.14.0",
     "@playwright/test": "^1.49.1",
     "@types/node": "^22.10.5",
     "@types/pg": "^8.11.10",

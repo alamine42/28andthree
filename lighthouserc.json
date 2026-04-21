@@ -1,7 +1,11 @@
 {
   "ci": {
     "collect": {
-      "url": ["http://localhost:3000/", "http://localhost:3000/status"],
+      "url": [
+        "http://localhost:3000/",
+        "http://localhost:3000/phases/pass_offense",
+        "http://localhost:3000/players/qb/00-0039851"
+      ],
       "numberOfRuns": 3,
       "startServerCommand": "pnpm start",
       "startServerReadyPattern": "Ready in",
@@ -10,17 +14,13 @@
       }
     },
     "assert": {
-      "preset": "lighthouse:recommended",
       "assertions": {
-        "categories:performance": ["warn", { "minScore": 0.9 }],
-        "categories:accessibility": ["warn", { "minScore": 0.95 }],
-        "largest-contentful-paint": ["warn", { "maxNumericValue": 2000 }],
-        "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.05 }],
-        "total-byte-weight": ["warn", { "maxNumericValue": 400000 }],
-        "unused-javascript": "off",
-        "uses-http2": "off",
-        "is-crawlable": "off",
-        "canonical": "off"
+        "categories:performance": ["error", { "minScore": 0.9 }],
+        "categories:accessibility": ["error", { "minScore": 0.9 }],
+        "categories:best-practices": ["error", { "minScore": 0.9 }],
+        "categories:seo": ["error", { "minScore": 0.9 }],
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2000 }],
+        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.05 }]
       }
     },
     "upload": {
