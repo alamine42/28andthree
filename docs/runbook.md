@@ -184,3 +184,162 @@ See `schema-changes` above for the full flow. TL;DR:
 5. Commit both.
 6. Apply to prod: `MIGRATOR_DATABASE_URL='<owner URL>' pnpm db:migrate`.
 7. (Future) Automate step 6 in CI on push to `main` — currently manual.
+
+## neon-outage
+
+**Symptom:** Next app surfaces DB errors (500s on `/`, `/phases/*`, `/players/*`); Sentry `web` project fires a spike alert; `/status` either 500s or shows stale `meta_refresh` rows.
+
+**First responder steps:**
+
+1. Confirm the outage is upstream, not ours:
+   ```bash
+   curl -sI https://status.neon.tech/api/v2/status.json | head -3
+   curl -s https://status.neon.tech/api/v2/incidents/unresolved.json | jq '.incidents[0].name, .incidents[0].status'
+   ```
+2. Check the Neon console → Branches → `main` for compute status and any "paused" indicator.
+3. Post to any active incident on Neon's status page to confirm the blast radius matches.
+4. **Mitigate:** since Vercel ISR caches pages for 1h (`revalidate = 3600`), most traffic keeps hitting cached HTML even while the DB is down. Do not trigger a redeploy — that invalidates the cache and would amplify impact. Verify via browser that `/` still renders.
+5. For errors surfacing on non-cached paths (e.g., `/status`, on-demand revalidation targets), let them 500 and wait — the site's "last refresh" dot in the footer communicates staleness honestly.
+6. If the outage crosses 30 minutes: post a single note on the public Status page (when we have one) pointing at Neon's status. Until then: no user-facing communication required.
+
+**Post-incident:**
+
+- Review Neon usage: was our CU/hr allotment close to a limit?
+- Document recovery time; if > 1 hour twice in 30 days, evaluate standby in a second region.
+
+## sentry-spike
+
+**Symptom:** Sentry alert fires (error rate > 5/hr for 30min) OR an issue gets > 50 events in 1h (triggers "hot issue" paging rule).
+
+**First responder steps:**
+
+1. Open the offending issue in Sentry. Read the stack trace + `digest` if it came from `app/error.tsx`.
+2. Correlate with:
+   - Most recent merge to `main` (`git log main -n 5 --format=oneline`).
+   - Most recent ETL run (`/status` page → latest `meta_refresh` row).
+3. Decide category:
+   - **Regression from a recent deploy** → `git revert <sha>` + push. Vercel redeploys in ~2min.
+   - **Data-shape change** (e.g., nflverse schema drift) → run contract test suite locally (`cd etl && uv run pytest tests/test_contracts.py`). If it's a missing column, see `etl-failure` below.
+   - **3rd-party scraper / bad bot** — confirm via the `request.url` field on the Sentry event. If requests cluster on a malformed path, it's noise; add a Sentry "inbox rule" to ignore that URL pattern and close.
+4. Never silence an issue without either a commit fix or a documented tag.
+
+**Noise suppression:** Sentry `beforeSend` in `instrumentation-client.ts` already strips cookies + authorization headers. If you see PII leaking into an event, that's a P0 patch to `beforeSend`.
+
+**Event budget:** free tier is 5K events/mo. A spike that burns > 500 events/hr for > 4 hours will blow quota mid-month — escalate to `git revert` sooner rather than waiting for root cause.
+
+## bad-data-publish
+
+**Symptom:** UI shows an obviously wrong number (e.g., rank `NaN`, an impossible EPA, a player attributed to the wrong team). The `no-bad-numbers` e2e crawler would have caught `NaN`/`null`/`undefined`/`0.0`, so this is usually a *valid but incorrect* number — semantically wrong, not syntactically wrong.
+
+**First responder steps:**
+
+1. Triage the scope: is it one row in one phase, or a site-wide shape (e.g., every rank shifted by one)?
+2. Pull the raw play-by-play for the affected week:
+   ```bash
+   ETL_DATABASE_URL='<prod etl_writer url>' \
+     uv run --project etl python -c "
+   from etl.db import conn
+   with conn() as c, c.cursor() as cur:
+       cur.execute('SELECT * FROM plays WHERE season = %s AND week = %s LIMIT 20', (2025, 14))
+       for r in cur.fetchall(): print(r)
+   "
+   ```
+3. Cross-check against rbsdm / FTN for the same phase/week. Divergence > 0.01 EPA is suspicious; divergence > 0.10 is almost certainly a bug.
+4. If the bug is in aggregation (ETL SQL): roll forward with a fix in `etl/transform/phases.py`, redeploy ETL, re-run `--full` backfill.
+5. If the bug is in display (wrong formatter, wrong semantic map): roll back the offending commit.
+6. Nuclear option: Neon PITR (Point-in-Time Restore) to just-before the bad ETL run. See `etl-rollback` section.
+7. Post a retraction: edit the methodology page with a one-line note dating the bad publish window and the correction. Quiet transparency > silent fix.
+
+**Prevention:** `etl/tests/test_contracts.py` golden values (contract test #12) is the primary guardrail. Anchor new golden values after any meaningful data-shape change.
+
+## dns-issue
+
+**Symptom:** `28andthree.com` times out, NXDOMAIN, or resolves to the wrong IP. Browser cert warning ("your connection is not private") often precedes the NXDOMAIN hint.
+
+**First responder steps:**
+
+1. Run from a few vantage points:
+   ```bash
+   dig 28andthree.com +short
+   dig www.28andthree.com +short
+   dig @1.1.1.1 28andthree.com +short   # bypass local resolver
+   ```
+2. Compare against Vercel's expected A/CNAME records:
+   - Apex `28andthree.com` → `76.76.21.21` (Vercel)
+   - `www.28andthree.com` → `cname.vercel-dns.com`
+3. Log into the registrar (Porkbun — credentials in Dashlane `28-and-three` → `Registrar`). DNS records live in Porkbun's DNS panel *or* are delegated to Vercel's nameservers (check NS records for the zone).
+4. Common breaks:
+   - Someone added a conflicting record in the registrar while nameservers are delegated to Vercel → remove it.
+   - TTL is too high; a good change hasn't propagated yet — confirm with `dig +trace`.
+5. **Cert expiry loop with DNS:** Vercel auto-renews Let's Encrypt via HTTP-01 challenge. If DNS is misconfigured, renewal fails silently. See `cert-expiry` next.
+
+**Post-incident:** If the outage crossed 30 min, lower TTLs on A/CNAME to 300s so the next mitigation propagates faster.
+
+## cert-expiry
+
+**Symptom:** Browser cert warning, Sentry `NET::ERR_CERT_DATE_INVALID` events, or Vercel dashboard banner about a failed renewal.
+
+**First responder steps:**
+
+1. Confirm cert state:
+   ```bash
+   openssl s_client -connect 28andthree.com:443 -servername 28andthree.com </dev/null 2>/dev/null \
+     | openssl x509 -noout -dates
+   ```
+   (`notAfter` should be > 14 days out; Vercel renews at T-30.)
+2. Vercel dashboard → Domains → `28andthree.com` → Certificates. Look for a failed-renewal warning.
+3. Most common cause: DNS was changed and the HTTP-01 challenge can't resolve. Fix the DNS first (see `dns-issue`), then hit the "Renew" button in the Vercel domains panel.
+4. Emergency fallback: Vercel will serve a self-signed cert while the correct one is issued; document a one-line status page note if the outage lasts > 15 min.
+
+**Prevention:** Set a calendar reminder 60 days before the cert's `notAfter` as a belt-and-suspenders check against Vercel's T-30 auto-renewal.
+
+## domain-expiry
+
+**Symptom:** WHOIS shows the domain in "pendingDelete" or "redemption". Registrar sends notices that were probably ignored.
+
+**First responder steps:**
+
+1. `whois 28andthree.com | grep -iE "expir|status"` — confirm current expiry + status.
+2. Log into Porkbun with the credentials in Dashlane. Renew immediately — a renewal inside the 30-day grace period is free; once the domain enters "redemption" (35–80 days after expiry) it costs $80+ to recover.
+3. Verify auto-renew is ON in the registrar UI and that the payment method on file isn't expired.
+4. Renew for at least 2 years so the notice cadence stabilizes.
+
+**Prevention:** Annual calendar reminder at `notBefore + 10mo` (i.e., 60 days before expiry). Auto-renew is the primary; the reminder is the backup.
+
+## dependency-cve
+
+**Symptom:** GitHub Dependabot or `pnpm audit` flags a HIGH or CRITICAL CVE in a dependency we ship.
+
+**First responder steps:**
+
+1. Classify the blast radius:
+   - Is it in a runtime dep (`dependencies`) or dev dep (`devDependencies`)?
+   - Does it run at request time, at build time, or only in CI?
+2. For runtime + server-side deps (Drizzle, pg, next, @sentry/nextjs, @upstash/*, zod): treat as P1. Patch within 24h.
+3. For build/dev deps (ESLint, Playwright, TS, Prettier): treat as P3. Patch in the next routine update.
+4. Apply the patch:
+   ```bash
+   pnpm update <package>@<fixed-version>
+   pnpm test && pnpm test:e2e tests/e2e/a11y.spec.ts tests/e2e/metadata.spec.ts
+   ```
+5. For transitive-only fixes, `pnpm update --recursive` or `pnpm why <package>` to find the parent.
+6. If no fix is available upstream: add a `pnpm.overrides` entry in `package.json` pinning to a safe version. Re-check on upstream release.
+7. Commit with message `deps: patch CVE-YYYY-NNNNN in <package>` and link to the advisory.
+
+**Baseline:** `pnpm audit --audit-level=high` runs in CI (see `.github/workflows/ci.yml`); a HIGH vuln fails the pipeline.
+
+## vercel-outage
+
+**Symptom:** 28andthree.com returns Vercel branded 5xx, or status page https://www.vercel-status.com shows an ongoing incident.
+
+**First responder steps:**
+
+1. Check Vercel's status page: https://www.vercel-status.com. Confirm the component affected (Edge Network / Serverless / Build / DNS).
+2. If **Edge Network**: nothing to do from our side. Traffic returns when Vercel recovers. ISR-cached pages may still serve from regional caches even during partial outages.
+3. If **Serverless functions**: `/api/revalidate` + `/status/data` + `/og` go down. Public pages stay up from cache. Wait.
+4. If **Build/Deploy**: a pending deploy may be stuck. Cancel and re-queue from the dashboard. Avoid pushing new commits until the platform recovers — they queue up and deploy in order on the wrong side of the incident.
+5. **No self-hosted fallback.** The architecture assumes Vercel. If an outage crosses 4 hours we post a status note on our GitHub README (fans have been linked there from the disclaimer footer).
+
+**Post-incident:** cross-reference the Vercel RCA with our ETL cron schedule — if an ETL window collided with the outage, manually dispatch `etl.yml` with `mode=full` to re-run.
+
+**Post-outage checklist (any category):** verify that `/status` last-refresh dot is current, that the footer disclaimer still renders, and that both CSP + rate-limit headers are back on `/` (`curl -I /`).
