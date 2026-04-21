@@ -52,18 +52,16 @@ MIGRATOR_DATABASE_URL='<prod owner URL>' pnpm db:migrate
 
 **Risky schema change (destructive, or unclear blast radius):**
 
-```bash
-# Test on dev branch first
-MIGRATOR_DATABASE_URL='<dev owner URL>' pnpm db:migrate
-# Verify app behavior against the dev branch in a local dev run
-DATABASE_URL='<dev app_read URL>' pnpm dev
-# When satisfied, apply to prod
-```
+There is no `dev` branch on Neon — only `main` (prod). For risky migrations:
+
+1. Generate the SQL with `pnpm db:generate` and **read every line** before committing. Drizzle-kit's output for CHECK constraints, index creation, or column drops is where surprises hide.
+2. If the migration touches large tables, hand-edit the generated SQL before applying: `CREATE INDEX CONCURRENTLY`, `NOT VALID` + `VALIDATE` for CHECKs, `SET statement_timeout` guards. See `adding-a-migration` below for the recipes.
+3. Create a Neon branch manually via the Neon UI *for that one migration*, apply there, smoke-test, then apply to prod and drop the ephemeral branch. This is explicitly a one-off — we do not keep a standing non-prod branch.
 
 **One-off preview environment when needed** (e.g., design review before merging a UI redo):
 
 - Push a branch; Vercel auto-creates a preview URL for any branch (default behavior, no integration required).
-- If the preview needs a non-prod DB: create a Neon branch manually via Neon UI → copy its connection string → set it on the Vercel preview via env override or `.env.preview.local` equivalent.
+- If the preview needs a non-prod DB: spin up a Neon branch in the Neon UI *ad hoc* for that preview → copy its connection string → set it on the Vercel preview via env override or `.env.preview.local` equivalent. Delete the Neon branch when the preview is done.
 - Merge to main when done; Vercel promotes to prod on the next push.
 
 **Rollback path:** `git revert <sha>` + force-reverse the migration. Neon PITR is the last resort (see `etl-rollback` below).

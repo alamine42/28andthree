@@ -19,7 +19,18 @@ In QA mode, flag any code that doesn't match DESIGN.md.
 - See `SPEC.md` §4 for the full architecture and `docs/plans/e1-foundation-plan.md` for Sprint 1 specifics.
 
 ## Workflow
-Single-branch: commits land on `main`, Vercel auto-deploys to prod. No required PRs, no per-PR Neon branches. Schema changes: `pnpm db:generate` → commit → `MIGRATOR_DATABASE_URL=<prod> pnpm db:migrate` (test on `dev` first for risky ones). See `docs/runbook.md#schema-changes`.
+Single-branch: commits land on `main`, Vercel auto-deploys to prod.
+
+**Neon has ONE branch: `main` (prod).** There is no `dev` branch, no staging, no per-PR preview branches. Do not reference `MIGRATOR_DATABASE_URL_DEV` or "test on dev first" — that line is stale and has been removed. Schema changes apply directly to prod:
+
+```bash
+pnpm db:generate          # generate SQL from db/schema.ts
+# review the generated SQL carefully — this is the last gate
+git add drizzle/ && git commit
+MIGRATOR_DATABASE_URL='<prod neondb_owner>' pnpm db:migrate
+```
+
+For risky migrations (CHECK constraints against large tables, concurrent-index requirements), edit the generated SQL by hand before applying — see `docs/runbook.md#adding-a-migration`.
 
 ## Testing
 Per `SPEC.md` §8: data contract tests in the ETL (primary), Playwright smoke E2E for key pages. No broad unit-test pyramid — bugs will be in the data, not component render logic.

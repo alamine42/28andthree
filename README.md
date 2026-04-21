@@ -15,7 +15,7 @@ Advanced analytics for the New England Patriots — built for fans who read the 
 ## Stack
 
 - **Web:** Next.js 15 (App Router, TypeScript) on Vercel, pnpm 9, Node 22 LTS.
-- **DB:** Neon Postgres with branch-per-PR. Drizzle ORM for schema + migrations.
+- **DB:** Neon Postgres, single `main` branch (no dev/staging/per-PR branches). Drizzle ORM for schema + migrations.
 - **ETL:** Python 3.12 managed by uv, via GitHub Actions cron.
 - **UI:** Tailwind 3, self-hosted fonts via `next/font`, Recharts.
 - **Observability:** Sentry (two projects — web + etl), Lighthouse CI (info-only in E1).
