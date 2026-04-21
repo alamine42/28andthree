@@ -1,20 +1,10 @@
 import { withSentryConfig } from '@sentry/nextjs';
 import type { NextConfig } from 'next';
 
+// CSP is now built + attached per-request in middleware.ts so each
+// response can carry a unique nonce (E6-09). Static headers below don't
+// change per request so they stay here.
 const securityHeaders: Array<{ key: string; value: string }> = [
-  {
-    key: 'Content-Security-Policy-Report-Only',
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https://static.www.nfl.com",
-      "font-src 'self' data:",
-      "connect-src 'self' https://*.sentry.io",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-    ].join('; '),
-  },
   {
     key: 'Strict-Transport-Security',
     value: 'max-age=63072000; includeSubDomains; preload',
