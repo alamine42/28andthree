@@ -11,7 +11,10 @@ dependencies = [
   # E2 nflverse ingest. nflreadpy is the maintained successor to nfl_data_py;
   # see docs/solutions/build-errors/nfl-data-py-pandas-python-312-build-failure.md
   # for the dep we explicitly rejected.
-  "nflreadpy>=0.1.0",
+  # Pinned exact per HANDOVER \u00A74 \u2014 upstream schema drift is the #1 ETL
+  # failure mode. Bump deliberately after running contract tests against a
+  # candidate version. Procedure in docs/runbook.md#etl-failure.
+  "nflreadpy==0.1.5",
   "polars>=1.12.0",
   "pyarrow>=17.0.0",
   "pyyaml>=6.0.2",  # for golden_values.yml (E2-11a contract test fixture)
