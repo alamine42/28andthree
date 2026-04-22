@@ -98,9 +98,77 @@ neonctl branches set-default pre-bad-etl
 vercel --prod --force
 ```
 
-**Quarterly drill:** run steps 1–3 on the `dev` branch against a recent PITR point. The first time you do this for real should not be the first time you've done it.
+See also: `etl-failure` below for the decision tree when a run fails rather than lands bad data. The detailed quarterly drill lives in `pitr-drill` next.
 
-See also: `etl-failure` below for the decision tree when a run fails rather than lands bad data.
+## pitr-drill
+
+Quarterly exercise to keep the recovery path warm. Should take ~15 min. The first time you do this for real cannot be the first time you've done it.
+
+### Prerequisites
+
+1. `neonctl` installed and authenticated: `brew install neondatabase/neonctl/neonctl && neonctl auth`.
+2. `ETL_DATABASE_URL` exported (read-only `etl_writer` role is enough for the verification queries).
+3. An uncommitted change-free shell session. The drill leaves no trace in git but does write to stdout a lot — run in a terminal you can scroll.
+
+### Step-by-step
+
+```bash
+# 0. Capture a baseline snapshot from live prod so you can compare after.
+BASELINE_PLAYS=$(psql "$ETL_DATABASE_URL" -Atc "SELECT COUNT(*) FROM plays")
+BASELINE_META=$(psql "$ETL_DATABASE_URL" -Atc "SELECT MAX(started_at) FROM meta_refresh WHERE status='ok'")
+echo "baseline: $BASELINE_PLAYS plays; last ok run $BASELINE_META"
+
+# 1. Pick a PITR timestamp 24h before now. In a real incident you'd pick
+#    "just before the bad ETL started"; for a drill, any recent point
+#    exercises the same path.
+DRILL_POINT=$(date -u -v-1d +%Y-%m-%dT%H:%M:%SZ)   # macOS date; on Linux use `-d '-1 day'`
+echo "drill point: $DRILL_POINT"
+
+# 2. Create a throwaway branch in Neon at that timestamp.
+neonctl branches create \
+  --project-id $(neonctl projects list --output json | jq -r '.[0].id') \
+  --parent main \
+  --pitr "$DRILL_POINT" \
+  --name drill-$(date +%s)
+
+# 3. Read back the connection string and store it in a shell var.
+DRILL_URL=$(neonctl connection-string drill-$(date +%s) --role-name etl_writer)
+echo "drill branch URL ready"
+
+# 4. Verify the restored snapshot is plausible.
+DRILL_PLAYS=$(psql "$DRILL_URL" -Atc "SELECT COUNT(*) FROM plays")
+DRILL_META=$(psql "$DRILL_URL" -Atc "SELECT MAX(started_at) FROM meta_refresh WHERE status='ok'")
+echo "drill:    $DRILL_PLAYS plays; last ok run $DRILL_META"
+
+# Expected: plays ≥ 99% of baseline (we may have added a week's worth),
+# meta_refresh max ≤ baseline.
+
+# 5. Spot-check a couple of known rows to make sure the PITR actually rewound:
+psql "$DRILL_URL" -c "SELECT team, season, rank FROM team_phase_season WHERE team='NE' AND season=2025 ORDER BY phase LIMIT 5;"
+
+# 6. Teardown — delete the throwaway branch so it doesn't count against
+#    Neon branch quota or rack up compute-hours.
+neonctl branches delete drill-$(date +%s)
+```
+
+### Acceptance
+
+- Steps 1–5 all succeed without errors.
+- `DRILL_PLAYS` is within ±1% of `BASELINE_PLAYS` (small drift from the PITR window is fine).
+- `DRILL_META` is ≤ the baseline's last-OK timestamp.
+- Branch deletion in step 6 completes cleanly.
+
+If any step fails or the numbers look wrong, do **not** try to fix in the moment — the drill's whole point is to surface issues when stakes are low. Open an issue tagged `runbook-drill-failure`, write up what happened, and triage before the next weekly ETL runs.
+
+### When to run it
+
+- Quarterly, tied to the calendar (add to the launch checklist's recurring block).
+- After any Neon API/CLI change (`neonctl` bumps especially).
+- After any migration that touches `plays` structurally.
+
+### Escalation
+
+If the real thing happens and this drill recipe doesn't match reality (Neon UI/CLI changed, connection flow differs), jump straight to the Neon console UI path: Branches → Create branch → Parent `main` → "Time travel" toggle → pick timestamp. Same outcome, slower typing.
 
 ## etl-failure
 
