@@ -6,7 +6,8 @@
 //   - Real minus sign U+2212 for negatives (not hyphen).
 //   - "+0.00" (signed zero) — deltas never hide direction.
 //   - Percentages: "58%" no space.
-//   - Ranks: two-digit zero-padded ("04").
+//   - Ranks: English ordinal suffix ("1st", "22nd", "13th") — the teen
+//     exceptions (11/12/13 → "th") are handled inside formatRank.
 
 /** Sentinel rendered when a metric is null / undefined / NaN / Infinity. */
 export const NO_DATA = '\u2014'; // em-dash
@@ -25,7 +26,22 @@ export function formatEpa(v: number | null | undefined): string {
 
 export function formatRank(rank: number | null | undefined): string {
   if (!isFiniteNumber(rank)) return NO_DATA;
-  return String(Math.trunc(rank)).padStart(2, '0');
+  const n = Math.trunc(rank);
+  return `${n}${ordinalSuffix(n)}`;
+}
+
+/** English ordinal suffix. 11/12/13 all use "th" regardless of last
+ *  digit (the "teen exception"). Kept internal — callers want the
+ *  formatted rank string, not just the suffix. */
+function ordinalSuffix(n: number): 'st' | 'nd' | 'rd' | 'th' {
+  const abs = Math.abs(n);
+  const mod100 = abs % 100;
+  if (mod100 >= 11 && mod100 <= 13) return 'th';
+  const mod10 = abs % 10;
+  if (mod10 === 1) return 'st';
+  if (mod10 === 2) return 'nd';
+  if (mod10 === 3) return 'rd';
+  return 'th';
 }
 
 export function formatDelta(delta: number | null | undefined): string {

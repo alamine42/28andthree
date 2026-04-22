@@ -46,13 +46,53 @@ describe('lib/format/number — formatEpa', () => {
   });
 });
 
-describe('lib/format/number — formatRank', () => {
-  it('should_zero_pad_single_digit_ranks', () => {
-    assert.equal(formatRank(4), '04');
+describe('lib/format/number — formatRank (ordinal suffix)', () => {
+  it('should_render_rank_1_as_1st', () => {
+    assert.equal(formatRank(1), '1st');
   });
 
-  it('should_not_pad_double_digit_ranks', () => {
-    assert.equal(formatRank(22), '22');
+  it('should_render_rank_2_as_2nd', () => {
+    assert.equal(formatRank(2), '2nd');
+  });
+
+  it('should_render_rank_3_as_3rd', () => {
+    assert.equal(formatRank(3), '3rd');
+  });
+
+  it('should_render_ranks_4_through_10_with_th', () => {
+    for (let n = 4; n <= 10; n++) {
+      assert.equal(formatRank(n), `${n}th`, `rank ${n}`);
+    }
+  });
+
+  it('should_use_th_for_the_teen_exceptions_11_12_13', () => {
+    // 11/12/13 all take "th" even though they end in 1/2/3 — English
+    // ordinal teens exception. Without this, we'd ship "11st / 12nd / 13rd".
+    assert.equal(formatRank(11), '11th');
+    assert.equal(formatRank(12), '12th');
+    assert.equal(formatRank(13), '13th');
+  });
+
+  it('should_render_ranks_14_through_20_with_th', () => {
+    for (let n = 14; n <= 20; n++) {
+      assert.equal(formatRank(n), `${n}th`, `rank ${n}`);
+    }
+  });
+
+  it('should_render_rank_21_as_21st', () => {
+    assert.equal(formatRank(21), '21st');
+  });
+
+  it('should_render_rank_22_as_22nd', () => {
+    assert.equal(formatRank(22), '22nd');
+  });
+
+  it('should_render_rank_23_as_23rd', () => {
+    assert.equal(formatRank(23), '23rd');
+  });
+
+  it('should_render_rank_32_as_32nd_league_bottom', () => {
+    assert.equal(formatRank(32), '32nd');
   });
 
   it('should_return_em_dash_for_null', () => {
@@ -61,6 +101,14 @@ describe('lib/format/number — formatRank', () => {
 
   it('should_return_em_dash_for_undefined', () => {
     assert.equal(formatRank(undefined), NO_DATA);
+  });
+
+  it('should_return_em_dash_for_NaN', () => {
+    assert.equal(formatRank(NaN), NO_DATA);
+  });
+
+  it('should_truncate_fractional_input_to_integer_ordinal', () => {
+    assert.equal(formatRank(4.9), '4th');
   });
 });
 

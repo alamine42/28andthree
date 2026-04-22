@@ -106,7 +106,7 @@ Redesigned surfaces, not inverted. Reduces saturation on accents by ~15%.
 
 ## Content conventions
 - **Numerics:** always tabular-nums. Always signed for deltas and EPA (`+0.08`, `−0.02`). Use the real minus sign `−` (U+2212) not hyphen.
-- **Ranks:** two-digit zero-padded when displayed large (`04`, not `4`). One-digit in inline text.
+- **Ranks:** English ordinal suffix (`1st`, `12th`, `22nd`, `32nd`). The teen exceptions (11/12/13) take `th` regardless of last digit. `formatRank()` is the single source of truth.
 - **Percentages:** no space before `%` (`58%`).
 - **Dates:** `Tue 10:06 AM ET` or `Wk 14 · 2025`. Lean terminal-style.
 - **Copy voice:** terse, specific, no exclamation points, no hype. The data does the talking.
@@ -139,3 +139,5 @@ Set in Geist Mono 11px, `--text-muted`, uppercase, tracked +0.14em.
 | 2026-04-14 | Deep ink navy `#0B1520` instead of pure black | Quiet Patriots reference without uniform-cosplay; gentler on eyes for long tables. |
 | 2026-04-21 | Green-for-positive (`#1ABE58`) replaces amber | User preference after living with the site for a week: amber read as alert/warning in adjacent-context glances (ESPN-like). Green is the audience's default expectation for "good" in sports analytics; the visual cost of being less category-distinctive is worth the cognitive-load saving. Shade chosen muted (`#1ABE58` on dark bg, 6.0:1 AA; `#0E6B2F` on warm paper) so it reads editorial rather than neon. Wordmark "and" flips to green too. |
 | 2026-04-21 | Density increased across home + phase + coaching + draft | Section gap 120→60px, card padding 24-28→16-20px, phase-card min-height 148-172→100-120px. Dense/analyst-terminal read vs. marketing-site breathing room. Editorial pages (methodology, future about) keep the 120px rhythm. |
+| 2026-04-21 | Rank format: ordinal suffix (`1st`, `22nd`) instead of zero-pad (`01`, `22`) | Fans scan league rankings with natural-language ordinals. Zero-pad was a terminal-density stylistic choice that read as "database key" rather than "standing". Ordinal suffix keeps monospace tabular-nums alignment (all strings are 3–4 chars) while reading like a sports-page ranking. |
+| 2026-04-21 | Phase-card: sparkline inline with rank | Column stack (label → rank → sparkline → EPA) spent a full row on a 20px-tall trend chart. Inlining the sparkline to the right of the rank saves ~25% card height while keeping the trend glanceable. Home page at 11 such cards drops measurably in vertical scroll. |

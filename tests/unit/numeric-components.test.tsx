@@ -14,9 +14,9 @@ describe('components/numeric — RankNumber', () => {
     assert.match(html, /data-numeric="true"/);
   });
 
-  it('should_zero_pad_single_digit_ranks_via_formatRank', () => {
+  it('should_render_ordinal_suffix_via_formatRank', () => {
     const html = renderToStaticMarkup(<RankNumber rank={4} />);
-    assert.match(html, />04</);
+    assert.match(html, />4th</);
   });
 
   it('should_render_em_dash_when_rank_is_null', () => {

@@ -16,10 +16,10 @@ test.describe('E3 smoke', () => {
     const cards = page.locator('[data-testid^="phase-card-"]');
     await expect(cards).toHaveCount(11);
 
-    // At least one card shows a real two-digit rank.
+    // At least one card shows a real ordinal rank (e.g. "1st", "22nd", "32nd").
     const firstRank = page.getByTestId('phase-card-pass_offense').locator('[data-numeric="true"]').first();
     const text = (await firstRank.textContent())?.trim() ?? '';
-    expect(text).toMatch(/^\d{2}$/);
+    expect(text).toMatch(/^\d{1,2}(st|nd|rd|th)$/);
   });
 
   test('clicking a phase card navigates to the phase detail page', async ({ page }) => {
