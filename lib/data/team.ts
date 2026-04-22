@@ -1,6 +1,7 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { games, teamPhaseSeason } from '@/db/schema';
 import { getDb } from '@/lib/db';
+import { isSandbox } from '@/lib/sandbox';
 
 export type TeamSeasonOverview = {
   season: number;
@@ -18,6 +19,10 @@ export async function getTeamSeasonOverview(
   team: string,
   season: number,
 ): Promise<TeamSeasonOverview> {
+  if (isSandbox()) {
+    const stub = await import('@/lib/sandbox/stubs/team');
+    return stub.getTeamSeasonOverview(team, season);
+  }
   const db = getDb();
   if (!db) {
     return emptyOverview(season);
@@ -147,6 +152,10 @@ export async function getRecentGames(
   season: number,
   n = 6,
 ): Promise<GameResult[]> {
+  if (isSandbox()) {
+    const stub = await import('@/lib/sandbox/stubs/team');
+    return stub.getRecentGames(team, season, n);
+  }
   const db = getDb();
   if (!db) return [];
 

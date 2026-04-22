@@ -2,6 +2,11 @@ import { and, asc, eq, sql } from 'drizzle-orm';
 import { PHASES, type Phase } from '@/lib/constants/phases';
 import { teamPhaseSeason, teamPhaseWeekly } from '@/db/schema';
 import { getDb } from '@/lib/db';
+import { isSandbox } from '@/lib/sandbox';
+
+// All five exported readers below check isSandbox() at the top and
+// dynamic-import the stub when active. Pattern documented in
+// docs/plans/e8-sandbox-plan.md §3 ("DAL wrapper pattern").
 
 // ---- Snapshot: one row per phase for the home-page rank grid ---------------
 
@@ -17,6 +22,10 @@ export async function getPhaseRankSnapshot(
   team: string,
   season: number,
 ): Promise<PhaseSnapshot[]> {
+  if (isSandbox()) {
+    const stub = await import('@/lib/sandbox/stubs/phases');
+    return stub.getPhaseRankSnapshot(team, season);
+  }
   const db = getDb();
   if (!db) return [];
 
@@ -57,6 +66,10 @@ export async function getPatsPhaseSparklines(
   season: number,
   weeksBack = 8,
 ): Promise<PatsSparklines> {
+  if (isSandbox()) {
+    const stub = await import('@/lib/sandbox/stubs/phases');
+    return stub.getPatsPhaseSparklines(team, season);
+  }
   const db = getDb();
   const result = new Map<Phase, SparklinePoint[]>();
   for (const p of PHASES) result.set(p, []);
@@ -106,6 +119,10 @@ export async function getPhaseDetail(
   team: string,
   season: number,
 ): Promise<PhaseDetail | null> {
+  if (isSandbox()) {
+    const stub = await import('@/lib/sandbox/stubs/phases');
+    return stub.getPhaseDetail(phase, team, season);
+  }
   const db = getDb();
   if (!db) return null;
 
@@ -158,6 +175,10 @@ export async function getPhaseWeeklyTrend(
   team: string,
   season: number,
 ): Promise<TrendPoint[]> {
+  if (isSandbox()) {
+    const stub = await import('@/lib/sandbox/stubs/phases');
+    return stub.getPhaseWeeklyTrend(phase, team, season);
+  }
   const db = getDb();
   if (!db) return [];
 
@@ -210,6 +231,10 @@ export async function getLeagueDistribution(
   season: number,
   week?: number,
 ): Promise<DistributionRow[]> {
+  if (isSandbox()) {
+    const stub = await import('@/lib/sandbox/stubs/phases');
+    return stub.getLeagueDistribution(phase, season);
+  }
   const db = getDb();
   if (!db) return [];
 

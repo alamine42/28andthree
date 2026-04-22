@@ -2,6 +2,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import type { Phase } from '@/lib/constants/phases';
 import { players, qbSeason, skillSeason } from '@/db/schema';
 import { getDb } from '@/lib/db';
+import { isSandbox } from '@/lib/sandbox';
 
 export type ContributorCard = {
   gsisId: string;
@@ -22,6 +23,10 @@ export async function getTopContributors(
   season: number,
   limit = 3,
 ): Promise<ContributorCard[]> {
+  if (isSandbox()) {
+    const stub = await import('@/lib/sandbox/stubs/contributors');
+    return stub.getTopContributors(phase, team, season, limit);
+  }
   const db = getDb();
   if (!db) return [];
 

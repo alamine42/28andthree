@@ -7,6 +7,7 @@ import {
   computeCoachSegments,
   type WeeklyCoachRow,
 } from '@/lib/logic/coach-segments';
+import { isSandbox } from '@/lib/sandbox';
 
 export type TendencyRollup = {
   passRate1Short: number | null;
@@ -51,6 +52,10 @@ export async function getCoachSegments(
   team: string,
   season: number,
 ): Promise<CoachSegmentWithRollup[]> {
+  if (isSandbox()) {
+    const stub = await import('@/lib/sandbox/stubs/coaching');
+    return stub.getCoachSegments(team, season);
+  }
   const db = getDb();
   if (!db) return [];
 
@@ -97,6 +102,10 @@ export async function getFourthDownDecisions(
   team: string,
   season: number,
 ): Promise<FourthDownDecision[]> {
+  if (isSandbox()) {
+    const stub = await import('@/lib/sandbox/stubs/coaching');
+    return stub.getFourthDownDecisions(team, season);
+  }
   const db = getDb();
   if (!db) return [];
 

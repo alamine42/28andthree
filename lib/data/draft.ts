@@ -3,6 +3,7 @@ import { draftPicks, draftExpectedValue, skillSeason, qbSeason } from '@/db/sche
 import { getDb } from '@/lib/db';
 import { bucketForPosition } from '@/lib/format/position-bucket';
 import { type Grade, gradePick } from '@/lib/logic/draft-grade';
+import { isSandbox } from '@/lib/sandbox';
 
 export type DraftRoiRow = {
   draftSeason: number;
@@ -31,6 +32,10 @@ export async function getDraftRoiByClass(
   draftSeason: number,
   currentSeason: number,
 ): Promise<DraftRoiRow[]> {
+  if (isSandbox()) {
+    const stub = await import('@/lib/sandbox/stubs/draft');
+    return stub.getDraftRoiByClass(draftSeason, currentSeason);
+  }
   const db = getDb();
   if (!db) return [];
 

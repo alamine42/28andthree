@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { AgentationToolbar } from '@/components/sandbox/AgentationToolbar';
+import { SandboxBanner } from '@/components/sandbox/SandboxBanner';
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteHeader } from '@/components/SiteHeader';
 import { display, geistMono, geistSans } from './fonts';
@@ -23,6 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${geistSans.variable} ${geistMono.variable} ${display.variable}`}
     >
       <body className="min-h-screen bg-bg text-text antialiased">
+        <SandboxBanner />
         <div className="flex min-h-screen flex-col">
           <SiteHeader />
           <main className="mx-auto w-full max-w-content flex-1 px-4 md:px-6 lg:px-8">
@@ -30,6 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </main>
           <SiteFooter />
         </div>
+        <AgentationToolbar />
       </body>
     </html>
   );

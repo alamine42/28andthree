@@ -16,6 +16,7 @@ const perPrProjects = allProjects.filter((p) => p.name === 'chromium');
 
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: ['**/sandbox/**'],
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,

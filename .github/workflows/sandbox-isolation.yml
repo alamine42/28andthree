@@ -1,0 +1,65 @@
+name: Sandbox isolation sentinel
+
+# Fail CI if a prod build accidentally contains fixture bytes. The
+# next.config.ts alias should have scrubbed them; this is the belt to
+# that suspenders. See docs/sandbox.md for how aliasing works.
+
+on:
+  pull_request:
+    paths:
+      - 'lib/sandbox/**'
+      - 'next.config.ts'
+      - 'package.json'
+      - '.github/workflows/sandbox-isolation.yml'
+  push:
+    branches: [main]
+
+jobs:
+  grep-prod-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build prod bundle (sandbox off)
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_SANDBOX_MODE: ''
+      - name: Grep .next for fixture sentinel strings
+        run: |
+          set -e
+          # Known unique strings that only appear in sandbox fixture
+          # *payloads* (not empty-stub export names, which are exported
+          # identifiers but carry no data). If any land in a non-.map
+          # file under .next, the build-time alias failed.
+          # McDaniels / Henderson etc. are legit prod names — don't use
+          # them. Stick to synthetic fixture IDs.
+          SENTINELS=(
+            "2025_12_NE_NYJ"
+            "2025_13_NE_BUF"
+            "2025_14_NE_MIA"
+            "2025_15_NE_ARI"
+            "00-2024-MAYE"
+            "00-2025-HEN"
+            "00-2025-KYW"
+          )
+          FAIL=0
+          for s in "${SENTINELS[@]}"; do
+            HITS=$(grep -r -l -F "$s" .next 2>/dev/null | grep -v '\.map$' || true)
+            if [ -n "$HITS" ]; then
+              echo "FAIL: fixture sentinel '$s' leaked into .next (non-map files):" >&2
+              echo "$HITS" >&2
+              FAIL=1
+            fi
+          done
+          if [ "$FAIL" = "1" ]; then
+            echo "::error::Sandbox fixtures leaked into the prod bundle. See docs/sandbox.md."
+            exit 1
+          fi
+          echo "OK: no sandbox fixture bytes found in .next"

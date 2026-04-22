@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:sandbox": "NEXT_PUBLIC_SANDBOX_MODE=1 next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",

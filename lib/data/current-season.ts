@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { desc } from 'drizzle-orm';
 import { teamPhaseWeekly } from '@/db/schema';
 import { getDb } from '@/lib/db';
+import { isSandbox } from '@/lib/sandbox';
 
 // Keyed on team_phase_weekly (not team_phase_season) so the home page flips
 // to the new season as soon as any team has enough plays in any phase —
@@ -12,6 +13,10 @@ const FALLBACK_SEASON = 2025;
 /** Latest season with at least one row in team_phase_weekly. Cached per
  * server render so multiple consumers in the same request hit the DB once. */
 export const getCurrentSeason = cache(async (): Promise<number> => {
+  if (isSandbox()) {
+    const stub = await import('@/lib/sandbox/stubs/current-season');
+    return stub.getCurrentSeason();
+  }
   const db = getDb();
   if (!db) return FALLBACK_SEASON;
   const rows = await db
