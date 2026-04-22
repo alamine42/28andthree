@@ -8,7 +8,19 @@ Local-only mode where the site renders against hand-curated fixtures instead of 
 pnpm dev:sandbox
 ```
 
-That sets `NEXT_PUBLIC_SANDBOX_MODE=1` and boots `next dev`. The amber **Sandbox mode** banner at the top of every page confirms you're in.
+That sets `NEXT_PUBLIC_SANDBOX_MODE=1` and wraps `next dev` with [portless](https://github.com/vercel-labs/portless). Portless assigns a free port in 4000–4999 (via `$PORT`) and routes **https://sandbox.localhost** to it through its HTTPS+HTTP/2 proxy. Port 3000 stays free for the non-sandbox `pnpm dev`.
+
+The amber **Sandbox mode** banner at the top of every page confirms you're in.
+
+### First-run setup
+
+Portless binds port 443 and needs a trusted local CA. On the first run:
+
+1. Portless prompts for `sudo` to bind 443 (macOS/Linux)
+2. It generates a CA and adds it to your system trust store — no browser warnings after that
+3. If you skipped the trust prompt, run `pnpm exec portless trust` later
+
+If you want plain HTTP (no TLS, no sudo), start the proxy once with `pnpm exec portless proxy start --no-tls` — the dev URL becomes `http://sandbox.localhost`.
 
 ## How it works
 

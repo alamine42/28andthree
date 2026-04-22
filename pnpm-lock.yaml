@@ -69,6 +69,9 @@ importers:
       eslint:
         specifier: ^9.17.0
         version: 9.39.4(jiti@1.21.7)
+      portless:
+        specifier: ^0.10.3
+        version: 0.10.3
       postcss:
         specifier: ^8.4.49
         version: 8.5.10
@@ -3143,6 +3146,12 @@ packages:
   playwright@1.59.1:
     resolution: {integrity: sha512-C8oWjPR3F81yljW9o5OxcWzfh6avkVwDD2VYdwIGqTkl+OGFISgypqzfu7dOe4QNLL2aqcWBmI3PMtLIK233lw==}
     engines: {node: '>=18'}
+    hasBin: true
+
+  portless@0.10.3:
+    resolution: {integrity: sha512-lXbVUsNiwWMKJGMi49HhTMW0lS7u0EzawonDZQ+yglSnHioiQK18Y4Fe0Ilk+TuXej71E/nTOHIFIBjUGvTm9w==}
+    engines: {node: '>=20'}
+    os: [darwin, linux, win32]
     hasBin: true
 
   postcss-import@15.1.0:
@@ -6939,6 +6948,8 @@ snapshots:
       playwright-core: 1.59.1
     optionalDependencies:
       fsevents: 2.3.2
+
+  portless@0.10.3: {}
 
   postcss-import@15.1.0(postcss@8.5.10):
     dependencies:

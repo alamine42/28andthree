@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "dev:sandbox": "NEXT_PUBLIC_SANDBOX_MODE=1 next dev",
+    "dev:sandbox": "NEXT_PUBLIC_SANDBOX_MODE=1 portless sandbox next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
@@ -44,6 +44,7 @@
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.30.1",
     "eslint": "^9.17.0",
+    "portless": "^0.10.3",
     "postcss": "^8.4.49",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.9",
