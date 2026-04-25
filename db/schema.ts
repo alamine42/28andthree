@@ -166,6 +166,12 @@ export const plays = pgTable(
     yardsAfterCatch: smallint('yards_after_catch'),
     completePass: boolean('complete_pass'),
     incompletePass: boolean('incomplete_pass'),
+    // E4-follow (39d.19): nflverse participation arrays — gsis IDs of every
+    // player on the field for the play, by side. Source for defender
+    // leaderboards on /phases/<defensive>. NULL when participation coverage
+    // is missing (older games or schema-drift release of nflverse).
+    offensePlayers: text('offense_players').array(),
+    defensePlayers: text('defense_players').array(),
   },
   (table) => [
     primaryKey({ name: 'plays_pkey', columns: [table.gameId, table.playId] }),

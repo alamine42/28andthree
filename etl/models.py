@@ -159,6 +159,11 @@ class Play(BaseModel):
     complete_pass: bool | None = None
     incomplete_pass: bool | None = None
 
+    # E4-follow (39d.19): nflverse participation arrays. NULL when the
+    # game's participation_coverage is missing.
+    offense_players: list[str] | None = None
+    defense_players: list[str] | None = None
+
 
 class TeamPhaseWeekly(BaseModel):
     """Mirror of db/schema.ts `team_phase_weekly`."""

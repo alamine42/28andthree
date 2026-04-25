@@ -144,11 +144,21 @@ export default async function PhaseDetailPage({ params }: { params: Params }) {
         {contributors.length === 0 ? (
           <p className="text-text-muted">No contributor data yet.</p>
         ) : (
-          <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
-            {contributors.map((c, i) => (
-              <TopContributorCard key={c.gsisId || `unit-${i}`} card={c} />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
+              {contributors.map((c, i) => (
+                <TopContributorCard key={c.gsisId || `unit-${i}`} card={c} />
+              ))}
+            </div>
+            {contributors[0]?.caveat ? (
+              <p
+                data-testid="contributor-caveat"
+                className="font-mono text-2xs leading-relaxed text-text-muted"
+              >
+                {contributors[0].caveat}
+              </p>
+            ) : null}
+          </>
         )}
       </section>
     </section>

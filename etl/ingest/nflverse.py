@@ -48,6 +48,9 @@ _REQUIRED_PLAY_COLUMNS: Final[tuple[str, ...]] = (
     "score_differential", "game_seconds_remaining",
     "posteam_timeouts_remaining", "defteam_timeouts_remaining",
     "roof", "surface",
+    # E4-follow (39d.19): participation arrays. Joined in by
+    # `_join_participation`; needed by the defender-leaderboard DAL.
+    "offense_players", "defense_players",
 )
 
 # nflverse → our schema column renames. Keeps our Pydantic fields aligned with
@@ -265,6 +268,13 @@ def _play_from_record(r: dict) -> Play:
         r["posteam"] = normalize_team_abbr(r["posteam"])
     if "defteam" in r:
         r["defteam"] = normalize_team_abbr(r["defteam"])
+    # nflverse participation ships {offense,defense}_players as a
+    # semicolon-separated string of gsis IDs in some releases and as a
+    # list in others. Coerce to list[str] for the Play model.
+    for key in ("offense_players", "defense_players"):
+        v = r.get(key)
+        if isinstance(v, str):
+            r[key] = [pid for pid in v.split(";") if pid]
     # Drop any keys Pydantic doesn't know about (schema drift safety valve).
     allowed = set(Play.model_fields.keys())
     payload = {k: v for k, v in r.items() if k in allowed}

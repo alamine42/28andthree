@@ -33,6 +33,8 @@ _PLAYS_WRITE_COLUMNS: tuple[str, ...] = (
     "receiver_player_id", "receiver_player_name",
     "rusher_player_id", "rusher_player_name",
     "yards_after_catch", "complete_pass", "incomplete_pass",
+    # E4-follow (39d.19): participation arrays for defender leaderboards.
+    "offense_players", "defense_players",
 )
 
 _GAMES_WRITE_COLUMNS: tuple[str, ...] = (

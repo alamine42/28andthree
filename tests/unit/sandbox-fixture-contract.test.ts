@@ -9,6 +9,7 @@ import {
 import { recentGames2025, teamOverview2025 } from '../../lib/sandbox/fixtures/team';
 import { coachSegments2025, fourthDownDecisions2025 } from '../../lib/sandbox/fixtures/coaching';
 import { draftRoi } from '../../lib/sandbox/fixtures/draft';
+import { getTopContributors } from '../../lib/sandbox/stubs/contributors';
 
 // E8-13: fixture shape contracts. If any of these drift out of sync
 // with the prod DAL types, the TS build would catch it — but the
@@ -89,6 +90,38 @@ describe('fixture contract — coaching', () => {
     const disagreed = fourthDownDecisions2025.filter((d) => d.wentForIt !== d.goRecommended);
     assert.ok(agreed.length > 0, 'need at least one agreed call');
     assert.ok(disagreed.length > 0, 'need at least one disagreed call');
+  });
+});
+
+describe('fixture contract — defensive contributors (E4-follow / 39d.19)', () => {
+  const DEFENSIVE_PHASES = [
+    'pass_defense',
+    'run_defense',
+    'third_down_defense',
+    'redzone_defense',
+    'explosive_defense',
+  ] as const;
+
+  for (const phase of DEFENSIVE_PHASES) {
+    it(`${phase} returns named defenders with gsis_ids and the SPEC §3.3 caveat`, async () => {
+      const cards = await getTopContributors(phase, 'NE', 2025, 3);
+      assert.ok(cards.length > 0, `${phase}: expected ≥1 defender card`);
+      for (const c of cards) {
+        assert.equal(c.role, 'defender', `${phase}: card should be role='defender'`);
+        assert.ok(c.gsisId.length > 0, `${phase}: defender card missing gsisId`);
+        assert.ok(c.displayName.length > 0, `${phase}: defender card missing displayName`);
+        assert.ok(
+          c.caveat && c.caveat.includes('participation data'),
+          `${phase}: defender card missing SPEC §3.3 caveat`,
+        );
+      }
+    });
+  }
+
+  it('special_teams stays on the unit-card fallback (no per-defender credit)', async () => {
+    const cards = await getTopContributors('special_teams', 'NE', 2025, 3);
+    assert.equal(cards.length, 1);
+    assert.equal(cards[0]?.role, 'unit');
   });
 });
 

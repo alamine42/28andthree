@@ -79,6 +79,69 @@ const UNIT_FALLBACK: ContributorCard[] = [
   },
 ];
 
+// E4-follow (39d.19): defender leaderboard fixtures. Synthetic gsisIds so
+// the sandbox build remains data-pure; CI sentinel grep keys off the
+// fixture-only marker added by sandbox-dump.
+const DEFENDER_CAVEAT =
+  'Based on nflverse participation data; no pass-coverage credit ' +
+  '(individual ratings deferred per methodology).';
+
+const PASS_DEFENDERS: ContributorCard[] = [
+  {
+    gsisId: '00-2023-GONZ',
+    displayName: 'Christian Gonzalez',
+    position: 'CB',
+    headshotUrl: null,
+    primaryStat: '14',
+    primaryStatLabel: 'Sacks + pressures',
+    role: 'defender',
+    caveat: DEFENDER_CAVEAT,
+  },
+  {
+    gsisId: '00-2021-BARM',
+    displayName: 'Christian Barmore',
+    position: 'DT',
+    headshotUrl: null,
+    primaryStat: '12',
+    primaryStatLabel: 'Sacks + pressures',
+    role: 'defender',
+    caveat: DEFENDER_CAVEAT,
+  },
+  {
+    gsisId: '00-2023-WHIT',
+    displayName: 'Keion White',
+    position: 'DE',
+    headshotUrl: null,
+    primaryStat: '10',
+    primaryStatLabel: 'Sacks + pressures',
+    role: 'defender',
+    caveat: DEFENDER_CAVEAT,
+  },
+];
+
+const RUN_DEFENDERS: ContributorCard[] = [
+  {
+    gsisId: '00-2021-BARM',
+    displayName: 'Christian Barmore',
+    position: 'DT',
+    headshotUrl: null,
+    primaryStat: '22',
+    primaryStatLabel: 'Stops at/behind LOS',
+    role: 'defender',
+    caveat: DEFENDER_CAVEAT,
+  },
+  {
+    gsisId: '00-2025-FARM',
+    displayName: 'Joshua Farmer',
+    position: 'DT',
+    headshotUrl: null,
+    primaryStat: '17',
+    primaryStatLabel: 'Stops at/behind LOS',
+    role: 'defender',
+    caveat: DEFENDER_CAVEAT,
+  },
+];
+
 export async function getTopContributors(
   phase: Phase,
   _team: string,
@@ -100,6 +163,19 @@ export async function getTopContributors(
       })).slice(0, limit);
     case 'explosive_offense':
       return RECEIVERS.slice(0, limit);
+    case 'pass_defense':
+    case 'third_down_defense':
+      return PASS_DEFENDERS.slice(0, limit);
+    case 'run_defense':
+      return RUN_DEFENDERS.slice(0, limit);
+    case 'redzone_defense':
+    case 'explosive_defense':
+      return PASS_DEFENDERS.map((c) => ({
+        ...c,
+        primaryStat: phase === 'redzone_defense' ? '38' : '92',
+        primaryStatLabel:
+          phase === 'redzone_defense' ? 'Red-zone snaps' : 'Snaps without an explosive',
+      })).slice(0, limit);
     default:
       return UNIT_FALLBACK;
   }
