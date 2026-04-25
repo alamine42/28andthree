@@ -1,18 +1,32 @@
-"""Freshness gate + off-season short-circuit. See plan §3.8."""
+"""Freshness gate. Decides whether the ETL should run on a given invocation.
+
+The gate is the first step of every cron run. It compares nflverse vs DB
+state and the calendar (via etl/schedule.py) to short-circuit no-op runs.
+
+Schedule logic moved out: this module is now a thin policy layer over a
+precomputed ScheduleSnapshot. Callers (etl/main.py) are responsible for
+fetching the snap.
+"""
 
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
-import psycopg
+from etl.schedule import ScheduleSnapshot
 
 logger = logging.getLogger("etl.freshness")
 
 # Grace window: if the latest completed nflverse game was within this window
 # of "now", assume the nflverse release is still processing and call it not-fresh.
 _RELEASE_GRACE = timedelta(hours=10)
+
+# Belt + suspenders deadlock breaker (codex E9 review CRITICAL #1).
+# Even when the gate would otherwise skip indefinitely (e.g., offseason
+# with no next-season schedule yet), force a re-attempt every N days so a
+# newly-published nflverse schedule gets ingested.
+_MAX_OFFSEASON_SKIP_DAYS = 14
 
 
 @dataclass(frozen=True)
@@ -28,67 +42,61 @@ class FreshnessResult:
 
 def check_freshness(
     *,
-    now: datetime,
-    current_season: int,
+    snap: ScheduleSnapshot,
     nflverse_latest_completed: tuple[int, int] | None,
-    db_connection: psycopg.Connection,
-    next_season_week1_date: date | None,
+    db_max_completed_week: int | None,
+    last_ok_run_at: datetime | None,
+    now: datetime,
 ) -> FreshnessResult:
     """Return whether the ETL should run now.
 
-    Arguments:
-      now: current UTC datetime, injected for testability.
-      current_season: the NFL season year (e.g., 2026 for Sept 2026 – Feb 2027).
-      nflverse_latest_completed: (season, week) of most recent completed game in
-        nflverse. None if the schedule couldn't be fetched.
-      db_connection: active Postgres conn to query our games table.
-      next_season_week1_date: scheduled kick-off date of the next season's
-        Week 1. If today is between post-Super-Bowl and this date, it's the
-        off-season and nothing can be fresh.
-
-    The decision rules:
-      1. If we're in the off-season, exit heartbeat (not a retry signal).
-      2. If nflverse's latest completed week equals our DB's latest → nothing
-         new; exit heartbeat.
-      3. If nflverse is ahead but the game is too recent (< grace window),
-         back off; exit heartbeat.
-      4. Otherwise: run the ETL.
+    Decision order:
+      1. Offseason short-circuit (4 guards, all must hold to skip):
+         - phase == 'offseason'
+         - next_game_date IS NOT NULL  (else: re-run to refresh schedule)
+         - days_until_next_game > 7
+         - last_ok_run_at < 14 days ago (else: force a periodic refresh)
+      2. nflverse unavailable → skip with explicit reason.
+      3. nflverse on a different season than the snap thinks → skip
+         (nflverse lags on season rollover).
+      4. nflverse latest week ≤ DB latest week → already_loaded.
+      5. Otherwise → run.
     """
-    if _is_offseason(now.date(), next_season_week1_date):
+    if _should_skip_offseason(snap, last_ok_run_at, now):
         return FreshnessResult(
             should_run=False,
             reason="offseason",
+            current_season=snap.season,
         )
 
-    db_max_week = _db_max_completed_week(db_connection, current_season)
+    current_season = snap.season
 
     if nflverse_latest_completed is None:
         return FreshnessResult(
             should_run=False,
             reason="nflverse_schedule_unavailable",
             current_season=current_season,
-            db_max_week=db_max_week,
+            db_max_week=db_max_completed_week,
         )
 
     nfl_season, nfl_week = nflverse_latest_completed
 
     if nfl_season != current_season:
-        # Pre-season, or nflverse lagging on season rollover.
         return FreshnessResult(
             should_run=False,
             reason=f"nflverse_on_different_season_{nfl_season}",
             current_season=current_season,
             nflverse_max_week=nfl_week,
-            db_max_week=db_max_week,
+            db_max_week=db_max_completed_week,
         )
 
-    if db_max_week is not None and nfl_week <= db_max_week:
+    if db_max_completed_week is not None and nfl_week <= db_max_completed_week:
         return FreshnessResult(
             should_run=False,
             reason="already_loaded",
             current_season=current_season,
             nflverse_max_week=nfl_week,
-            db_max_week=db_max_week,
+            db_max_week=db_max_completed_week,
         )
 
     return FreshnessResult(
@@ -96,39 +104,32 @@ def check_freshness(
         reason="fresh",
         current_season=current_season,
         nflverse_max_week=nfl_week,
-        db_max_week=db_max_week,
+        db_max_week=db_max_completed_week,
     )
 
 
-def _is_offseason(today: date, next_week1: date | None) -> bool:
-    """Return True when today is safely in the offseason.
-
-    If we don't know next Week 1 (schedule unavailable), we conservatively say
-    "not offseason" — better to run the gate and write a heartbeat than to
-    silently skip and never notice new data.
-    """
-    if next_week1 is None:
+def _should_skip_offseason(
+    snap: ScheduleSnapshot,
+    last_ok_run_at: datetime | None,
+    now: datetime,
+) -> bool:
+    """Apply all four offseason-skip guards. Any failure → don't skip."""
+    if snap.phase != "offseason":
         return False
-    # Super Bowl typically completes by mid-February; next Week 1 is early Sept.
-    # The gap is the offseason. One week of buffer either side keeps us from
-    # flagging SB Monday or Week 1 Tuesday as offseason.
-    buffer = timedelta(days=7)
-    # "Offseason" = from mid-Feb until a week before Week 1.
-    feb_start = date(today.year, 2, 15)
-    offseason_end = next_week1 - buffer
-    return feb_start <= today < offseason_end
-
-
-def _db_max_completed_week(conn: psycopg.Connection, season: int) -> int | None:
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT MAX(week) FROM games WHERE season = %s AND completed = true",
-            (season,),
-        )
-        row = cur.fetchone()
-    if row is None or row[0] is None:
-        return None
-    return int(row[0])
+    if snap.next_game_date is None:
+        # No upcoming game in DB → next-season schedule may not have been
+        # published yet. Run to attempt a fresh nflverse fetch.
+        return False
+    if snap.days_until_next_game is None or snap.days_until_next_game <= 7:
+        # In-window for a refresh in case nflverse drops a release early.
+        return False
+    if last_ok_run_at is None:
+        # Cold start (or nuked meta_refresh) → run.
+        return False
+    if (now - last_ok_run_at).days >= _MAX_OFFSEASON_SKIP_DAYS:
+        # Periodic-refresh ceiling. Codex CRITICAL #1 deadlock-breaker.
+        return False
+    return True
 
 
 def now_utc() -> datetime:
@@ -136,4 +137,10 @@ def now_utc() -> datetime:
     return datetime.now(UTC)
 
 
-__all__ = ["FreshnessResult", "check_freshness", "now_utc", "_RELEASE_GRACE"]
+__all__ = [
+    "FreshnessResult",
+    "check_freshness",
+    "now_utc",
+    "_RELEASE_GRACE",
+    "_MAX_OFFSEASON_SKIP_DAYS",
+]

@@ -409,3 +409,54 @@ See `schema-changes` above for the full flow. TL;DR:
 **Post-incident:** cross-reference the Vercel RCA with our ETL cron schedule — if an ETL window collided with the outage, manually dispatch `etl.yml` with `mode=full` to re-run.
 
 **Post-outage checklist (any category):** verify that `/status` last-refresh dot is current, that the footer disclaimer still renders, and that both CSP + rate-limit headers are back on `/` (`curl -I /`).
+
+## schedule-aware-helpers
+
+The site + ETL both consult `lib/schedule/phase.ts` (TS) and `etl/schedule.py` (Python) to derive the current NFL schedule phase from the `games` table — no hardcoded calendar dates. The two implementations are kept in lock-step by a shared golden-values fixture (`tests/fixtures/schedule-cases.json`). Plan: `docs/plans/e9-schedule-aware-plan.md`.
+
+### Contract
+
+Both helpers expose `get_schedule_phase(now, db) → ScheduleSnapshot` (and a pure `derive_phase` for tests). `ScheduleSnapshot` carries:
+
+- `phase`: `regular` | `playoffs` | `offseason`
+- `season`: NFL season-year currently in play
+- `last_game_date` + `days_since_last_game` (calendar days in `America/New_York`)
+- `next_game_date` + `days_until_next_game`
+- `playoff_round`: `wild_card` | `divisional` | `conference` | `super_bowl` (only when phase=playoffs)
+
+Day-deltas are NY-local so countdown copy doesn't flip ±1 around UTC midnight. The TS impl uses `Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' })`; Python uses `zoneinfo.ZoneInfo('America/New_York')`.
+
+### Adding a new consumer
+
+```ts
+// Server component (page.tsx, layout.tsx, etc.)
+import { getSchedulePhase } from '@/lib/schedule/phase';
+const snap = await getSchedulePhase();
+switch (snap.phase) {
+  case 'regular': ...; break;
+  case 'playoffs': ...; break;
+  case 'offseason': ...; break;
+}
+```
+
+`getSchedulePhase()` is wrapped in React `cache()` — multiple consumers in the same render share one DB hit.
+
+### ETL freshness gate skip rules
+
+`etl/freshness.py::check_freshness` short-circuits the ETL with `reason='offseason'` only when ALL four guards hold:
+
+1. `snap.phase == 'offseason'`
+2. `snap.next_game_date is not None` *(else: re-run to refresh schedule)*
+3. `snap.days_until_next_game > 7`
+4. `last_ok_run_at < 14 days ago` (the `_MAX_OFFSEASON_SKIP_DAYS` ceiling)
+
+The 14-day ceiling is the codex E9 review CRITICAL #1 deadlock-breaker. Without it, an offseason where our DB has no next-season schedule yet would loop forever — gate skips, gate never runs, schedule never gets pulled. The ceiling forces a periodic refresh attempt regardless of phase.
+
+### Updating the contract
+
+If the `ScheduleSnapshot` shape changes:
+
+1. Update `tests/fixtures/schedule-cases.json` — add/modify cases as needed.
+2. Update both `lib/schedule/phase.ts` AND `etl/schedule.py` together.
+3. Run both test suites (`pnpm test` + `cd etl && uv run pytest tests/test_schedule.py`); they must agree byte-for-byte on every case.
+4. Touch the consumers (eyebrow / footer / freshness gate) — typecheck flags the contract mismatch.

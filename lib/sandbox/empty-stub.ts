@@ -39,6 +39,9 @@ export function getDraftRoiByClass(): never { sandboxThrow(); }
 export function getCoachSegments(): never { sandboxThrow(); }
 export function getFourthDownDecisions(): never { sandboxThrow(); }
 export function getTopContributors(): never { sandboxThrow(); }
+// Schedule helper (E9 / bd-8rd). In prod the alias map points
+// lib/schedule/phase's stub-import here; this throws if accidentally hit.
+export function getSchedulePhase(): never { sandboxThrow(); }
 
 // Fixture-module surface (re-exports used by stubs). Throw on read.
 export const teamOverview2025: never = new Proxy({}, { get: sandboxThrow }) as never;

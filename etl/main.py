@@ -28,6 +28,7 @@ import psycopg
 
 from etl.constants import CONCURRENT_ETL_LOCK_ID
 from etl.freshness import FreshnessResult, check_freshness, now_utc
+from etl.schedule import get_schedule_phase
 from etl.ingest.nflverse import (
     compute_participation_coverage,
     fetch_pbp,
@@ -278,31 +279,27 @@ def _source_version() -> str:
 # -----------------------------------------------------------------------------
 
 def run_freshness_gate(settings: EtlSettings) -> FreshnessResult:
-    """Inspect nflverse vs DB state; return the decision. Does not run the ETL."""
-    current = _current_season_year()
-    with psycopg.connect(settings.etl_database_url, autocommit=True) as conn:
-        result = check_freshness(
-            now=now_utc(),
-            current_season=current,
-            nflverse_latest_completed=_nflverse_latest_completed(current),
-            db_connection=conn,
-            next_season_week1_date=_next_week1(current + 1),
-        )
-    logger.info("freshness_gate decision=%s reason=%s", result.should_run, result.reason)
-    return result
+    """Inspect nflverse vs DB state; return the decision. Does not run the ETL.
 
-
-def _current_season_year() -> int:
-    """The NFL season-year currently in play.
-
-    NFL convention: the 2026 season is the one that starts in September 2026
-    and runs through February 2027. If today is Jan/Feb we're still in the
-    previous calendar-year's season.
+    Schedule logic (current_season, offseason boundaries, next-game date)
+    flows through `etl/schedule.py::get_schedule_phase`, which derives
+    everything from the `games` table. No hardcoded calendar dates here.
     """
-    today = date.today()
-    if today.month < 3:
-        return today.year - 1
-    return today.year
+    now = now_utc()
+    with psycopg.connect(settings.etl_database_url, autocommit=True) as conn:
+        snap = get_schedule_phase(now=now, db_connection=conn)
+        result = check_freshness(
+            snap=snap,
+            nflverse_latest_completed=_nflverse_latest_completed(snap.season),
+            db_max_completed_week=_db_max_completed_week(conn, snap.season),
+            last_ok_run_at=_last_ok_run_at(conn),
+            now=now,
+        )
+    logger.info(
+        "freshness_gate decision=%s reason=%s phase=%s season=%d",
+        result.should_run, result.reason, snap.phase, snap.season,
+    )
+    return result
 
 
 def _nflverse_latest_completed(season: int) -> tuple[int, int] | None:
@@ -324,30 +321,39 @@ def _nflverse_latest_completed(season: int) -> tuple[int, int] | None:
     return (season, int(row[0]))
 
 
-def _next_week1(season: int) -> date | None:
-    """First scheduled game date for a given season. None if schedule not yet released."""
-    try:
-        sched = fetch_schedules([season])
-    except Exception as exc:  # noqa: BLE001
-        logger.info("nflverse_next_season_unavailable season=%d err=%r", season, exc)
+def _db_max_completed_week(conn: psycopg.Connection, season: int) -> int | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT MAX(week) FROM games WHERE season = %s AND completed = true",
+            (season,),
+        )
+        row = cur.fetchone()
+    if row is None or row[0] is None:
         return None
+    return int(row[0])
 
-    import polars as pl
 
-    week1 = sched.filter(pl.col("week") == 1)
-    if week1.height == 0:
+def _last_ok_run_at(conn: psycopg.Connection) -> datetime | None:
+    """Most recent meta_refresh.completed_at for a status='ok' run.
+
+    Drives the 14-day max-skip ceiling in check_freshness — even when all
+    other guards would let us skip, a periodic refresh is forced so a
+    newly-released nflverse schedule gets ingested.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT completed_at
+            FROM meta_refresh
+            WHERE status = 'ok' AND completed_at IS NOT NULL
+            ORDER BY started_at DESC
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+    if row is None or row[0] is None:
         return None
-    earliest = week1.select(pl.col("gameday").min().alias("d")).row(0)[0]
-    if earliest is None:
-        return None
-    if isinstance(earliest, date):
-        return earliest
-    if isinstance(earliest, datetime):
-        return earliest.date()
-    try:
-        return datetime.strptime(str(earliest), "%Y-%m-%d").date()
-    except ValueError:
-        return None
+    return row[0]
 
 
 # -----------------------------------------------------------------------------

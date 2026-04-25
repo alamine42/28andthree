@@ -5,6 +5,7 @@ import { WeekResultsStrip } from '@/components/WeekResultsStrip';
 import { getCurrentSeason } from '@/lib/data/current-season';
 import { getPatsPhaseSparklines, getPhaseRankSnapshot } from '@/lib/data/phases';
 import { getRecentGames, getTeamSeasonOverview } from '@/lib/data/team';
+import { getSchedulePhase, type ScheduleSnapshot } from '@/lib/schedule/phase';
 import { pageMetadata } from '@/lib/seo/page-metadata';
 
 // Fallback TTL if on-demand revalidation misses (one hour — plan §3.2).
@@ -30,6 +31,7 @@ const TEAM = 'NE' as const;
 
 export default async function HomePage() {
   const season = await getCurrentSeason();
+  const snap = await getSchedulePhase();
 
   const [overview, snapshot, sparklines, games] = await Promise.all([
     getTeamSeasonOverview(TEAM, season),
@@ -38,7 +40,7 @@ export default async function HomePage() {
     getRecentGames(TEAM, season, 6),
   ]);
 
-  const eyebrow = buildEyebrow(season, snapshot);
+  const eyebrow = buildEyebrow(snap);
 
   return (
     <section className="flex flex-col gap-10 py-8 md:gap-[60px] md:py-12">
@@ -67,13 +69,30 @@ export default async function HomePage() {
   );
 }
 
-function buildEyebrow(
-  season: number,
-  snapshot: ReadonlyArray<{ plays: number }>,
-): string {
-  // If the season rollup has meaningful data (any phase has >=100 plays), we
-  // call the season "final"; otherwise it's still in progress.
-  const meaningfulPlays = snapshot.some((s) => s.plays >= 100);
-  const label = meaningfulPlays ? 'FINAL' : 'IN PROGRESS';
-  return `${season} SEASON · ${label}`;
+// Schedule-derived eyebrow copy. Replaces the >=100 plays heuristic that
+// could not distinguish "season final, weeks ago" from "season just ended".
+// See plan v2 §2 (docs/plans/e9-schedule-aware-plan.md) for the copy table.
+const PLAYOFF_ROUND_LABEL = {
+  wild_card: 'WILD CARD',
+  divisional: 'DIVISIONAL',
+  conference: 'CONFERENCE',
+  super_bowl: 'SUPER BOWL',
+} as const;
+
+function buildEyebrow(snap: ScheduleSnapshot): string {
+  switch (snap.phase) {
+    case 'regular':
+      return `${snap.season} SEASON · IN PROGRESS`;
+    case 'playoffs': {
+      const label = snap.playoffRound ? PLAYOFF_ROUND_LABEL[snap.playoffRound] : 'PLAYOFFS';
+      return `${snap.season} PLAYOFFS · ${label}`;
+    }
+    case 'offseason': {
+      const tail =
+        snap.daysUntilNextGame != null
+          ? `NEXT GAME IN ${snap.daysUntilNextGame} DAYS`
+          : 'OFFSEASON';
+      return `${snap.season} SEASON · FINAL · ${tail}`;
+    }
+  }
 }

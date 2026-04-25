@@ -1,0 +1,302 @@
+{
+  "$comment": "bd-8rd.1: Golden-values fixture for getSchedulePhase / get_schedule_phase. Both TS (lib/schedule/phase.test.ts) and Python (etl/tests/test_schedule.py) suites consume this. Cases cover all 3 phases x 4+ boundary conditions per plan §4. Day-deltas are calendar days in America/New_York. Times in UTC.",
+  "tz": "America/New_York",
+  "cases": [
+    {
+      "name": "regular_season_tuesday",
+      "now_utc": "2025-10-14T15:00:00Z",
+      "input": {
+        "rows": [
+          { "season": 2024, "season_type": "REG", "first_game": "2024-09-05", "last_game": "2025-01-05", "last_week": 18 },
+          { "season": 2024, "season_type": "POST", "first_game": "2025-01-11", "last_game": "2025-02-09", "last_week": 22 },
+          { "season": 2025, "season_type": "REG", "first_game": "2025-09-04", "last_game": "2026-01-05", "last_week": 18 },
+          { "season": 2025, "season_type": "POST", "first_game": "2026-01-10", "last_game": "2026-02-08", "last_week": 22 }
+        ],
+        "playoff_weeks": [],
+        "next_game_date": "2025-10-16",
+        "last_completed_date": "2025-10-13"
+      },
+      "expected": {
+        "phase": "regular",
+        "season": 2025,
+        "last_game_date": "2025-10-13",
+        "days_since_last_game": 1,
+        "next_game_date": "2025-10-16",
+        "days_until_next_game": 2,
+        "playoff_round": null
+      }
+    },
+    {
+      "name": "regular_season_first_day_kickoff",
+      "now_utc": "2025-09-04T20:00:00Z",
+      "input": {
+        "rows": [
+          { "season": 2024, "season_type": "REG", "first_game": "2024-09-05", "last_game": "2025-01-05", "last_week": 18 },
+          { "season": 2024, "season_type": "POST", "first_game": "2025-01-11", "last_game": "2025-02-09", "last_week": 22 },
+          { "season": 2025, "season_type": "REG", "first_game": "2025-09-04", "last_game": "2026-01-05", "last_week": 18 }
+        ],
+        "playoff_weeks": [],
+        "next_game_date": "2025-09-04",
+        "last_completed_date": "2025-02-09"
+      },
+      "expected": {
+        "phase": "regular",
+        "season": 2025,
+        "last_game_date": "2025-02-09",
+        "days_since_last_game": 207,
+        "next_game_date": "2025-09-04",
+        "days_until_next_game": 0,
+        "playoff_round": null
+      }
+    },
+    {
+      "name": "regular_season_last_sunday",
+      "now_utc": "2026-01-04T15:00:00Z",
+      "input": {
+        "rows": [
+          { "season": 2025, "season_type": "REG", "first_game": "2025-09-04", "last_game": "2026-01-05", "last_week": 18 },
+          { "season": 2025, "season_type": "POST", "first_game": "2026-01-10", "last_game": "2026-02-08", "last_week": 22 }
+        ],
+        "playoff_weeks": [],
+        "next_game_date": "2026-01-04",
+        "last_completed_date": "2026-01-03"
+      },
+      "expected": {
+        "phase": "regular",
+        "season": 2025,
+        "last_game_date": "2026-01-03",
+        "days_since_last_game": 1,
+        "next_game_date": "2026-01-04",
+        "days_until_next_game": 0,
+        "playoff_round": null
+      }
+    },
+    {
+      "name": "gap_between_reg_and_post_treated_as_playoffs",
+      "now_utc": "2026-01-07T15:00:00Z",
+      "input": {
+        "rows": [
+          { "season": 2025, "season_type": "REG", "first_game": "2025-09-04", "last_game": "2026-01-05", "last_week": 18 },
+          { "season": 2025, "season_type": "POST", "first_game": "2026-01-10", "last_game": "2026-02-08", "last_week": 22 }
+        ],
+        "playoff_weeks": [
+          { "week": 19, "first_game": "2026-01-10", "last_game": "2026-01-12" },
+          { "week": 20, "first_game": "2026-01-17", "last_game": "2026-01-19" },
+          { "week": 21, "first_game": "2026-01-25", "last_game": "2026-01-26" },
+          { "week": 22, "first_game": "2026-02-08", "last_game": "2026-02-08" }
+        ],
+        "next_game_date": "2026-01-10",
+        "last_completed_date": "2026-01-05"
+      },
+      "expected": {
+        "phase": "playoffs",
+        "season": 2025,
+        "last_game_date": "2026-01-05",
+        "days_since_last_game": 2,
+        "next_game_date": "2026-01-10",
+        "days_until_next_game": 3,
+        "playoff_round": "wild_card"
+      }
+    },
+    {
+      "name": "playoffs_wild_card",
+      "now_utc": "2026-01-11T15:00:00Z",
+      "input": {
+        "rows": [
+          { "season": 2025, "season_type": "REG", "first_game": "2025-09-04", "last_game": "2026-01-05", "last_week": 18 },
+          { "season": 2025, "season_type": "POST", "first_game": "2026-01-10", "last_game": "2026-02-08", "last_week": 22 }
+        ],
+        "playoff_weeks": [
+          { "week": 19, "first_game": "2026-01-10", "last_game": "2026-01-12" },
+          { "week": 20, "first_game": "2026-01-17", "last_game": "2026-01-19" },
+          { "week": 21, "first_game": "2026-01-25", "last_game": "2026-01-26" },
+          { "week": 22, "first_game": "2026-02-08", "last_game": "2026-02-08" }
+        ],
+        "next_game_date": "2026-01-11",
+        "last_completed_date": "2026-01-10"
+      },
+      "expected": {
+        "phase": "playoffs",
+        "season": 2025,
+        "last_game_date": "2026-01-10",
+        "days_since_last_game": 1,
+        "next_game_date": "2026-01-11",
+        "days_until_next_game": 0,
+        "playoff_round": "wild_card"
+      }
+    },
+    {
+      "name": "playoffs_divisional",
+      "now_utc": "2026-01-18T15:00:00Z",
+      "input": {
+        "rows": [
+          { "season": 2025, "season_type": "REG", "first_game": "2025-09-04", "last_game": "2026-01-05", "last_week": 18 },
+          { "season": 2025, "season_type": "POST", "first_game": "2026-01-10", "last_game": "2026-02-08", "last_week": 22 }
+        ],
+        "playoff_weeks": [
+          { "week": 19, "first_game": "2026-01-10", "last_game": "2026-01-12" },
+          { "week": 20, "first_game": "2026-01-17", "last_game": "2026-01-19" },
+          { "week": 21, "first_game": "2026-01-25", "last_game": "2026-01-26" },
+          { "week": 22, "first_game": "2026-02-08", "last_game": "2026-02-08" }
+        ],
+        "next_game_date": "2026-01-18",
+        "last_completed_date": "2026-01-17"
+      },
+      "expected": {
+        "phase": "playoffs",
+        "season": 2025,
+        "last_game_date": "2026-01-17",
+        "days_since_last_game": 1,
+        "next_game_date": "2026-01-18",
+        "days_until_next_game": 0,
+        "playoff_round": "divisional"
+      }
+    },
+    {
+      "name": "playoffs_conference",
+      "now_utc": "2026-01-25T15:00:00Z",
+      "input": {
+        "rows": [
+          { "season": 2025, "season_type": "REG", "first_game": "2025-09-04", "last_game": "2026-01-05", "last_week": 18 },
+          { "season": 2025, "season_type": "POST", "first_game": "2026-01-10", "last_game": "2026-02-08", "last_week": 22 }
+        ],
+        "playoff_weeks": [
+          { "week": 19, "first_game": "2026-01-10", "last_game": "2026-01-12" },
+          { "week": 20, "first_game": "2026-01-17", "last_game": "2026-01-19" },
+          { "week": 21, "first_game": "2026-01-25", "last_game": "2026-01-26" },
+          { "week": 22, "first_game": "2026-02-08", "last_game": "2026-02-08" }
+        ],
+        "next_game_date": "2026-01-25",
+        "last_completed_date": "2026-01-19"
+      },
+      "expected": {
+        "phase": "playoffs",
+        "season": 2025,
+        "last_game_date": "2026-01-19",
+        "days_since_last_game": 6,
+        "next_game_date": "2026-01-25",
+        "days_until_next_game": 0,
+        "playoff_round": "conference"
+      }
+    },
+    {
+      "name": "playoffs_super_bowl",
+      "now_utc": "2026-02-08T15:00:00Z",
+      "input": {
+        "rows": [
+          { "season": 2025, "season_type": "REG", "first_game": "2025-09-04", "last_game": "2026-01-05", "last_week": 18 },
+          { "season": 2025, "season_type": "POST", "first_game": "2026-01-10", "last_game": "2026-02-08", "last_week": 22 }
+        ],
+        "playoff_weeks": [
+          { "week": 19, "first_game": "2026-01-10", "last_game": "2026-01-12" },
+          { "week": 20, "first_game": "2026-01-17", "last_game": "2026-01-19" },
+          { "week": 21, "first_game": "2026-01-25", "last_game": "2026-01-26" },
+          { "week": 22, "first_game": "2026-02-08", "last_game": "2026-02-08" }
+        ],
+        "next_game_date": "2026-02-08",
+        "last_completed_date": "2026-01-26"
+      },
+      "expected": {
+        "phase": "playoffs",
+        "season": 2025,
+        "last_game_date": "2026-01-26",
+        "days_since_last_game": 13,
+        "next_game_date": "2026-02-08",
+        "days_until_next_game": 0,
+        "playoff_round": "super_bowl"
+      }
+    },
+    {
+      "name": "day_after_super_bowl",
+      "now_utc": "2026-02-09T15:00:00Z",
+      "input": {
+        "rows": [
+          { "season": 2025, "season_type": "REG", "first_game": "2025-09-04", "last_game": "2026-01-05", "last_week": 18 },
+          { "season": 2025, "season_type": "POST", "first_game": "2026-01-10", "last_game": "2026-02-08", "last_week": 22 }
+        ],
+        "playoff_weeks": [],
+        "next_game_date": null,
+        "last_completed_date": "2026-02-08"
+      },
+      "expected": {
+        "phase": "offseason",
+        "season": 2025,
+        "last_game_date": "2026-02-08",
+        "days_since_last_game": 1,
+        "next_game_date": null,
+        "days_until_next_game": null,
+        "playoff_round": null
+      }
+    },
+    {
+      "name": "mid_offseason_no_next_schedule",
+      "now_utc": "2026-06-15T12:00:00Z",
+      "input": {
+        "rows": [
+          { "season": 2024, "season_type": "REG", "first_game": "2024-09-05", "last_game": "2025-01-05", "last_week": 18 },
+          { "season": 2024, "season_type": "POST", "first_game": "2025-01-11", "last_game": "2025-02-09", "last_week": 22 },
+          { "season": 2025, "season_type": "REG", "first_game": "2025-09-04", "last_game": "2026-01-05", "last_week": 18 },
+          { "season": 2025, "season_type": "POST", "first_game": "2026-01-10", "last_game": "2026-02-08", "last_week": 22 }
+        ],
+        "playoff_weeks": [],
+        "next_game_date": null,
+        "last_completed_date": "2026-02-08"
+      },
+      "expected": {
+        "phase": "offseason",
+        "season": 2025,
+        "last_game_date": "2026-02-08",
+        "days_since_last_game": 127,
+        "next_game_date": null,
+        "days_until_next_game": null,
+        "playoff_round": null
+      }
+    },
+    {
+      "name": "offseason_with_next_season_schedule_released",
+      "now_utc": "2026-08-15T12:00:00Z",
+      "input": {
+        "rows": [
+          { "season": 2025, "season_type": "REG", "first_game": "2025-09-04", "last_game": "2026-01-05", "last_week": 18 },
+          { "season": 2025, "season_type": "POST", "first_game": "2026-01-10", "last_game": "2026-02-08", "last_week": 22 },
+          { "season": 2026, "season_type": "REG", "first_game": "2026-09-03", "last_game": "2027-01-04", "last_week": 18 }
+        ],
+        "playoff_weeks": [],
+        "next_game_date": "2026-09-03",
+        "last_completed_date": "2026-02-08"
+      },
+      "expected": {
+        "phase": "offseason",
+        "season": 2025,
+        "last_game_date": "2026-02-08",
+        "days_since_last_game": 188,
+        "next_game_date": "2026-09-03",
+        "days_until_next_game": 19,
+        "playoff_round": null
+      }
+    },
+    {
+      "name": "next_season_first_day_kickoff",
+      "now_utc": "2026-09-03T23:00:00Z",
+      "input": {
+        "rows": [
+          { "season": 2025, "season_type": "REG", "first_game": "2025-09-04", "last_game": "2026-01-05", "last_week": 18 },
+          { "season": 2025, "season_type": "POST", "first_game": "2026-01-10", "last_game": "2026-02-08", "last_week": 22 },
+          { "season": 2026, "season_type": "REG", "first_game": "2026-09-03", "last_game": "2027-01-04", "last_week": 18 }
+        ],
+        "playoff_weeks": [],
+        "next_game_date": "2026-09-03",
+        "last_completed_date": "2026-02-08"
+      },
+      "expected": {
+        "phase": "regular",
+        "season": 2026,
+        "last_game_date": "2026-02-08",
+        "days_since_last_game": 207,
+        "next_game_date": "2026-09-03",
+        "days_until_next_game": 0,
+        "playoff_round": null
+      }
+    }
+  ]
+}

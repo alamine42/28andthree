@@ -27,6 +27,7 @@ const SANDBOX_ALIAS_KEYS = [
   '@/lib/sandbox/stubs/coaching',
   '@/lib/sandbox/stubs/current-season',
   '@/lib/sandbox/stubs/contributors',
+  '@/lib/sandbox/stubs/schedule',
 ];
 const turbopackAliasMap: Record<string, string> = SANDBOX_ON
   ? {}
