@@ -34,20 +34,16 @@ jobs:
       - name: Grep .next for fixture sentinel strings
         run: |
           set -e
-          # Known unique strings that only appear in sandbox fixture
-          # *payloads* (not empty-stub export names, which are exported
-          # identifiers but carry no data). If any land in a non-.map
+          # Known unique strings injected by scripts/sandbox-dump.ts
+          # augmenter — they only appear in sandbox fixture payloads
+          # (no real prod row carries them). If any land in a non-.map
           # file under .next, the build-time alias failed.
-          # McDaniels / Henderson etc. are legit prod names — don't use
-          # them. Stick to synthetic fixture IDs.
+          # If you change these, update SENTINEL_* in scripts/sandbox-dump.ts too.
           SENTINELS=(
-            "2025_12_NE_NYJ"
-            "2025_13_NE_BUF"
-            "2025_14_NE_MIA"
-            "2025_15_NE_ARI"
-            "00-2024-MAYE"
-            "00-2025-HEN"
-            "00-2025-KYW"
+            "__SANDBOX_FIXTURE__tie_game"
+            "__SANDBOX_FIXTURE__draft_pick"
+            "__SANDBOX_FIXTURE__phase_team"
+            "[augmented] mid-season replacement"
           )
           FAIL=0
           for s in "${SENTINELS[@]}"; do

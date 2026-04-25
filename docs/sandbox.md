@@ -62,6 +62,42 @@ Security on the bridge:
 - `draftRoi[2023]` includes a traded-out slot with `gsisId = null`
 - `fourthDownDecisions2025` mixes agreed + disagreed HC calls
 
+## Regenerating fixtures from prod
+
+`pnpm sandbox:regenerate` re-pulls real prod rows through the live DAL readers and re-emits `lib/sandbox/fixtures/*.ts`. Run it whenever the schema or DAL signatures evolve so fixtures don't rot.
+
+```bash
+DATABASE_URL='postgres://app_read:...@host/db' pnpm sandbox:regenerate
+DATABASE_URL='...' pnpm sandbox:regenerate -- --dry-run        # no writes
+DATABASE_URL='...' pnpm sandbox:regenerate -- --no-augment     # raw prod, no edge-case overlays
+DATABASE_URL='...' pnpm sandbox:regenerate -- --season=2024    # snapshot a specific season
+```
+
+The script is read-only — every query goes through the existing DAL readers, which run exclusively SELECTs. Use the `app_read` role as belt + suspenders. It refuses to run if `NEXT_PUBLIC_SANDBOX_MODE=1` (would dump fixtures back into themselves) or if `DATABASE_URL` is missing.
+
+The augmenter (default on) overlays edge cases that real prod rarely contains so the sandbox UI exercises every render path:
+
+- Tied ranks at 14 (rush_offense + special_teams) — tiebreak display
+- `explosive_defense` flagged insufficient with `totalQualified < 32` — K<32 copy path
+- One null sparkline point in `special_teams` — gap-render path
+- Mid-season OC split (§3.5a) — two coaching segments instead of one
+- Tie game in recent results — third W/L/T result code
+- Synthetic traded-out draft slot + at least one HIT grade — every grade-badge path
+- Non-empty fourthDownDecisions — FourthDownLedger module instead of "Model pending"
+
+The augmenter also injects four CI sentinel strings that nothing in real prod could produce:
+
+- `__SANDBOX_FIXTURE__tie_game` (team.ts gameId)
+- `__SANDBOX_FIXTURE__draft_pick` (draft.ts gsisId)
+- `__SANDBOX_FIXTURE__phase_team` (phases.ts distribution row)
+- `[augmented] mid-season replacement` (coaching.ts coachName)
+
+`.github/workflows/sandbox-isolation.yml` greps the prod build for these — if any leak into `.next/`, the alias map in `next.config.ts` failed and the workflow fails. If you change the sentinel strings in `scripts/sandbox-dump.ts`, mirror them in the workflow.
+
+After regenerating: `pnpm typecheck && pnpm test && pnpm build` is the sanity gate. Diff the fixtures, eyeball them, then commit.
+
+`--no-augment` is for inspection (what does raw prod look like?), not for committing — the fixture-contract test in `tests/unit/sandbox-fixture-contract.test.ts` will fail because the edge-case rows aren't injected.
+
 ## Adding a new DAL
 
 1. Add a stub in `lib/sandbox/stubs/<name>.ts` matching the prod function signature

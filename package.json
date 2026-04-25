@@ -19,7 +19,8 @@
     "test": "tsx --test tests/unit/*.test.ts tests/unit/*.test.tsx",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "sandbox:regenerate": "tsx scripts/sandbox-dump.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.49.0",
