@@ -127,7 +127,6 @@ def _should_skip_offseason(
         # Cold start (or nuked meta_refresh) → run.
         return False
     if (now - last_ok_run_at).days >= _MAX_OFFSEASON_SKIP_DAYS:
-        # Periodic-refresh ceiling. Codex CRITICAL #1 deadlock-breaker.
         return False
     return True
 

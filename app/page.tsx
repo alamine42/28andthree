@@ -31,9 +31,9 @@ const TEAM = 'NE' as const;
 
 export default async function HomePage() {
   const season = await getCurrentSeason();
-  const snap = await getSchedulePhase();
 
-  const [overview, snapshot, sparklines, games] = await Promise.all([
+  const [snap, overview, snapshot, sparklines, games] = await Promise.all([
+    getSchedulePhase(),
     getTeamSeasonOverview(TEAM, season),
     getPhaseRankSnapshot(TEAM, season),
     getPatsPhaseSparklines(TEAM, season),
@@ -79,7 +79,7 @@ const PLAYOFF_ROUND_LABEL = {
   super_bowl: 'SUPER BOWL',
 } as const;
 
-function buildEyebrow(snap: ScheduleSnapshot): string {
+function buildEyebrow(snap: ScheduleSnapshot): React.ReactNode {
   switch (snap.phase) {
     case 'regular':
       return `${snap.season} SEASON · IN PROGRESS`;
@@ -88,11 +88,17 @@ function buildEyebrow(snap: ScheduleSnapshot): string {
       return `${snap.season} PLAYOFFS · ${label}`;
     }
     case 'offseason': {
-      const tail =
-        snap.daysUntilNextGame != null
-          ? `NEXT GAME IN ${snap.daysUntilNextGame} DAYS`
-          : 'OFFSEASON';
-      return `${snap.season} SEASON · FINAL · ${tail}`;
+      if (snap.daysUntilNextGame != null) {
+        // Surface the days-until count brighter than the rest so the
+        // "how long until football?" answer reads at a glance.
+        return (
+          <>
+            {snap.season} SEASON · FINAL · NEXT GAME IN{' '}
+            <span className="text-text">{snap.daysUntilNextGame}</span> DAYS
+          </>
+        );
+      }
+      return `${snap.season} SEASON · FINAL · OFFSEASON`;
     }
   }
 }
