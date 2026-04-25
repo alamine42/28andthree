@@ -16,7 +16,7 @@ export function PhaseGrid({ snapshot, sparklines }: Props) {
   const byPhase = new Map<Phase, PhaseSnapshot>(snapshot.map((s) => [s.phase, s]));
 
   return (
-    <section className="flex flex-col gap-3" data-testid="phase-grid">
+    <section id="phases" className="flex flex-col gap-3 scroll-mt-20" data-testid="phase-grid">
       <h2 className="font-mono text-2xs uppercase tracking-widest text-text-muted">
         League rank across phases
       </h2>

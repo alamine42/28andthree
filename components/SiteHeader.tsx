@@ -6,11 +6,12 @@ import { useEffect, useId, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 // Top nav links for the header. Team = home; Players = E7 hub; Draft + Coaching
-// = E5 pages. Phases has no index yet (all phase content lives on /phases/[slug]).
+// = E5 pages. Phases has no index page — links to the phase grid section on
+// the home page via #phases anchor (component PhaseGrid carries the id).
 type NavLink = { label: string; href: Route };
 const NAV_LINKS: ReadonlyArray<NavLink> = [
   { label: 'Team', href: '/' as Route },
-  { label: 'Phases', href: '/' as Route },
+  { label: 'Phases', href: '/#phases' as Route },
   { label: 'Players', href: '/players' as Route },
   { label: 'Draft', href: '/draft-roi' as Route },
   { label: 'Coaching', href: '/coaching' as Route },
