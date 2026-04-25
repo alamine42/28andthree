@@ -196,16 +196,23 @@ export const getSchedulePhase = cache(async (now: Date = new Date()): Promise<Sc
     };
   }
 
-  const calendarYear = now.getUTCFullYear();
+  // Anchor the SQL `now` to America/New_York date so the query agrees with
+  // etl/schedule.py (which does the same conversion) — without this, after
+  // ~8pm ET the UTC date advances past NY's, and the two implementations
+  // disagree on which game is "next".
+  const today = nyDateString(now);
+  const calendarYear = Number(today.slice(0, 4));
   const aggResult = await db.execute<SnapshotRow & AggregateExtras>(sql`
     SELECT season, season_type,
            MIN(game_date)::text AS first_game,
            MAX(game_date)::text AS last_game,
            MAX(week)::int       AS last_week,
            (SELECT MIN(game_date)::text FROM games
-              WHERE game_date > ${now}::date)            AS next_game_date,
+              WHERE game_date > ${today}::date
+                 OR (game_date = ${today}::date AND completed = false)
+           )                                              AS next_game_date,
            (SELECT MAX(game_date)::text FROM games
-              WHERE game_date <= ${now}::date AND completed = true) AS last_completed_date
+              WHERE game_date <= ${today}::date AND completed = true) AS last_completed_date
     FROM games
     WHERE season BETWEEN ${calendarYear - 1} AND ${calendarYear + 1}
     GROUP BY season, season_type
@@ -236,7 +243,7 @@ export const getSchedulePhase = cache(async (now: Date = new Date()): Promise<Sc
   // Per-week POST aggregates for the current season — needed only when
   // phase=playoffs to derive the round. Fetched separately to keep the
   // primary aggregate query small.
-  const seasonGuess = pickCurrentSeason(rows, nyDateString(now));
+  const seasonGuess = pickCurrentSeason(rows, today);
   const playoffWeeks = await fetchPlayoffWeeks(db, seasonGuess);
 
   // Same now-anchored aggregates from the first query — pull from any row.

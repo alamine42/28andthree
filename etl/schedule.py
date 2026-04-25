@@ -166,7 +166,9 @@ def get_schedule_phase(
                    MAX(game_date) AS last_game,
                    MAX(week)::int AS last_week,
                    (SELECT MIN(game_date) FROM games
-                      WHERE game_date > %s::date)                        AS next_game_date,
+                      WHERE game_date > %s::date
+                         OR (game_date = %s::date AND completed = false)
+                   )                                                     AS next_game_date,
                    (SELECT MAX(game_date) FROM games
                       WHERE game_date <= %s::date AND completed = true)  AS last_completed_date
             FROM games
@@ -174,7 +176,7 @@ def get_schedule_phase(
             GROUP BY season, season_type
             ORDER BY season, season_type
             """,
-            (today, today, calendar_year - 1, calendar_year + 1),
+            (today, today, today, calendar_year - 1, calendar_year + 1),
         )
         agg_rows = cur.fetchall()
 

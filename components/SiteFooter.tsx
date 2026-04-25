@@ -31,10 +31,13 @@ export async function SiteFooter({ lastRefreshIso }: FooterProps = {}) {
 
   // Offseason: rephrase the freshness indicator + dim the live dot. Stops
   // implying staleness when the data is intentionally frozen until the
-  // next ETL run after kickoff.
-  const refreshLine = isOffseason && snap.nextGameDate
-    ? `Next refresh after ${formatNextGameDate(snap.nextGameDate)} kickoff`
-    : `Last refresh: ${lastRefreshDisplay}`;
+  // next ETL run after kickoff. When the next-season schedule isn't out
+  // yet we say so explicitly — "Last refresh: never" reads as broken.
+  const refreshLine = !isOffseason
+    ? `Last refresh: ${lastRefreshDisplay}`
+    : snap.nextGameDate
+      ? `Next refresh after ${formatNextGameDate(snap.nextGameDate)} kickoff`
+      : 'Offseason — next refresh after kickoff';
   const dotClassName = isOffseason
     ? 'inline-block h-1.5 w-1.5 rounded-pill bg-text-dim'
     : 'live-dot inline-block h-1.5 w-1.5 rounded-pill bg-positive';
