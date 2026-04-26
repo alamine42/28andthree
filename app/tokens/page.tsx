@@ -24,7 +24,7 @@ const DARK_TOKENS: TokenRow[] = [
   { key: 'text-dim', label: 'Text Dim', cssVar: '--text-dim' },
   { key: 'accent', label: 'Accent (Pats Red)', cssVar: '--accent' },
   { key: 'accent-dim', label: 'Accent Dim', cssVar: '--accent-dim' },
-  { key: 'positive', label: 'Positive (Amber)', cssVar: '--positive' },
+  { key: 'positive', label: 'Positive (Green)', cssVar: '--positive' },
   { key: 'positive-dim', label: 'Positive Dim', cssVar: '--positive-dim' },
   { key: 'negative', label: 'Negative', cssVar: '--negative' },
   { key: 'chart-neutral', label: 'Chart Neutral', cssVar: '--chart-neutral' },

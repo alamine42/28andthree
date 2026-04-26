@@ -14,10 +14,11 @@ type RankNumberProps = {
   className?: string;
 };
 
-// --negative cranberry at 2.84:1 on --bg fails WCAG AA Large (3:1 required
-// for text ≥24px). We keep positive amber (8.7:1 passes both AA+AAA) and
-// route the negative signal through the adjacent sparkline + card context
-// instead. Review finding #11.
+// We keep `text-text` on the negative tier even though `--negative` now
+// passes WCAG AA on `--bg` (5.76:1 after the 2026-04-26 lightening — see
+// DESIGN.md Decisions Log). The signal is already carried by the adjacent
+// sparkline + card context; coloring a 56–88px display rank cranberry-pink
+// reads as alarmist for a single bottom-third ranking.
 const TIER_CLASS = {
   positive: 'text-positive',
   neutral: 'text-text',

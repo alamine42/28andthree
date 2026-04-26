@@ -173,11 +173,11 @@ function formatRatio(ratio: number | null): string {
 
 function ratioToneClass(ratio: number | null): string {
   // Positive ratios (HIT range) get the green tint — passes AA on both bg
-  // and surface. MISS ratios stay on --text instead of --negative: the
-  // cranberry on deep-ink bg fails WCAG AA (2.83:1). The MISS signal is
-  // carried by the adjacent GradeBadge + the summary header count; the
-  // ratio cell is just the exact magnitude. Same pattern as the negative-
-  // signal routing in lib/color/rank.ts.
+  // and surface. MISS ratios stay on --text rather than --negative even
+  // though --negative now passes AA (see DESIGN.md 2026-04-26). The MISS
+  // signal is carried by the adjacent GradeBadge + the summary header
+  // count; the ratio cell shows the exact magnitude in bone for column
+  // scannability. Same routing pattern as numeric.tsx.
   if (ratio === null) return 'text-text-muted';
   if (ratio >= 1.25) return 'text-positive';
   return 'text-text';

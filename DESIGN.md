@@ -43,11 +43,11 @@
 | `--text` | `#E8E6E1` | Primary text. Warm bone, never pure white. |
 | `--text-muted` | `#8A96A3` | Labels, metadata, secondary. |
 | `--text-dim` | `#5F6E80` | Tertiary, disclaimers. |
-| `--accent` | `#D21F3C` | Patriots red, desaturated for dark bg. **Used rarely** — live indicators, primary CTAs, critical alerts. |
-| `--accent-dim` | `#A23A4A` | Accent borders, hover states. |
+| `--accent` | `#C81E36` | Patriots red, tuned for dark bg. **Background pairings only** (CTA buttons, live-indicator dot fill) — `text-text` on `bg-accent` lands at 4.56:1 (AA Normal). Do not use as a text color: against `--bg` it sits at 3.23:1 (AA-Large only). |
+| `--accent-dim` | `#A23A4A` | Button hover (`bg-accent-dim` + `text-text` = 5.20:1), accent borders. Background-only, same rules as `--accent`. |
 | `--positive` | `#1ABE58` | **Green.** "Up / ranked well / improving." Muted editorial green — not neon. Luminance tuned to pass WCAG AA Normal (4.5:1) on *both* `--bg` (7.3:1) and `--surface` (6.0:1), so positive text stays readable in card-hover + nested-card contexts. |
 | `--positive-dim` | `#0E5E2A` | Positive borders on badges. |
-| `--negative` | `#A23A4A` | Down trends, bottom-tier ranks. Muted cranberry, not screaming red. |
+| `--negative` | `#D9707F` | Down trends, bottom-tier ranks. Muted cranberry-pink (lightened from `#A23A4A` to clear WCAG AA Normal as text). 5.76:1 on `--bg`, 5.28:1 on `--surface`, 4.72:1 on `--surface-2`. Use freely as text or border; for `bg-negative` pair with `text-bg`, not `text-text`. |
 | `--chart-neutral` | `#5F6E80` | League median lines, neutral series in charts. |
 
 ### Light mode
@@ -141,3 +141,4 @@ Set in Geist Mono 11px, `--text-muted`, uppercase, tracked +0.14em.
 | 2026-04-21 | Density increased across home + phase + coaching + draft | Section gap 120→60px, card padding 24-28→16-20px, phase-card min-height 148-172→100-120px. Dense/analyst-terminal read vs. marketing-site breathing room. Editorial pages (methodology, future about) keep the 120px rhythm. |
 | 2026-04-21 | Rank format: ordinal suffix (`1st`, `22nd`) instead of zero-pad (`01`, `22`) | Fans scan league rankings with natural-language ordinals. Zero-pad was a terminal-density stylistic choice that read as "database key" rather than "standing". Ordinal suffix keeps monospace tabular-nums alignment (all strings are 3–4 chars) while reading like a sports-page ranking. |
 | 2026-04-21 | Phase-card: sparkline inline with rank | Column stack (label → rank → sparkline → EPA) spent a full row on a 20px-tall trend chart. Inlining the sparkline to the right of the rank saves ~25% card height while keeping the trend glanceable. Home page at 11 such cards drops measurably in vertical scroll. |
+| 2026-04-26 | `--accent` darkened (`#D21F3C`→`#C81E36`); `--negative` lightened (`#A23A4A`→`#D9707F`) | Codex E9 adversarial review (bd-2w1): old values failed WCAG AA on dark surfaces — accent at 3.50:1 on `--bg`, negative at 2.84:1. The two tokens have opposing constraints on a dark UI: `--accent` lives under `text-text` overlays (so it must stay *darker* than the bone text — 4.56:1 with bone on top), while `--negative` is used *as* text (so it must stay *lighter* than `--bg` — 5.76:1). Resolving both pulled the colors apart hue/luminance-wise; they are no longer the same hex. Usage rule: `--accent` is background/border only, `--negative` is freely usable as text. |

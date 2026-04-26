@@ -129,10 +129,11 @@ export default async function StatusPage({ searchParams }: StatusPageProps) {
 }
 
 // DESIGN.md §Motion restricts the pulse animation to the footer's fresh-data dot
-// only, so status badges render a static dot regardless of state. Text colors are
-// tuned for WCAG AA on the dark bg: `--negative` at 2.84:1 is too low for body
-// text, so the failed badge uses `--text` for the label and leans on the colored
-// dot + border to carry the "bad" signal.
+// only, so status badges render a static dot regardless of state. The failed
+// badge keeps `--text` on the label (with the cranberry signal carried by the
+// dot + border) — `--negative` now passes AA as text after the 2026-04-26
+// lightening, but a deliberate "bad" status reads more legibly in bone with
+// border-color carrying the semantic.
 const HEALTH_TONE: Record<EtlStatus | 'none', { classes: string; dot: string }> = {
   ok: { classes: 'border-positive-dim text-positive', dot: 'bg-positive' },
   heartbeat: { classes: 'border-positive-dim text-positive', dot: 'bg-positive' },
