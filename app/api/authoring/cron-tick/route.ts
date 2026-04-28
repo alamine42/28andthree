@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 import { authoringRuns, authoringSchedules } from '@/db/schema';
 import type { AuthoringTrigger } from '@/db/schema';
 import type { ContentType } from '@/lib/authoring/extractors/types';
@@ -29,31 +29,33 @@ export async function POST(): Promise<NextResponse> {
     model: 'none',
   }).catch(() => {/* heartbeat best-effort */});
 
-  // Atomic claim: a single UPDATE with status='queued' predicate prevents two
-  // overlapping ticks from picking up the same row (codex WARNING #2). Also
-  // claims rows that have been 'running' too long (>15min) — these would
-  // otherwise stay stuck if a previous tick crashed mid-generation.
+  // Atomic claim: a single UPDATE with the status='queued' predicate is
+  // already atomic — Postgres locks the matching rows and applies the SET in
+  // one statement. Two overlapping ticks can't both claim the same row
+  // because once one's UPDATE commits, the other's WHERE predicate no longer
+  // matches. Also claims rows stuck in 'running' for >15min (recovery from
+  // a crashed prior tick).
+  //
+  // Earlier draft used FOR UPDATE SKIP LOCKED inside an IN subquery; that
+  // was over-engineered and Drizzle's sql template was rendering the nested
+  // table reference into broken SQL.
   const due = await db
     .update(authoringSchedules)
-    .set({ status: 'running', attemptedAt: new Date(), attempts: sql`${authoringSchedules.attempts} + 1` })
+    .set({
+      status: 'running',
+      attemptedAt: new Date(),
+      attempts: sql`${authoringSchedules.attempts} + 1`,
+    })
     .where(
       and(
         sql`${authoringSchedules.scheduledAt} <= now()`,
-        sql`(
-          ${authoringSchedules.status} = 'queued'
-          OR (${authoringSchedules.status} = 'running' AND ${authoringSchedules.attemptedAt} < now() - interval '15 minutes')
-        )`,
-        sql`${authoringSchedules.id} IN (
-          SELECT id FROM ${authoringSchedules}
-          WHERE ${authoringSchedules.scheduledAt} <= now()
-            AND (
-              ${authoringSchedules.status} = 'queued'
-              OR (${authoringSchedules.status} = 'running' AND ${authoringSchedules.attemptedAt} < now() - interval '15 minutes')
-            )
-          ORDER BY ${authoringSchedules.scheduledAt} ASC
-          LIMIT 5
-          FOR UPDATE SKIP LOCKED
-        )`,
+        or(
+          eq(authoringSchedules.status, 'queued'),
+          and(
+            eq(authoringSchedules.status, 'running'),
+            sql`${authoringSchedules.attemptedAt} < now() - interval '15 minutes'`,
+          ),
+        ),
       ),
     )
     .returning();
