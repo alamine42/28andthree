@@ -4,6 +4,16 @@ import { redirect } from 'next/navigation';
 import type { Route } from 'next';
 import type { ReactNode } from 'react';
 
+// Admin routes are auth-gated, query the authoring_* tables on every request,
+// and have data that changes per query. They MUST run per-request, never
+// prerendered. Without this, Vercel's build tries to SSG /admin/backlog (etc.)
+// and fails with PG 42P01 ("relation does not exist") if the migration hasn't
+// been applied yet — same shape as the bd-39d.19 build crash.
+//
+// This layout-level config cascades to every nested admin route, including
+// /admin/login (which reads searchParams) and the dynamic [id] routes.
+export const dynamic = 'force-dynamic';
+
 // Studio shell. Top bar with brand + logout. Sidebar nav on desktop;
 // horizontal scroll-tab nav on mobile. Pure DESIGN.md tokens — no decoration.
 
