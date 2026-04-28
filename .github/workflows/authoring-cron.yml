@@ -1,0 +1,33 @@
+name: authoring-cron
+
+# Fires every 30 minutes UTC. Hits /api/authoring/cron-tick on prod with
+# the AUTHORING_CRON_TOKEN bearer. The route reads queued authoring_schedules
+# rows and dispatches per-piece generations.
+#
+# Codex CRITICAL #2 fix: cron auth via Authorization: Bearer header, NOT
+# cookie. AUTHORING_CRON_TOKEN must be set in BOTH GitHub Actions secrets
+# AND Vercel env (production scope).
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  cron-tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger authoring cron-tick
+        env:
+          BEARER: ${{ secrets.AUTHORING_CRON_TOKEN }}
+          BASE_URL: ${{ vars.AUTHORING_BASE_URL || 'https://28andthree.com' }}
+        run: |
+          if [ -z "$BEARER" ]; then
+            echo "::error::AUTHORING_CRON_TOKEN secret is missing"
+            exit 1
+          fi
+          curl -fsS -X POST "$BASE_URL/api/authoring/cron-tick" \
+            -H "Authorization: Bearer $BEARER" \
+            -H "Content-Type: application/json" \
+            -d '{"source":"github_actions"}' \
+            --max-time 300

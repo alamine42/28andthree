@@ -1,0 +1,1 @@
+ALTER TABLE "authoring_runs" ADD CONSTRAINT "authoring_runs_factcheck_chk" CHECK ("authoring_runs"."factcheck_status" IS NULL OR "authoring_runs"."factcheck_status" IN ('pending','pass','fail'));

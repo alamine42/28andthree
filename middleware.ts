@@ -25,6 +25,11 @@ export const config = {
 const RATE_LIMITED_PREFIXES = ['/api', '/status'] as const;
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
+  // E10b L0-10: admin auth gate runs first on /admin/* and /api/authoring/*.
+  // Dual path: cookie (operator) OR Bearer token (cron). Codex CRITICAL #2.
+  const adminGate = checkAdminAuth(req);
+  if (adminGate) return adminGate;
+
   const nonce = makeNonce();
   // Only attach CSP when the request hits a Vercel deploy — local `next dev`
   // can't serve inline hydration scripts with a nonce (Next doesn't
@@ -79,4 +84,61 @@ function shouldRateLimit(pathname: string): boolean {
   return RATE_LIMITED_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
+}
+
+// Admin auth gate. Returns a NextResponse if the request should be blocked or
+// redirected; null if the request should fall through to the rest of the
+// middleware chain.
+function checkAdminAuth(req: NextRequest): NextResponse | null {
+  const path = req.nextUrl.pathname;
+  const isAdminUI = path.startsWith('/admin') && path !== '/admin/login';
+  const isAuthoringApi = path.startsWith('/api/authoring');
+  if (!isAdminUI && !isAuthoringApi) return null;
+
+  const sessionKey = process.env.ADMIN_SESSION_KEY;
+  const cronToken = process.env.AUTHORING_CRON_TOKEN;
+  if (!sessionKey) {
+    return NextResponse.json(
+      { error: 'admin disabled — ADMIN_SESSION_KEY not set' },
+      { status: 503 },
+    );
+  }
+
+  // Bearer token path (cron, CI). Bad bearer falls through to cookie check.
+  const authHeader = req.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    if (cronToken && timingSafeEqual(token, cronToken)) {
+      return null;
+    }
+  }
+
+  // Cookie path (operator browser).
+  const cookie = req.cookies.get('28t_admin_session')?.value;
+  if (cookie && timingSafeEqual(cookie, sessionKey)) {
+    return null;
+  }
+
+  if (isAdminUI) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/admin/login';
+    url.searchParams.set('next', path);
+    return NextResponse.redirect(url);
+  }
+  return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+}
+
+// Constant-time string compare. Edge runtime doesn't have crypto.timingSafeEqual,
+// so this is the manual XOR-loop equivalent. Walks the full max-length to avoid
+// leaking length information via early return — codex pass-2 finding.
+function timingSafeEqual(a: string, b: string): boolean {
+  const maxLen = Math.max(a.length, b.length);
+  // Seed accumulator with the length-diff so unequal lengths always fail.
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < maxLen; i++) {
+    const ca = i < a.length ? a.charCodeAt(i) : 0;
+    const cb = i < b.length ? b.charCodeAt(i) : 0;
+    diff |= ca ^ cb;
+  }
+  return diff === 0;
 }

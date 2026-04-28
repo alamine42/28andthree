@@ -20,9 +20,12 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "sandbox:regenerate": "tsx scripts/sandbox-dump.ts"
+    "sandbox:regenerate": "tsx scripts/sandbox-dump.ts",
+    "authoring:generate": "tsx scripts/authoring-generate.ts",
+    "authoring:export": "tsx scripts/authoring-export.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.91.1",
     "@sentry/nextjs": "^10.49.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",

@@ -4,6 +4,7 @@ import {
   check,
   date,
   doublePrecision,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -647,3 +648,201 @@ export const coachingTendenciesWeekly = pgTable(
 
 export type CoachingTendencyWeekly = typeof coachingTendenciesWeekly.$inferSelect;
 
+
+// =============================================================================
+// E10b — AI Authoring Studio (lnv plan §3.2)
+// =============================================================================
+//
+// Four tables underlying the authoring pipeline + studio UI:
+//   - authoring_drafts:     drafts (DB-only persistence per codex CRITICAL #1)
+//   - authoring_backlog:    topic queue feeding scheduled slots
+//   - authoring_schedules:  deterministic upcoming generations (Wed preview, Sun recap)
+//   - authoring_runs:       per-LLM-call telemetry (cost, tokens, cache hits, factcheck)
+//
+// State machines mirrored in TS-side enums below + DB CHECK constraints. The two
+// must stay in sync; the e10b/L0-22 test gate verifies.
+
+export const AUTHORING_DRAFT_STATUSES = [
+  'draft',
+  'approved',
+  'exported',  // sent to Beehiiv as draft post; awaiting send confirmation
+  'published',
+  'rejected',
+  'archived',
+] as const;
+export type AuthoringDraftStatus = (typeof AUTHORING_DRAFT_STATUSES)[number];
+
+export const AUTHORING_BACKLOG_STATUSES = ['pending', 'scheduled', 'used', 'archived'] as const;
+export type AuthoringBacklogStatus = (typeof AUTHORING_BACKLOG_STATUSES)[number];
+
+export const AUTHORING_SCHEDULE_STATUSES = [
+  'queued',
+  'running',
+  'completed',
+  'failed',
+  'skipped',
+] as const;
+export type AuthoringScheduleStatus = (typeof AUTHORING_SCHEDULE_STATUSES)[number];
+
+export const AUTHORING_FACTCHECK_STATUSES = ['pending', 'pass', 'fail'] as const;
+export type AuthoringFactcheckStatus = (typeof AUTHORING_FACTCHECK_STATUSES)[number];
+
+export const AUTHORING_TRIGGERS = ['cli', 'cron', 'studio_button', 'regenerate_section'] as const;
+export type AuthoringTrigger = (typeof AUTHORING_TRIGGERS)[number];
+
+// -----------------------------------------------------------------------------
+// authoring_drafts — one row per generated piece. Markdown lives in the row
+// (codex CRITICAL #1 fix; Vercel filesystem is read-only/ephemeral). The
+// content_sha256 is a cache key for concurrent-edit detection (409 on conflict).
+// -----------------------------------------------------------------------------
+export const authoringDrafts = pgTable(
+  'authoring_drafts',
+  {
+    id: text('id').primaryKey(),
+    contentType: text('content_type').notNull(),
+    title: text('title'),
+    slug: text('slug').notNull().unique(),
+    markdownContent: text('markdown_content').notNull(),
+    contentSha256: text('content_sha256'),
+    status: text('status').notNull().default('draft').$type<AuthoringDraftStatus>(),
+    beehiivPostId: text('beehiiv_post_id'),
+    beehiivPostUrl: text('beehiiv_post_url'),
+    generatedAt: timestamp('generated_at', { withTimezone: true }).notNull().defaultNow(),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    exportedAt: timestamp('exported_at', { withTimezone: true }),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    rejectedAt: timestamp('rejected_at', { withTimezone: true }),
+    rejectedReason: text('rejected_reason'),
+    factcheckStatus: text('factcheck_status')
+      .notNull()
+      .default('pending')
+      .$type<AuthoringFactcheckStatus>(),
+    factcheckFindings: jsonb('factcheck_findings'),
+    sourceDataHash: text('source_data_hash'),
+    costUsd: doublePrecision('cost_usd'),
+    metadata: jsonb('metadata'),
+  },
+  (table) => [
+    check(
+      'authoring_drafts_status_chk',
+      sql`${table.status} IN ('draft','approved','exported','published','rejected','archived')`,
+    ),
+    check(
+      'authoring_drafts_factcheck_chk',
+      sql`${table.factcheckStatus} IN ('pending','pass','fail')`,
+    ),
+    index('authoring_drafts_status_idx').on(table.status),
+    index('authoring_drafts_type_generated_idx').on(table.contentType, table.generatedAt),
+  ],
+);
+
+export type AuthoringDraft = typeof authoringDrafts.$inferSelect;
+export type NewAuthoringDraft = typeof authoringDrafts.$inferInsert;
+
+// -----------------------------------------------------------------------------
+// authoring_backlog — topic queue. Each row is an idea/topic that may become
+// content. State flows pending → scheduled → used → archived.
+// -----------------------------------------------------------------------------
+export const authoringBacklog = pgTable(
+  'authoring_backlog',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    notes: text('notes'),
+    contentType: text('content_type'),
+    priority: smallint('priority').notNull().default(2),
+    source: text('source').notNull(),
+    status: text('status').notNull().default('pending').$type<AuthoringBacklogStatus>(),
+    usedInDraftId: text('used_in_draft_id').references(() => authoringDrafts.id),
+    scheduledForSlot: text('scheduled_for_slot'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      'authoring_backlog_status_chk',
+      sql`${table.status} IN ('pending','scheduled','used','archived')`,
+    ),
+    check(
+      'authoring_backlog_priority_chk',
+      sql`${table.priority} BETWEEN 0 AND 4`,
+    ),
+    index('authoring_backlog_status_idx').on(table.status),
+    index('authoring_backlog_priority_idx').on(table.priority),
+  ],
+);
+
+export type AuthoringBacklog = typeof authoringBacklog.$inferSelect;
+export type NewAuthoringBacklog = typeof authoringBacklog.$inferInsert;
+
+// -----------------------------------------------------------------------------
+// authoring_schedules — deterministic upcoming generations driven by E9
+// ScheduleSnapshot. Cron tick reads queued rows where scheduled_at <= now().
+// -----------------------------------------------------------------------------
+export const authoringSchedules = pgTable(
+  'authoring_schedules',
+  {
+    id: text('id').primaryKey(),
+    contentType: text('content_type').notNull(),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
+    contextKey: text('context_key'),
+    draftId: text('draft_id').references(() => authoringDrafts.id),
+    status: text('status').notNull().default('queued').$type<AuthoringScheduleStatus>(),
+    attemptedAt: timestamp('attempted_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    errorText: text('error_text'),
+    attempts: smallint('attempts').notNull().default(0),
+    metadata: jsonb('metadata'),
+  },
+  (table) => [
+    check(
+      'authoring_schedules_status_chk',
+      sql`${table.status} IN ('queued','running','completed','failed','skipped')`,
+    ),
+    index('authoring_schedules_sched_status_idx').on(table.scheduledAt, table.status),
+  ],
+);
+
+export type AuthoringSchedule = typeof authoringSchedules.$inferSelect;
+export type NewAuthoringSchedule = typeof authoringSchedules.$inferInsert;
+
+// -----------------------------------------------------------------------------
+// authoring_runs — per-LLM-call telemetry. Each generateDraft() invocation
+// writes one row, regardless of trigger (cli/cron/studio_button).
+// Heartbeat rows have draft_id=null and trigger='cron'.
+// -----------------------------------------------------------------------------
+export const authoringRuns = pgTable(
+  'authoring_runs',
+  {
+    id: serial('id').primaryKey(),
+    draftId: text('draft_id').references(() => authoringDrafts.id),
+    contentType: text('content_type').notNull(),
+    trigger: text('trigger').notNull().$type<AuthoringTrigger>(),
+    model: text('model').notNull(),
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
+    cacheReadTokens: integer('cache_read_tokens'),
+    cacheWriteTokens: integer('cache_write_tokens'),
+    costUsd: doublePrecision('cost_usd'),
+    promptCacheHit: boolean('prompt_cache_hit'),
+    factcheckStatus: text('factcheck_status').$type<AuthoringFactcheckStatus | null>(),
+    durationMs: integer('duration_ms'),
+    errorText: text('error_text'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      'authoring_runs_trigger_chk',
+      sql`${table.trigger} IN ('cli','cron','studio_button','regenerate_section')`,
+    ),
+    check(
+      'authoring_runs_factcheck_chk',
+      sql`${table.factcheckStatus} IS NULL OR ${table.factcheckStatus} IN ('pending','pass','fail')`,
+    ),
+    index('authoring_runs_created_idx').on(table.createdAt),
+    index('authoring_runs_type_created_idx').on(table.contentType, table.createdAt),
+  ],
+);
+
+export type AuthoringRun = typeof authoringRuns.$inferSelect;
+export type NewAuthoringRun = typeof authoringRuns.$inferInsert;
