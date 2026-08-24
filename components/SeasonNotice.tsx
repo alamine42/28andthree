@@ -23,8 +23,11 @@ export async function SeasonNotice() {
         ) : null}
       </p>
       <p className="mt-1 text-sm text-text-muted">
-        The {ctx.season} Patriots haven&apos;t taken a regular-season snap
-        yet. Stats populate after Week 1.
+        {/* Explicit {' '} — the JSX transform dropped the plain space
+            between the expression and this text node. */}
+        The {ctx.season}{' '}
+        Patriots haven&apos;t taken a regular-season snap yet. Stats
+        populate after Week 1.
       </p>
     </aside>
   );
