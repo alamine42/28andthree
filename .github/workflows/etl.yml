@@ -23,11 +23,28 @@ on:
 
 permissions:
   contents: read
+  actions: write  # keepalive job re-enables cron workflows
 
 # Primary + retry runs (see etl-retry.yml) share the same freshness-gate. No
 # cross-run state coordination — whichever fires first with fresh data runs
 # the ETL; subsequent fires find max(week) == nflverse's and exit heartbeat.
 jobs:
+  # GitHub disables scheduled workflows after 60 days without repo activity.
+  # That silenced every cron here from 2026-07-05 to 2026-08-24. A PUT to the
+  # enable endpoint resets the timer, so this weekly job keeps them alive.
+  keepalive:
+    name: Keepalive — reset 60-day cron disable timer
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Re-enable all cron workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for wf in authoring-cron.yml ci-nightly.yml etl-retry.yml etl-summary.yml etl.yml; do
+            gh api -X PUT "repos/${{ github.repository }}/actions/workflows/$wf/enable"
+          done
   etl:
     name: ETL — nflverse → Neon
     runs-on: ubuntu-latest

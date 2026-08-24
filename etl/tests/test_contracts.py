@@ -253,6 +253,8 @@ def test_c10_meta_refresh_row_counts_present_and_non_zero(
     if row is None:
         pytest.skip("no ok meta_refresh rows yet")
     counts: dict[str, int] = row[0]
+    if counts.get("schedule_only"):
+        pytest.skip("latest ok run was a schedule-only rollover ingest")
     expected = {"plays", "games", "team_phase_weekly", "team_phase_season"}
     present = set(counts.keys())
     missing = expected - present

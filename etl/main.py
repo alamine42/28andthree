@@ -48,9 +48,10 @@ from etl.transform.phases import recompute_season, recompute_weekly
 
 logger = logging.getLogger("etl")
 
-# Static upper bound = 2025 (current through Feb 2026 SB). When Week 1 2026
-# kicks off, bump to 2026 via the `--season` flag.
-DEFAULT_BACKFILL_SEASONS = tuple(range(2020, 2026))
+# Static upper bound = 2026. run_season handles a not-yet-started season as
+# a schedule-only ingest, so the bound can lead the calendar. Bump each year
+# when nflverse publishes the new schedule (May).
+DEFAULT_BACKFILL_SEASONS = tuple(range(2020, 2027))
 
 
 # -----------------------------------------------------------------------------
@@ -175,13 +176,24 @@ def run_season(
     started_at = now_utc()
 
     # Fetch outside the DB transaction — network I/O, may take minutes.
+    # Schedule first: it decides whether the season has started at all.
     logger.info("fetch_start season=%d week=%s", season, week)
-    pbp_df = fetch_pbp([season])
     sched_df = fetch_schedules([season])
+    games = normalize_games(sched_df)
+
+    if not any(g.completed for g in games):
+        # Season rollover: nflverse has published the schedule but no game
+        # has completed. The PBP release for this season does not exist yet,
+        # so a full run would crash on fetch. Ingest the schedule alone —
+        # that is what flips schedule-phase derivation to the new season.
+        return _run_schedule_only(
+            settings, season=season, week=week, games=games, started_at=started_at
+        )
+
+    pbp_df = fetch_pbp([season])
     roster_df = fetch_rosters([season])
     coverage_df = compute_participation_coverage(pbp_df)
 
-    games = normalize_games(sched_df)
     plays = normalize_plays(pbp_df)
     current_players = normalize_current_players(roster_df)
     snapshots = normalize_snapshots(roster_df)
@@ -253,6 +265,43 @@ def run_season(
     return row_counts
 
 
+def _run_schedule_only(
+    settings: EtlSettings,
+    *,
+    season: int,
+    week: int | None,
+    games: list,
+    started_at: datetime,
+) -> dict[str, int]:
+    """Ingest schedule rows for a season with no completed games yet.
+
+    Skips PBP, rosters, and every rollup — none of their nflverse releases
+    exist before kickoff. The `schedule_only` marker in row_counts lets the
+    contract tests tell this run apart from a real refresh.
+    """
+    logger.info("schedule_only_ingest season=%d games=%d", season, len(games))
+    row_counts: dict[str, int]
+    with psycopg.connect(settings.etl_database_url, autocommit=False) as conn:
+        if not _acquire_run_lock(conn):
+            logger.info("concurrent_run_skipped lock=%d", CONCURRENT_ETL_LOCK_ID)
+            return {"concurrent_skipped": 1}
+        games_written = upsert_games(conn, games)
+        row_counts = {"games": games_written, "plays": 0, "schedule_only": 1}
+        _write_meta_refresh(
+            conn,
+            started_at=started_at,
+            completed_at=now_utc(),
+            status="ok",
+            season=season,
+            week=week,
+            source_version=_source_version(),
+            row_counts=row_counts,
+        )
+        conn.commit()
+    logger.info("run_complete season=%d row_counts=%s", season, json.dumps(row_counts))
+    return row_counts
+
+
 def run_full_backfill(
     settings: EtlSettings,
     *,
@@ -278,28 +327,69 @@ def _source_version() -> str:
 # Freshness gate entry
 # -----------------------------------------------------------------------------
 
-def run_freshness_gate(settings: EtlSettings) -> FreshnessResult:
+def run_freshness_gate(
+    settings: EtlSettings,
+    *,
+    target_season: int | None = None,
+) -> FreshnessResult:
     """Inspect nflverse vs DB state; return the decision. Does not run the ETL.
 
     Schedule logic (current_season, offseason boundaries, next-game date)
     flows through `etl/schedule.py::get_schedule_phase`, which derives
     everything from the `games` table. No hardcoded calendar dates here.
+
+    `target_season` is the season the caller wants to refresh (the cron
+    derives it from the calendar). When it is ahead of what the games table
+    knows, the gate checks nflverse for the new schedule instead of
+    deadlocking on the old season's "already_loaded".
     """
     now = now_utc()
     with psycopg.connect(settings.etl_database_url, autocommit=True) as conn:
         snap = get_schedule_phase(now=now, db_connection=conn)
+        rollover_candidate = target_season is not None and target_season > snap.season
+        db_has_target_games = (
+            _db_has_games(conn, target_season)  # type: ignore[arg-type]
+            if rollover_candidate
+            else False
+        )
+        target_schedule_available = (
+            _nflverse_schedule_available(target_season)  # type: ignore[arg-type]
+            if rollover_candidate and not db_has_target_games
+            else False
+        )
         result = check_freshness(
             snap=snap,
             nflverse_latest_completed=_nflverse_latest_completed(snap.season),
             db_max_completed_week=_db_max_completed_week(conn, snap.season),
             last_ok_run_at=_last_ok_run_at(conn),
             now=now,
+            target_season=target_season,
+            target_schedule_available=target_schedule_available,
+            db_has_target_games=db_has_target_games,
         )
     logger.info(
         "freshness_gate decision=%s reason=%s phase=%s season=%d",
         result.should_run, result.reason, snap.phase, snap.season,
     )
     return result
+
+
+def _db_has_games(conn: psycopg.Connection, season: int) -> bool:
+    with conn.cursor() as cur:
+        cur.execute("SELECT 1 FROM games WHERE season = %s LIMIT 1", (season,))
+        return cur.fetchone() is not None
+
+
+def _nflverse_schedule_available(season: int) -> bool:
+    """True when nflverse has published any schedule rows for the season."""
+    try:
+        sched = fetch_schedules([season])
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "nflverse_schedule_fetch_failed season=%d err=%r", season, exc
+        )
+        return False
+    return sched.height > 0
 
 
 def _nflverse_latest_completed(season: int) -> tuple[int, int] | None:
@@ -408,7 +498,7 @@ def main(argv: list[str] | None = None) -> int:
             raise
 
     if args.season is not None:
-        result = run_freshness_gate(settings)
+        result = run_freshness_gate(settings, target_season=args.season)
         if not result.should_run:
             _write_heartbeat(settings, reason=result.reason)
             return 0

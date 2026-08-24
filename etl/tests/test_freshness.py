@@ -155,6 +155,75 @@ def test_gate_runs_when_nflverse_is_ahead_of_db() -> None:
     assert result.should_run is True
 
 
+# ---- Season rollover --------------------------------------------------------
+
+
+def test_gate_runs_rollover_when_target_schedule_published_and_db_lacks_it() -> None:
+    # The post-Super-Bowl deadlock: nflverse and the DB agree on the old
+    # season's max week, so without the rollover check every run exits
+    # "already_loaded" and the new schedule never lands.
+    now = datetime(2026, 8, 24, 14, 0, tzinfo=UTC)
+    result = check_freshness(
+        snap=_offseason_snap_no_schedule(season=2025),
+        nflverse_latest_completed=(2025, 22),
+        db_max_completed_week=22,
+        last_ok_run_at=now - timedelta(days=3),
+        now=now,
+        target_season=2026,
+        target_schedule_available=True,
+        db_has_target_games=False,
+    )
+    assert result.should_run is True
+    assert result.reason == "season_rollover"
+    assert result.current_season == 2026
+
+
+def test_gate_does_not_rollover_when_db_already_has_target_games() -> None:
+    now = datetime(2026, 8, 24, 14, 0, tzinfo=UTC)
+    result = check_freshness(
+        snap=_offseason_snap_next_far(season=2025, days_until=17),
+        nflverse_latest_completed=(2025, 22),
+        db_max_completed_week=22,
+        last_ok_run_at=now - timedelta(days=3),
+        now=now,
+        target_season=2026,
+        target_schedule_available=True,
+        db_has_target_games=True,
+    )
+    assert result.should_run is False
+
+
+def test_gate_does_not_rollover_when_target_schedule_not_published() -> None:
+    now = datetime(2026, 4, 1, 14, 0, tzinfo=UTC)
+    result = check_freshness(
+        snap=_offseason_snap_no_schedule(season=2025),
+        nflverse_latest_completed=(2025, 22),
+        db_max_completed_week=22,
+        last_ok_run_at=now - timedelta(days=3),
+        now=now,
+        target_season=2026,
+        target_schedule_available=False,
+        db_has_target_games=False,
+    )
+    assert result.should_run is False
+    assert result.reason == "already_loaded"
+
+
+def test_gate_ignores_target_season_when_not_ahead_of_snap() -> None:
+    result = check_freshness(
+        snap=_regular_snap(2026),
+        nflverse_latest_completed=(2026, 3),
+        db_max_completed_week=3,
+        last_ok_run_at=None,
+        now=_mid_september(),
+        target_season=2026,
+        target_schedule_available=True,
+        db_has_target_games=True,
+    )
+    assert result.should_run is False
+    assert result.reason == "already_loaded"
+
+
 # ---- Edge cases ------------------------------------------------------------
 
 

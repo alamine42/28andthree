@@ -47,10 +47,19 @@ def check_freshness(
     db_max_completed_week: int | None,
     last_ok_run_at: datetime | None,
     now: datetime,
+    target_season: int | None = None,
+    target_schedule_available: bool = False,
+    db_has_target_games: bool = False,
 ) -> FreshnessResult:
     """Return whether the ETL should run now.
 
     Decision order:
+      0. Season rollover: the caller asks for a season ahead of what the
+         games table knows (target_season > snap.season), the DB has no
+         rows for it, and nflverse has published its schedule → run.
+         Without this, the gate deadlocks after the Super Bowl: nflverse
+         and the DB agree on the old season's max week forever, the new
+         schedule never lands, and snap.season never advances.
       1. Offseason short-circuit (4 guards, all must hold to skip):
          - phase == 'offseason'
          - next_game_date IS NOT NULL  (else: re-run to refresh schedule)
@@ -62,6 +71,18 @@ def check_freshness(
       4. nflverse latest week ≤ DB latest week → already_loaded.
       5. Otherwise → run.
     """
+    if (
+        target_season is not None
+        and target_season > snap.season
+        and not db_has_target_games
+        and target_schedule_available
+    ):
+        return FreshnessResult(
+            should_run=True,
+            reason="season_rollover",
+            current_season=target_season,
+        )
+
     if _should_skip_offseason(snap, last_ok_run_at, now):
         return FreshnessResult(
             should_run=False,
