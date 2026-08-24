@@ -2,19 +2,25 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { useEffect, useId, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { Suspense, useEffect, useId, useState } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { SeasonSwitcher, SeasonSwitcherFallback } from '@/components/SeasonSwitcher';
+import { parseSeasonParam } from '@/lib/season-view';
 
 // Top nav links for the header. Team = home; Players = E7 hub; Draft + Coaching
 // = E5 pages. Phases has no index page — links to the phase grid section on
 // the home page via #phases anchor (component PhaseGrid carries the id).
-type NavLink = { label: string; href: Route };
+// The season param rides every nav link while a past season is active —
+// pages that are season-agnostic (Draft, Status) simply ignore it, so the
+// context survives a detour and is still there when the visitor returns
+// to a season-scoped page. (User decision, prototype round 3.)
+type NavLink = { label: string; href: string; seasonAware: boolean };
 const NAV_LINKS: ReadonlyArray<NavLink> = [
-  { label: 'Team', href: '/' as Route },
-  { label: 'Phases', href: '/#phases' as Route },
-  { label: 'Players', href: '/players' as Route },
-  { label: 'Draft', href: '/draft-roi' as Route },
-  { label: 'Coaching', href: '/coaching' as Route },
+  { label: 'Team', href: '/', seasonAware: true },
+  { label: 'Phases', href: '/#phases', seasonAware: true },
+  { label: 'Players', href: '/players', seasonAware: true },
+  { label: 'Draft', href: '/draft-roi', seasonAware: true },
+  { label: 'Coaching', href: '/coaching', seasonAware: true },
 ];
 
 function Wordmark() {
@@ -30,7 +36,66 @@ function Wordmark() {
   );
 }
 
-export function SiteHeader() {
+/** Append ?season= to season-aware links while a past season is active, so
+ * the context follows the visitor across pages. Hash links keep the hash
+ * after the query. */
+function decorate(href: string, seasonAware: boolean, season: string | null): Route {
+  if (!seasonAware || season == null) return href as Route;
+  const [path, hash] = href.split('#');
+  return `${path}?season=${season}${hash ? `#${hash}` : ''}` as Route;
+}
+
+function useActiveSeasonParam(): string | null {
+  const searchParams = useSearchParams();
+  // Strict validation (lib/season-view): a junk param must not ride the
+  // session through nav links (review WARNING).
+  const parsed = parseSeasonParam(searchParams.get('season'));
+  return parsed != null ? String(parsed) : null;
+}
+
+function DesktopNav() {
+  const season = useActiveSeasonParam();
+  return (
+    <>
+      {NAV_LINKS.map((link) => (
+        <Link
+          key={link.label}
+          href={decorate(link.href, link.seasonAware, season)}
+          className="font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-positive"
+        >
+          {link.label}
+        </Link>
+      ))}
+    </>
+  );
+}
+
+function MobileNavList({ onNavigate }: { onNavigate: () => void }) {
+  const season = useActiveSeasonParam();
+  return (
+    <>
+      {NAV_LINKS.map((link) => (
+        <li key={link.label} className="border-b border-border last:border-b-0">
+          <Link
+            href={decorate(link.href, link.seasonAware, season)}
+            onClick={onNavigate}
+            className="flex min-h-[44px] items-center font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive"
+          >
+            {link.label}
+          </Link>
+        </li>
+      ))}
+    </>
+  );
+}
+
+export function SiteHeader({
+  currentSeason,
+  seasons,
+}: {
+  currentSeason: number;
+  seasons: number[];
+}) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const pathname = usePathname();
@@ -53,29 +118,29 @@ export function SiteHeader() {
       <div className="mx-auto flex h-14 w-full max-w-content items-center justify-between px-4 md:h-16 md:px-6 lg:px-8">
         <Wordmark />
 
-        <nav aria-label="Primary" className="hidden items-center gap-5 md:flex lg:gap-7">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.label}
-              href={link.href}
-              className="font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-positive"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="flex items-center gap-3 md:gap-5">
+          <nav aria-label="Primary" className="hidden items-center gap-5 md:flex lg:gap-7">
+            <Suspense fallback={<DesktopNavFallback />}>
+              <DesktopNav />
+            </Suspense>
+          </nav>
 
-        <button
-          type="button"
-          aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
-          aria-expanded={open}
-          aria-controls={panelId}
-          data-testid="mobile-nav-toggle"
-          onClick={() => setOpen((v) => !v)}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-sm text-text-muted transition-colors hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive md:hidden"
-        >
-          {open ? <CloseIcon /> : <HamburgerIcon />}
-        </button>
+          <Suspense fallback={<SeasonSwitcherFallback current={currentSeason} />}>
+            <SeasonSwitcher current={currentSeason} seasons={seasons} />
+          </Suspense>
+
+          <button
+            type="button"
+            aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={open}
+            aria-controls={panelId}
+            data-testid="mobile-nav-toggle"
+            onClick={() => setOpen((v) => !v)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-sm text-text-muted transition-colors hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive md:hidden"
+          >
+            {open ? <CloseIcon /> : <HamburgerIcon />}
+          </button>
+        </div>
       </div>
 
       <nav
@@ -86,20 +151,28 @@ export function SiteHeader() {
         className="border-t border-border bg-bg md:hidden"
       >
         <ul className="mx-auto flex w-full max-w-content flex-col px-4">
-          {NAV_LINKS.map((link) => (
-            <li key={link.label} className="border-b border-border last:border-b-0">
-              <Link
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="flex min-h-[44px] items-center font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive"
-              >
-                {link.label}
-              </Link>
-            </li>
-          ))}
+          <Suspense fallback={null}>
+            <MobileNavList onNavigate={() => setOpen(false)} />
+          </Suspense>
         </ul>
       </nav>
     </header>
+  );
+}
+
+function DesktopNavFallback() {
+  return (
+    <>
+      {NAV_LINKS.map((link) => (
+        <Link
+          key={link.label}
+          href={link.href as Route}
+          className="font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-positive"
+        >
+          {link.label}
+        </Link>
+      ))}
+    </>
   );
 }
 

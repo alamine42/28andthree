@@ -17,7 +17,11 @@ test.describe('sandbox smoke', () => {
 
   test('phase page renders fixture snapshot', async ({ page }) => {
     await page.goto('/phases/pass_offense');
-    await expect(page.locator('body')).toContainText('pass');
+    // Latent fix (E11-08): the old case-sensitive 'pass' assertion never
+    // matched the rendered body ('Pass offense') — hidden by the broken CI
+    // E2E job. Assert the fixture content the test was written to check.
+    await expect(page.locator('body')).toContainText('Pass offense');
+    await expect(page.getByTestId('phase-rank-card')).toContainText('1st');
   });
 
   test('phase with insufficient sample shows K<32 copy', async ({ page }) => {
