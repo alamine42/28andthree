@@ -5,7 +5,7 @@ import { getSeasonContext } from '@/lib/data/current-season';
 import { getLatestStatsSeason } from '@/lib/data/stats-season';
 import { EARLIEST_SEASON } from '@/lib/season-view';
 import { getDb } from '@/lib/db';
-import { qbSeason, skillSeason } from '@/db/schema';
+import { coachingTendenciesWeekly, qbSeason, skillSeason, teamPhaseSeason } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 
 // Sitemap regenerates daily (revalidate below) so a newly completed
@@ -38,16 +38,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 }
 
 /** E11 (plan §3.7): team-level historical URLs in the public ?season=
- * form, for every completed season below current. Player historical URLs
- * stay out (thin-content risk). */
+ * form, only for completed seasons that actually hold data (code review
+ * pass 2: never advertise a blank archive shell). Coaching URLs key on
+ * coaching rows to match the /s coaching wrapper's noindex-when-empty.
+ * Player historical URLs stay out (thin-content risk). */
 async function listHistoricalRoutes(): Promise<MetadataRoute.Sitemap> {
+  const db = getDb();
+  if (!db) return [];
   try {
     const { season: current } = await getSeasonContext();
+    const [phaseSeasonsRows, coachingSeasonsRows] = await Promise.all([
+      db.selectDistinct({ season: teamPhaseSeason.season }).from(teamPhaseSeason),
+      db.selectDistinct({ season: coachingTendenciesWeekly.season }).from(coachingTendenciesWeekly),
+    ]);
+    const phaseSeasons = new Set(phaseSeasonsRows.map((r) => r.season));
+    const coachingSeasons = new Set(coachingSeasonsRows.map((r) => r.season));
     const now = new Date();
     const out: MetadataRoute.Sitemap = [];
     for (let s = EARLIEST_SEASON; s < current; s++) {
+      if (!phaseSeasons.has(s)) continue;
       out.push(entry(`/?season=${s}`, now, 'yearly', 0.4));
-      out.push(entry(`/coaching?season=${s}`, now, 'yearly', 0.3));
+      if (coachingSeasons.has(s)) out.push(entry(`/coaching?season=${s}`, now, 'yearly', 0.3));
       for (const slug of PHASES) out.push(entry(`/phases/${slug}?season=${s}`, now, 'yearly', 0.3));
       for (const slug of UNIT_SLUGS) out.push(entry(`/team/units/${slug}?season=${s}`, now, 'yearly', 0.2));
     }
@@ -60,12 +71,14 @@ async function listHistoricalRoutes(): Promise<MetadataRoute.Sitemap> {
 async function listPlayerRoutes(): Promise<MetadataRoute.Sitemap> {
   const db = getDb();
   if (!db) return [];
-  // Latest season WITH stats — not the display season (plan §3.7).
-  const season = await getLatestStatsSeason();
-  if (season == null) return [];
 
   // Current-season Pats roster only — not all 480 league-wide players.
   try {
+    // Latest season WITH stats — not the display season (plan §3.7).
+    // Inside the try: a transient DB failure degrades to fixed routes
+    // instead of 500ing /sitemap.xml (code review pass 2).
+    const season = await getLatestStatsSeason();
+    if (season == null) return [];
     const [qbs, skill] = await Promise.all([
       db
         .select({ gsisId: qbSeason.gsisId })

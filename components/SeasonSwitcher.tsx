@@ -102,23 +102,45 @@ export function SeasonSwitcher({ current, seasons }: Props) {
           className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-md border border-border-strong bg-surface-2 shadow-lg"
         >
           <ul>
-            {seasons.map((s) => (
-              <li key={s} className="border-b border-border last:border-b-0">
-                <Link
-                  href={hrefFor(s)}
-                  aria-current={s === season ? 'true' : undefined}
-                  onClick={(e) => onLinkClick(e, s)}
-                  className={`flex min-h-[40px] w-full items-center justify-between px-3 font-mono text-2xs uppercase tracking-widest transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-positive ${
-                    s === season ? 'text-text' : 'text-text-muted'
-                  }`}
-                >
+            {seasons.map((s) => {
+              const itemClass = `flex min-h-[40px] w-full items-center justify-between px-3 font-mono text-2xs uppercase tracking-widest transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-positive ${
+                s === season ? 'text-text' : 'text-text-muted'
+              }`;
+              const body = (
+                <>
                   <span className="tabular-nums">{s}</span>
                   <span className={s === current ? 'text-positive' : 'text-text-muted'}>
                     {s === current ? 'CURRENT' : 'FINAL'}
                   </span>
-                </Link>
-              </li>
-            ))}
+                </>
+              );
+              return (
+                <li key={s} className="border-b border-border last:border-b-0">
+                  {s === current ? (
+                    // Plain anchor: the app router no-ops a soft navigation
+                    // from a rewritten ?season= URL back to the same
+                    // pathname's clean URL (Next 16) — a real browser
+                    // navigation always lands.
+                    <a
+                      href={hrefFor(s)}
+                      aria-current={s === season ? 'true' : undefined}
+                      className={itemClass}
+                    >
+                      {body}
+                    </a>
+                  ) : (
+                    <Link
+                      href={hrefFor(s)}
+                      aria-current={s === season ? 'true' : undefined}
+                      onClick={(e) => onLinkClick(e, s)}
+                      className={itemClass}
+                    >
+                      {body}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </nav>
       ) : null}

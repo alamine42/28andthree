@@ -89,7 +89,11 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     const url = req.nextUrl.clone();
     url.pathname = seasonRoute.pathname;
     if (seasonRoute.kind === 'redirect') {
-      url.search = seasonRoute.search;
+      // Preserve the incoming query (utm params, a valid ?season= on a
+      // malformed /s path); a valid /s segment overrides the season.
+      if (seasonRoute.seasonOverride != null) {
+        url.searchParams.set('season', String(seasonRoute.seasonOverride));
+      }
       return NextResponse.redirect(url, 308);
     }
     // Drop the season param from the internal URL: the /s route reads its

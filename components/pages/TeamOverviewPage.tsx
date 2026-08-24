@@ -88,7 +88,7 @@ function buildEyebrowSuffix(snap: ScheduleSnapshot, ctx: SeasonContext): React.R
   if (ctx.awaitingFirstGame && ctx.kickoffInDays != null) {
     return (
       <>
-        SEASON · KICKOFF IN <span className="text-text">{ctx.kickoffInDays}</span> DAYS
+        SEASON · KICKOFF IN <span className="tabular-nums text-text">{ctx.kickoffInDays}</span> DAYS
       </>
     );
   }
@@ -106,7 +106,7 @@ function buildEyebrowSuffix(snap: ScheduleSnapshot, ctx: SeasonContext): React.R
         return (
           <>
             SEASON · FINAL · NEXT GAME IN{' '}
-            <span className="text-text">{snap.daysUntilNextGame}</span> DAYS
+            <span className="tabular-nums text-text">{snap.daysUntilNextGame}</span> DAYS
           </>
         );
       }

@@ -1,8 +1,7 @@
-import Link from 'next/link';
-import type { Route } from 'next';
 import type { DraftRoiRow } from '@/lib/data/draft';
 import { bucketForPosition } from '@/lib/format/position-bucket';
 import { playerHref, roleFor } from '@/lib/format/player-routes';
+import { SeasonCarryLink } from '@/components/SeasonCarryLink';
 import { GradeBadge } from './GradeBadge';
 
 type Props = {
@@ -137,13 +136,15 @@ function PlayerLink({ row }: { row: DraftRoiRow }) {
   const href = playerHref({ role, gsisId: row.gsisId });
   const label = row.displayName ?? row.gsisId;
   if (href === null) return <span className="truncate text-text">{label}</span>;
+  // SeasonCarryLink keeps an active historical context through the draft
+  // detour (code review pass 2) without making this static page dynamic.
   return (
-    <Link
-      href={href as Route}
+    <SeasonCarryLink
+      href={href}
       className="truncate font-display text-base font-bold text-text transition-colors hover:text-positive focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
     >
       {label}
-    </Link>
+    </SeasonCarryLink>
   );
 }
 

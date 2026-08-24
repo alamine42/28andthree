@@ -66,6 +66,17 @@ test.describe('E11 historical season browsing', () => {
   });
 
   test('current-season param redirects to the clean URL', async ({ page }) => {
+    // Read the real current season from the header pill, then request it as
+    // a param: middleware rewrites to /s/{current}, whose wrapper redirects
+    // back to the clean URL (the exact rollover-critical path — code review
+    // pass 2: a junk year like 2099 never reaches the wrapper).
+    await page.goto('/');
+    const current = (await page.getByTestId('season-switcher').innerText()).trim();
+    await page.goto(`/?season=${current}`);
+    await page.waitForURL((url) => !url.searchParams.has('season'));
+    await expect(page.getByTestId('historical-marker')).toHaveCount(0);
+
+    // Junk future years never rewrite at all — clean page, param inert.
     const response = await page.goto('/?season=2099');
     expect(response?.status()).toBe(200);
     await expect(page.getByTestId('historical-marker')).toHaveCount(0);

@@ -45,16 +45,20 @@ function decorate(href: string, seasonAware: boolean, season: string | null): Ro
   return `${path}?season=${season}${hash ? `#${hash}` : ''}` as Route;
 }
 
-function useActiveSeasonParam(): string | null {
+function useActiveSeasonParam(seasons: number[], current: number): string | null {
   const searchParams = useSearchParams();
-  // Strict validation (lib/season-view): a junk param must not ride the
-  // session through nav links (review WARNING).
+  // Same predicate as the SeasonSwitcher pill — format + browsable-list
+  // membership + not-current. Without the membership check the nav can
+  // decorate with a calendar-year season the pill rejects (Jan–Aug), the
+  // split-brain chrome from code review pass 2.
   const parsed = parseSeasonParam(searchParams.get('season'));
-  return parsed != null ? String(parsed) : null;
+  return parsed != null && parsed !== current && seasons.includes(parsed)
+    ? String(parsed)
+    : null;
 }
 
-function DesktopNav() {
-  const season = useActiveSeasonParam();
+function DesktopNav({ seasons, current }: { seasons: number[]; current: number }) {
+  const season = useActiveSeasonParam(seasons, current);
   return (
     <>
       {NAV_LINKS.map((link) => (
@@ -70,8 +74,16 @@ function DesktopNav() {
   );
 }
 
-function MobileNavList({ onNavigate }: { onNavigate: () => void }) {
-  const season = useActiveSeasonParam();
+function MobileNavList({
+  onNavigate,
+  seasons,
+  current,
+}: {
+  onNavigate: () => void;
+  seasons: number[];
+  current: number;
+}) {
+  const season = useActiveSeasonParam(seasons, current);
   return (
     <>
       {NAV_LINKS.map((link) => (
@@ -121,7 +133,7 @@ export function SiteHeader({
         <div className="flex items-center gap-3 md:gap-5">
           <nav aria-label="Primary" className="hidden items-center gap-5 md:flex lg:gap-7">
             <Suspense fallback={<DesktopNavFallback />}>
-              <DesktopNav />
+              <DesktopNav seasons={seasons} current={currentSeason} />
             </Suspense>
           </nav>
 
@@ -152,7 +164,7 @@ export function SiteHeader({
       >
         <ul className="mx-auto flex w-full max-w-content flex-col px-4">
           <Suspense fallback={null}>
-            <MobileNavList onNavigate={() => setOpen(false)} />
+            <MobileNavList onNavigate={() => setOpen(false)} seasons={seasons} current={currentSeason} />
           </Suspense>
         </ul>
       </nav>

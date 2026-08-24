@@ -52,6 +52,7 @@ export async function PhaseDetailPage({
     if (!historical && !ctx.awaitingFirstGame) notFound();
     return (
       <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
+        {historical ? null : <SeasonNotice />}
         <PhaseBreadcrumb display={display} homeHref={homeHref} />
         <header className="flex flex-col gap-3">
           {historical ? (

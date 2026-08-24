@@ -41,38 +41,40 @@ describe('lib/season-view — resolveSeasonRouting', () => {
     assert.deepEqual(resolveSeasonRouting('/s/2023/coaching', null), {
       kind: 'redirect',
       pathname: '/coaching',
-      search: '?season=2023',
+      seasonOverride: 2023,
     });
     assert.deepEqual(resolveSeasonRouting('/s/2023', null), {
       kind: 'redirect',
       pathname: '/',
-      search: '?season=2023',
+      seasonOverride: 2023,
     });
     assert.deepEqual(
       resolveSeasonRouting('/s/2021/players/skill/00-0031234', null),
       {
         kind: 'redirect',
         pathname: '/players/skill/00-0031234',
-        search: '?season=2021',
+        seasonOverride: 2021,
       },
     );
   });
 
-  it('should_redirect_malformed_internal_hits_to_the_clean_path', () => {
+  it('should_redirect_malformed_internal_hits_preserving_the_query', () => {
+    // seasonOverride null = middleware leaves the original query alone, so
+    // /s/abc/coaching?season=2023 still lands on the 2023 archive.
     assert.deepEqual(resolveSeasonRouting('/s/abc/coaching', null), {
       kind: 'redirect',
       pathname: '/coaching',
-      search: '',
+      seasonOverride: null,
     });
     assert.deepEqual(resolveSeasonRouting('/s/1999', null), {
       kind: 'redirect',
       pathname: '/',
-      search: '',
+      seasonOverride: null,
     });
     assert.deepEqual(resolveSeasonRouting('/s', null), {
       kind: 'redirect',
       pathname: '/',
-      search: '',
+      seasonOverride: null,
     });
   });
 });

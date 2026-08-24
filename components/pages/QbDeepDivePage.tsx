@@ -37,6 +37,7 @@ export async function QbDeepDivePage({
     if (!historical && !ctx.awaitingFirstGame) notFound();
     return (
       <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
+        {historical ? null : <SeasonNotice />}
         <header className="flex flex-col gap-3">
           <PlayerHeader player={player} season={season} subtitle="Quarterback" />
           {historical ? (

@@ -1,5 +1,3 @@
-import Link from 'next/link';
-import type { Route } from 'next';
 import { getSeasonContext } from '@/lib/data/current-season';
 
 // E11: persistent marker while a past season is in view; "Back to
@@ -22,12 +20,16 @@ export async function HistoricalMarker({
       <span className="rounded-sm border border-border-strong px-2 py-0.5 text-text-muted">
         Historical · <span className="tabular-nums">{season}</span>
       </span>
-      <Link
-        href={backHref as Route}
+      {/* Plain anchor, not <Link>: the app router silently no-ops a soft
+          navigation from a rewritten ?season= URL to the same pathname's
+          clean URL (Next 16; code review pass 2 follow-through). A real
+          browser navigation always lands. */}
+      <a
+        href={backHref}
         className="inline-flex min-h-[32px] items-center text-text-muted underline underline-offset-4 decoration-border-strong transition-colors hover:text-text hover:decoration-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
       >
         Back to <span className="tabular-nums">{current}</span>
-      </Link>
+      </a>
     </p>
   );
 }

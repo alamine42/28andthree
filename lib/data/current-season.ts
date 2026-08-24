@@ -29,6 +29,7 @@ export const getSeasonContext = cache(async (): Promise<SeasonContext> => {
   if (!db) {
     return { season: FALLBACK_SEASON, awaitingFirstGame: false, kickoffInDays: null };
   }
+  try {
   const rows = await db
     .select({ season: teamPhaseWeekly.season })
     .from(teamPhaseWeekly)
@@ -59,6 +60,14 @@ export const getSeasonContext = cache(async (): Promise<SeasonContext> => {
     phase: snap.phase,
     daysUntilNextGame: snap.daysUntilNextGame,
   });
+  } catch (err) {
+    // The root layout awaits this for the header season list — a Neon
+    // blip must not 500 every page or fail a build (code review pass 2).
+    // Chrome degrades to the fallback; data pages surface their own
+    // errors through their own DAL calls.
+    console.error('getSeasonContext_failed', err);
+    return { season: FALLBACK_SEASON, awaitingFirstGame: false, kickoffInDays: null };
+  }
 });
 
 /** Season every stats page should display. Delegates to getSeasonContext

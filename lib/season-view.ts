@@ -42,7 +42,15 @@ export function isSeasonScopedPath(pathname: string): boolean {
 
 export type SeasonRouting =
   | { kind: 'rewrite'; pathname: string }
-  | { kind: 'redirect'; pathname: string; search: string };
+  | {
+      kind: 'redirect';
+      pathname: string;
+      /** Season to stamp onto the redirect's query (from a valid /s
+       * segment); null = leave the original query untouched, so a valid
+       * ?season= (or any other param) on the incoming URL survives the
+       * bounce (code review pass 2). */
+      seasonOverride: number | null;
+    };
 
 /** Pure decision core for the middleware branch (plan §3.1, §3.3).
  *
@@ -66,11 +74,7 @@ export function resolveSeasonRouting(
     const [, segment = '', ...restParts] = rest.split('/');
     const cleanPath = restParts.length > 0 ? `/${restParts.join('/')}` : '/';
     const season = parseSeasonParam(segment);
-    return {
-      kind: 'redirect',
-      pathname: cleanPath,
-      search: season != null ? `?season=${season}` : '',
-    };
+    return { kind: 'redirect', pathname: cleanPath, seasonOverride: season };
   }
 
   const season = parseSeasonParam(seasonParam);
