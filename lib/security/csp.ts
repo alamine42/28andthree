@@ -17,15 +17,21 @@
 export type CspEnv = 'development' | 'test' | 'production';
 
 export function buildCsp(env: CspEnv, nonce: string): string {
-  // Dev must NOT include a nonce: once CSP script-src has a nonce, the
-  // browser ignores 'unsafe-inline' for scripts (per CSP spec), and Next's
-  // Turbopack-emitted inline bootstrap/hydration scripts don't carry one —
-  // they'd all be blocked and the client-side page becomes non-interactive.
-  // Production ships with a nonce; Next's SSR scripts are served from
-  // /_next/static (which 'self' allows) so they load fine without a nonce.
+  // NO nonce in script-src, in any env: once a nonce is present the
+  // browser ignores 'unsafe-inline' (per CSP spec). Production mints a
+  // fresh nonce per request while ISR serves CACHED HTML whose inline
+  // hydration scripts carry the nonce baked at prerender time — mismatch,
+  // every inline script blocked, client components never mount on cache
+  // HITs (found live when E11's header switcher stayed a static
+  // fallback). Nonce-based CSP requires dynamic rendering of every page;
+  // this is a deliberately ISR-heavy site, so the header-comment design
+  // ('unsafe-inline' until Next has a nonce-plus-static story) is the
+  // policy. The nonce parameter is kept for the x-nonce request-header
+  // plumbing but no longer appears in the policy.
+  void nonce;
   const scriptSrc =
     env === 'production'
-      ? ["'self'", `'nonce-${nonce}'`, "'unsafe-inline'"]
+      ? ["'self'", "'unsafe-inline'"]
       : ["'self'", "'unsafe-inline'", "'unsafe-eval'"];
 
   const directives: Array<[string, string[]]> = [

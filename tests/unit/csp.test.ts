@@ -9,8 +9,12 @@ describe('buildCsp — production profile', () => {
     assert.match(csp, /(^|;\s)default-src 'self'(;|$)/);
   });
 
-  it('includes the nonce in script-src', () => {
-    assert.match(csp, /script-src[^;]*'nonce-TESTNONCEBASE64'/);
+  it('does NOT include a nonce in script-src', () => {
+    // A nonce disables 'unsafe-inline' per spec, and ISR-cached HTML
+    // carries stale nonces — hydration dies on every cache HIT. See
+    // lib/security/csp.ts.
+    assert.doesNotMatch(csp, /'nonce-/);
+    assert.match(csp, /script-src[^;]*'unsafe-inline'/);
   });
 
   it('does NOT include unsafe-eval in script-src', () => {
