@@ -5,6 +5,8 @@ import { PhaseCard } from './PhaseCard';
 type Props = {
   snapshot: ReadonlyArray<PhaseSnapshot>;
   sparklines: PatsSparklines;
+  /** Past season in view, appended to card links as ?season=. */
+  seasonQuery?: number | null;
 };
 
 // `overall` is already the hero stat at the top of the page; showing it again
@@ -12,7 +14,7 @@ type Props = {
 // specific ranks beneath.
 const GRID_PHASES = PHASES.filter((p) => p !== 'overall');
 
-export function PhaseGrid({ snapshot, sparklines }: Props) {
+export function PhaseGrid({ snapshot, sparklines, seasonQuery }: Props) {
   const byPhase = new Map<Phase, PhaseSnapshot>(snapshot.map((s) => [s.phase, s]));
 
   return (
@@ -32,6 +34,7 @@ export function PhaseGrid({ snapshot, sparklines }: Props) {
               epaPerPlay={s?.epaPerPlay ?? null}
               sparkline={points}
               insufficientSample={s ? s.plays < 30 : false}
+              seasonQuery={seasonQuery}
             />
           );
         })}

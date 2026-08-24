@@ -14,9 +14,19 @@ type Props = {
   epaPerPlay: number | null;
   sparkline: ReadonlyArray<SparklinePoint>;
   insufficientSample?: boolean;
+  /** When a past season is in view, its year — appended as ?season= so the
+   * historical context follows the click through. */
+  seasonQuery?: number | null;
 };
 
-export function PhaseCard({ phase, rank, epaPerPlay, sparkline, insufficientSample }: Props) {
+export function PhaseCard({
+  phase,
+  rank,
+  epaPerPlay,
+  sparkline,
+  insufficientSample,
+  seasonQuery,
+}: Props) {
   const tier = rankTier(rank);
   const slug = phase;
   const display = phaseDisplayName(phase);
@@ -29,7 +39,7 @@ export function PhaseCard({ phase, rank, epaPerPlay, sparkline, insufficientSamp
   // signal without costing a full row of vertical space.
   return (
     <Link
-      href={`/phases/${slug}` as Route}
+      href={`/phases/${slug}${seasonQuery != null ? `?season=${seasonQuery}` : ''}` as Route}
       data-testid={`phase-card-${slug}`}
       className="flex min-h-[80px] flex-col gap-1.5 bg-bg p-3 transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive md:min-h-[96px] md:p-4"
     >
