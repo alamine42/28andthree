@@ -134,7 +134,7 @@ export async function PhaseDetailPage({
           <>
             <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
               {contributors.map((c, i) => (
-                <TopContributorCard key={c.gsisId || `unit-${i}`} card={c} />
+                <TopContributorCard key={c.gsisId || `unit-${i}`} card={c} seasonQuery={historical ? season : null} />
               ))}
             </div>
             {contributors[0]?.caveat ? (

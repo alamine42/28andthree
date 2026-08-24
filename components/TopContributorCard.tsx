@@ -5,10 +5,12 @@ import type { ContributorCard } from '@/lib/data/contributors';
 
 type Props = {
   card: ContributorCard;
+  /** Past season in view — carried onto the card link (E11). */
+  seasonQuery?: number | null;
 };
 
-export function TopContributorCard({ card }: Props) {
-  const href = hrefFor(card);
+export function TopContributorCard({ card, seasonQuery }: Props) {
+  const href = hrefFor(card, seasonQuery);
   const testId = card.gsisId ? `contributor-card-${card.gsisId}` : 'contributor-card-unit';
   // Focus + hover styles sit on the actual focusable element (<a>) — putting
   // them on a `display:contents` wrapper hides them from keyboard users
@@ -50,9 +52,16 @@ export function TopContributorCard({ card }: Props) {
   );
 }
 
-function hrefFor(card: ContributorCard): Route | '#' {
-  if (card.role === 'qb') return `/players/qb/${card.gsisId}` as Route;
-  if (card.role === 'skill') return `/players/skill/${card.gsisId}` as Route;
-  if (card.role === 'unit') return '/team/units/defense' as Route;
-  return '#';
+function hrefFor(card: ContributorCard, seasonQuery?: number | null): Route | '#' {
+  const base =
+    card.role === 'qb'
+      ? `/players/qb/${card.gsisId}`
+      : card.role === 'skill'
+        ? `/players/skill/${card.gsisId}`
+        : card.role === 'unit'
+          ? '/team/units/defense'
+          : null;
+  if (base == null) return '#';
+  if (seasonQuery == null) return base as Route;
+  return `${base}?season=${seasonQuery}` as Route;
 }
