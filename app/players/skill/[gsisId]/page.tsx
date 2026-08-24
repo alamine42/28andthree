@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { skillSeason } from '@/db/schema';
 import { getDb } from '@/lib/db';
 import { getCurrentSeason } from '@/lib/data/current-season';
+import { getLatestStatsSeason } from '@/lib/data/stats-season';
 import { getPlayer, getSkillUsage } from '@/lib/data/player';
 import { formatPercent } from '@/lib/format/number';
 import { pageMetadata } from '@/lib/seo/page-metadata';
@@ -15,10 +16,14 @@ type Params = Promise<{ gsisId: string }>;
 export async function generateStaticParams() {
   const db = getDb();
   if (!db) return [];
+  // Latest season with stats — the display season is empty during the
+  // preseason transition (plan §3.7).
+  const statsSeason = await getLatestStatsSeason();
+  if (statsSeason == null) return [];
   const rows = await db
     .select({ gsisId: skillSeason.gsisId })
     .from(skillSeason)
-    .where(and(eq(skillSeason.team, 'NE'), eq(skillSeason.season, 2025)));
+    .where(and(eq(skillSeason.team, 'NE'), eq(skillSeason.season, statsSeason)));
   return rows.map((r) => ({ gsisId: r.gsisId }));
 }
 

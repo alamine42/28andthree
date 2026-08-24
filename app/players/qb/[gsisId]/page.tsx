@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { qbSeason } from '@/db/schema';
 import { getDb } from '@/lib/db';
 import { getCurrentSeason } from '@/lib/data/current-season';
+import { getLatestStatsSeason } from '@/lib/data/stats-season';
 import { getPlayer, getQbDeepDive } from '@/lib/data/player';
 import { formatEpa } from '@/lib/format/number';
 import { pageMetadata } from '@/lib/seo/page-metadata';
@@ -17,10 +18,14 @@ type Params = Promise<{ gsisId: string }>;
 export async function generateStaticParams() {
   const db = getDb();
   if (!db) return [];
+  // Latest season with stats — the display season is empty during the
+  // preseason transition (plan §3.7).
+  const statsSeason = await getLatestStatsSeason();
+  if (statsSeason == null) return [];
   const rows = await db
     .select({ gsisId: qbSeason.gsisId })
     .from(qbSeason)
-    .where(and(eq(qbSeason.team, 'NE'), eq(qbSeason.season, 2025)));
+    .where(and(eq(qbSeason.team, 'NE'), eq(qbSeason.season, statsSeason)));
   return rows.map((r) => ({ gsisId: r.gsisId }));
 }
 
