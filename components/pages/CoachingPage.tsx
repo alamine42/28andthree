@@ -111,12 +111,12 @@ export async function CoachingPage({
                 className="flex flex-col gap-2 rounded-sm border-l-2 border-positive bg-surface px-4 py-3"
               >
                 <p className="font-mono text-2xs uppercase tracking-widest text-positive">
-                  4th down — model pending
+                  {historical ? '4th down — no model data' : '4th down — model pending'}
                 </p>
                 <p className="max-w-prose text-sm text-text">
-                  Recommendations from the 4th-down model haven&rsquo;t been
-                  computed for this season yet. Check back after the next
-                  ETL run.
+                  {historical
+                    ? `No ${season} 4th-down model recommendations were recorded.`
+                    : 'Recommendations from the 4th-down model haven\u2019t been computed for this season yet. Check back after the next ETL run.'}
                 </p>
               </aside>
             )}

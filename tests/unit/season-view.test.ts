@@ -39,6 +39,13 @@ describe('lib/season-view — parseSeasonParam', () => {
     assert.equal(parseSeasonParam('1999'), null);
     assert.equal(parseSeasonParam('2019'), null);
   });
+
+  it('should_reject_seasons_beyond_the_current_calendar_year', () => {
+    const thisYear = new Date().getFullYear();
+    assert.equal(parseSeasonParam(String(thisYear)), thisYear);
+    assert.equal(parseSeasonParam(String(thisYear + 1)), null);
+    assert.equal(parseSeasonParam('9999'), null);
+  });
 });
 
 describe('lib/season-view — isSeasonScopedPath', () => {

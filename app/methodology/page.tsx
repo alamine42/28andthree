@@ -15,6 +15,9 @@ export const metadata: Metadata = pageMetadata({
 
 // Static content page. No DB reads, no revalidation needed.
 export const dynamic = 'force-static';
+// E11: the root layout bakes the header's season list at render time;
+// an hourly revalidate keeps it from going stale for a whole deploy gap.
+export const revalidate = 3600;
 
 type TocItem = { id: string; label: string };
 

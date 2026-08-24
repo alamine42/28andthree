@@ -15,7 +15,11 @@ const SEASON_PARAM_RE = /^\d{4}$/;
 export function parseSeasonParam(raw: string | null | undefined): number | null {
   if (raw == null || !SEASON_PARAM_RE.test(raw)) return null;
   const season = Number(raw);
-  if (season < EARLIEST_SEASON) return null;
+  // Upper bound: an NFL season Y starts in September of calendar year Y,
+  // so nothing above the current year can be real. Without this, junk
+  // future years pass the format check, split the header chrome, and mint
+  // /s ISR redirect entries per crawled year (code review pass 1).
+  if (season < EARLIEST_SEASON || season > new Date().getFullYear()) return null;
   return season;
 }
 

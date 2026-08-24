@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
-import { isRevalidatablePath, REVALIDATE_PATHS } from '@/lib/revalidation/tags';
+import { isRevalidatablePath, REVALIDATE_LAYOUT_PATHS, REVALIDATE_PATHS } from '@/lib/revalidation/tags';
 import { getServerEnv } from '@/lib/env';
 
 // On-demand revalidation webhook. Called by the ETL workflow after a
@@ -37,7 +37,16 @@ export async function POST(req: Request): Promise<Response> {
   const target = paths.length > 0 ? paths : REVALIDATE_PATHS;
   const accepted = target.filter(isRevalidatablePath);
   for (const p of accepted) revalidatePath(p);
-  return json({ revalidated: accepted }, 200);
+  // Full flush also clears the historical /s subtree (layout-scoped —
+  // covers per-player pages that cannot be enumerated). E11 plan §3.3.
+  const layouts: string[] = [];
+  if (paths.length === 0) {
+    for (const l of REVALIDATE_LAYOUT_PATHS) {
+      revalidatePath(l.path, l.type);
+      layouts.push(l.path);
+    }
+  }
+  return json({ revalidated: accepted, revalidatedLayouts: layouts }, 200);
 }
 
 function extractPaths(body: unknown): string[] | null {

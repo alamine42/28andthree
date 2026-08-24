@@ -8,9 +8,12 @@ import { getDb } from '@/lib/db';
 import { qbSeason, skillSeason } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 
-// Sitemap is generated at build time (or at the next ISR revalidation).
+// Sitemap regenerates daily (revalidate below) so a newly completed
+// season's archive URLs enter without a redeploy (code review pass 1).
 // Excludes internal routes (/status, /tokens, /og, /api/*) — those are
 // marked noindex at the page level per E6-03 and don't need crawler hints.
+
+export const revalidate = 86400;
 
 const baseUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '') ?? 'https://28andthree.com';

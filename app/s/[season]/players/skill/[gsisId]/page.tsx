@@ -27,7 +27,7 @@ export async function generateMetadata({
   if (season == null) return {};
   const [player, usage] = await Promise.all([
     getPlayer(gsisId, season),
-    getSkillUsage(gsisId, { season }),
+    getSkillUsage(gsisId, season),
   ]);
   if (!player) return {};
   const position = usage?.position ?? player.position ?? 'Skill';

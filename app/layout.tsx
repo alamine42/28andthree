@@ -21,6 +21,12 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
+  // Season list for the header switcher. Fully static renders (404 page)
+  // bake the list at build with the DB fallback — accepted: the header on
+  // an error page carrying last deploy's list is harmless, and every
+  // season-scoped page revalidates. getSeasonContext degrades to a
+  // fallback season when the DB is unreachable, so builds never fail on
+  // this call (code review pass 1).
   const ctx = await getSeasonContext();
   const seasons = browsableSeasons(ctx.season);
   return (

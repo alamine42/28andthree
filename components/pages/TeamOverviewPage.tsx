@@ -41,7 +41,7 @@ export async function TeamOverviewPage({
           className="flex flex-wrap items-center gap-x-2 font-mono text-2xs uppercase tracking-widest text-text-muted"
           data-testid="season-eyebrow"
         >
-          <span className="tabular-nums">{season}</span>
+          <span className="tabular-nums">{season}</span>{' '}
           <span>{eyebrowSuffix}</span>
         </p>
         {historical ? <HistoricalMarker season={season} backHref="/" /> : null}

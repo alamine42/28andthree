@@ -25,7 +25,7 @@ export async function SkillPlayerPage({
   const ctx = await getSeasonContext();
   const [player, usage] = await Promise.all([
     getPlayer(gsisId, season),
-    getSkillUsage(gsisId, { season }),
+    getSkillUsage(gsisId, season),
   ]);
   if (!player) notFound();
 
@@ -38,7 +38,7 @@ export async function SkillPlayerPage({
         <header className="flex flex-col gap-3">
           <PlayerHeader player={player} season={season} subtitle={player.position ?? undefined} />
           {historical ? (
-            <HistoricalMarker season={season} backHref={`/players/skill/${gsisId}`} />
+            <HistoricalMarker season={season} backHref="/players" />
           ) : null}
         </header>
         <NoSeasonData
@@ -59,10 +59,13 @@ export async function SkillPlayerPage({
   return (
     <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
       {historical ? null : <SeasonNotice />}
+      {/* Back target is the roster hub, not this player's clean URL — a
+          departed player has no current-season stats and the clean player
+          route 404s (code review pass 1). */}
       <header className="flex flex-col gap-3">
         <PlayerHeader player={player} season={season} subtitle={usage.position} />
         {historical ? (
-          <HistoricalMarker season={season} backHref={`/players/skill/${gsisId}`} />
+          <HistoricalMarker season={season} backHref="/players" />
         ) : null}
       </header>
 

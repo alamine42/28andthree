@@ -26,7 +26,7 @@ export async function QbDeepDivePage({
   const ctx = await getSeasonContext();
   const [player, deepDive] = await Promise.all([
     getPlayer(gsisId, season),
-    getQbDeepDive(gsisId, { season }),
+    getQbDeepDive(gsisId, season),
   ]);
   if (!player) notFound();
 
@@ -40,7 +40,7 @@ export async function QbDeepDivePage({
         <header className="flex flex-col gap-3">
           <PlayerHeader player={player} season={season} subtitle="Quarterback" />
           {historical ? (
-            <HistoricalMarker season={season} backHref={`/players/qb/${gsisId}`} />
+            <HistoricalMarker season={season} backHref="/players" />
           ) : null}
         </header>
         <NoSeasonData
@@ -59,10 +59,13 @@ export async function QbDeepDivePage({
   return (
     <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
       {historical ? null : <SeasonNotice />}
+      {/* Back target is the roster hub, not this player's clean URL — a
+          departed player has no current-season stats and the clean player
+          route 404s (code review pass 1). */}
       <header className="flex flex-col gap-3">
         <PlayerHeader player={player} season={season} subtitle="Quarterback" />
         {historical ? (
-          <HistoricalMarker season={season} backHref={`/players/qb/${gsisId}`} />
+          <HistoricalMarker season={season} backHref="/players" />
         ) : null}
       </header>
 

@@ -28,7 +28,7 @@ export async function generateMetadata({
   if (season == null) return {};
   const [player, deepDive] = await Promise.all([
     getPlayer(gsisId, season),
-    getQbDeepDive(gsisId, { season }),
+    getQbDeepDive(gsisId, season),
   ]);
   if (!player) return {};
   const epa = deepDive?.epaPerDropback;

@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { and, asc, eq } from 'drizzle-orm';
 import { coachingTendenciesWeekly } from '@/db/schema';
 import { getDb } from '@/lib/db';
@@ -48,10 +49,10 @@ export type FourthDownDecision = {
  *  One segment per (role, continuous coach identity). When a coordinator
  *  changes mid-season, the role produces two segments.
  */
-export async function getCoachSegments(
+export const getCoachSegments = cache(async (
   team: string,
   season: number,
-): Promise<CoachSegmentWithRollup[]> {
+): Promise<CoachSegmentWithRollup[]> => {
   if (isSandbox()) {
     const stub = await import('@/lib/sandbox/stubs/coaching');
     return stub.getCoachSegments(team, season);
@@ -96,7 +97,7 @@ export async function getCoachSegments(
     );
     return { ...s, rollup: averageRollup(segmentRows) };
   });
-}
+});
 
 export async function getFourthDownDecisions(
   team: string,

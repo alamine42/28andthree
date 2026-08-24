@@ -471,9 +471,11 @@ becomes historical and those cached redirects are stale until cleared.
 Two safety nets, no manual step normally needed:
 1. `/s` pages revalidate every 86400s — worst-case one day of stale
    redirects for the boundary season only.
-2. The ETL revalidation flush allowlist (`lib/revalidation/tags.ts`)
-   includes all `/s` paths; the first post-rollover ETL run (the
-   schedule-only ingest fires it) clears them within minutes.
+2. The ETL revalidation full flush clears the entire `/s` subtree with a
+   layout-scoped `revalidatePath('/s/[season]', 'layout')` (see
+   `lib/revalidation/tags.ts`), player pages included; the first
+   post-rollover ETL run (the schedule-only ingest fires it) clears them
+   within minutes.
 
 Symptom of staleness: `/?season={just-finished-season}` bounces back to
 `/` instead of showing the archived season. Manual fix: POST

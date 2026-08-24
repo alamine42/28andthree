@@ -91,23 +91,28 @@ export type QbWeeklyPoint = {
 
 export const getQbDeepDive = cache(async (
   gsisId: string,
-  opts: { season: number; primaryStarterOnly?: boolean; team?: string },
+  // Scalar params only: React cache() keys arguments by Object.is, so an
+  // options object literal would defeat dedup between generateMetadata
+  // and the page body (code review pass 1).
+  season: number,
+  team?: string,
+  primaryStarterOnly?: boolean,
 ): Promise<QbDeepDive | null> => {
   const db = getDb();
   if (!db) return null;
 
-  const where = [eq(qbSeason.gsisId, gsisId), eq(qbSeason.season, opts.season)];
-  if (opts.team) where.push(eq(qbSeason.team, opts.team));
+  const where = [eq(qbSeason.gsisId, gsisId), eq(qbSeason.season, season)];
+  if (team) where.push(eq(qbSeason.team, team));
 
   const [s] = await db.select().from(qbSeason).where(and(...where)).limit(1);
   if (!s) return null;
 
   const weeklyWhere = [
     eq(qbWeekly.gsisId, gsisId),
-    eq(qbWeekly.season, opts.season),
+    eq(qbWeekly.season, season),
   ];
-  if (opts.team) weeklyWhere.push(eq(qbWeekly.team, opts.team));
-  if (opts.primaryStarterOnly) weeklyWhere.push(eq(qbWeekly.primaryStarter, true));
+  if (team) weeklyWhere.push(eq(qbWeekly.team, team));
+  if (primaryStarterOnly) weeklyWhere.push(eq(qbWeekly.primaryStarter, true));
 
   const weekly = await db
     .select({
@@ -192,13 +197,14 @@ export type SkillWeeklyPoint = {
 
 export const getSkillUsage = cache(async (
   gsisId: string,
-  opts: { season: number; team?: string },
+  season: number,
+  team?: string,
 ): Promise<SkillUsage | null> => {
   const db = getDb();
   if (!db) return null;
 
-  const where = [eq(skillSeason.gsisId, gsisId), eq(skillSeason.season, opts.season)];
-  if (opts.team) where.push(eq(skillSeason.team, opts.team));
+  const where = [eq(skillSeason.gsisId, gsisId), eq(skillSeason.season, season)];
+  if (team) where.push(eq(skillSeason.team, team));
 
   // Explicit column list: the E5-04a migration adds epaReceiving/epaRushing
   // which the skill page doesn't consume yet. Listing only what we need
@@ -227,8 +233,8 @@ export const getSkillUsage = cache(async (
     .limit(1);
   if (!s) return null;
 
-  const weeklyWhere = [eq(skillWeekly.gsisId, gsisId), eq(skillWeekly.season, opts.season)];
-  if (opts.team) weeklyWhere.push(eq(skillWeekly.team, opts.team));
+  const weeklyWhere = [eq(skillWeekly.gsisId, gsisId), eq(skillWeekly.season, season)];
+  if (team) weeklyWhere.push(eq(skillWeekly.team, team));
 
   const weekly = await db
     .select({

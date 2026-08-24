@@ -38,7 +38,7 @@ export async function generateMetadata({
   const season = await getCurrentSeason();
   const [player, deepDive] = await Promise.all([
     getPlayer(gsisId, season),
-    getQbDeepDive(gsisId, { season }),
+    getQbDeepDive(gsisId, season),
   ]);
   if (!player) return {};
   const name = player.displayName;

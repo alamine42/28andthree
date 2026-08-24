@@ -36,7 +36,7 @@ export async function generateMetadata({
   const season = await getCurrentSeason();
   const [player, usage] = await Promise.all([
     getPlayer(gsisId, season),
-    getSkillUsage(gsisId, { season }),
+    getSkillUsage(gsisId, season),
   ]);
   if (!player) return {};
   const name = player.displayName;
