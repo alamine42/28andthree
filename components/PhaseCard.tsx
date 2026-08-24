@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { rankTier } from '@/lib/color/rank';
+import { withSeason } from '@/lib/season-view';
 import { type Phase } from '@/lib/constants/phases';
 import { phaseDisplayName } from '@/lib/format/phase';
 import { formatEpa } from '@/lib/format/number';
@@ -39,7 +40,7 @@ export function PhaseCard({
   // signal without costing a full row of vertical space.
   return (
     <Link
-      href={`/phases/${slug}${seasonQuery != null ? `?season=${seasonQuery}` : ''}` as Route}
+      href={withSeason(`/phases/${slug}`, seasonQuery) as Route}
       data-testid={`phase-card-${slug}`}
       className="flex min-h-[80px] flex-col gap-1.5 bg-bg p-3 transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive md:min-h-[96px] md:p-4"
     >

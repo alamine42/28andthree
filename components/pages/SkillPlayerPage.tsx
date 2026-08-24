@@ -3,6 +3,7 @@ import { getSeasonContext } from '@/lib/data/current-season';
 import { getPlayer, getSkillUsage } from '@/lib/data/player';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
 import { MetricValue } from '@/components/numeric';
+import { StatCell, StatValue } from '@/components/StatCell';
 import { NoSeasonData } from '@/components/NoSeasonData';
 import { SeasonNotice } from '@/components/SeasonNotice';
 import { formatPercent } from '@/lib/format/number';
@@ -34,8 +35,12 @@ export async function SkillPlayerPage({
     if (!historical && !ctx.awaitingFirstGame) notFound();
     return (
       <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
-        <PlayerHeader player={player} season={season} subtitle={player.position ?? undefined} />
-        {historical ? <HistoricalMarker season={season} current={ctx.season} /> : null}
+        <header className="flex flex-col gap-3">
+          <PlayerHeader player={player} season={season} subtitle={player.position ?? undefined} />
+          {historical ? (
+            <HistoricalMarker season={season} backHref={`/players/skill/${gsisId}`} />
+          ) : null}
+        </header>
         <NoSeasonData
           season={season}
           variant={historical ? 'historical' : 'upcoming'}
@@ -53,9 +58,13 @@ export async function SkillPlayerPage({
 
   return (
     <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
-      <PlayerHeader player={player} season={season} subtitle={usage.position} />
-      {historical ? <HistoricalMarker season={season} current={ctx.season} /> : null}
       {historical ? null : <SeasonNotice />}
+      <header className="flex flex-col gap-3">
+        <PlayerHeader player={player} season={season} subtitle={usage.position} />
+        {historical ? (
+          <HistoricalMarker season={season} backHref={`/players/skill/${gsisId}`} />
+        ) : null}
+      </header>
 
       <SmallSampleBanner
         kind={isRb ? 'carries' : 'targets'}
@@ -69,33 +78,33 @@ export async function SkillPlayerPage({
       >
         {isRb ? (
           <>
-            <HairlineCell label="Carries">
-              <Big value={usage.carries} format={(v) => v == null ? '—' : String(v)} />
-            </HairlineCell>
-            <HairlineCell label="Yards">
-              <Big value={usage.yardsRushing} format={(v) => v == null ? '—' : String(v)} />
-            </HairlineCell>
-            <HairlineCell label="YPC">
-              <Big value={usage.ypc} format={(v) => v == null ? '—' : v.toFixed(2)} />
-            </HairlineCell>
-            <HairlineCell label="RZ targets">
-              <Big value={usage.redzoneTargets} format={(v) => v == null ? '—' : String(v)} />
-            </HairlineCell>
+            <StatCell label="Carries">
+              <StatValue><MetricValue value={usage.carries} format={(v) => v == null ? '—' : String(v)} /></StatValue>
+            </StatCell>
+            <StatCell label="Yards">
+              <StatValue><MetricValue value={usage.yardsRushing} format={(v) => v == null ? '—' : String(v)} /></StatValue>
+            </StatCell>
+            <StatCell label="YPC">
+              <StatValue><MetricValue value={usage.ypc} format={(v) => v == null ? '—' : v.toFixed(2)} /></StatValue>
+            </StatCell>
+            <StatCell label="RZ targets">
+              <StatValue><MetricValue value={usage.redzoneTargets} format={(v) => v == null ? '—' : String(v)} /></StatValue>
+            </StatCell>
           </>
         ) : (
           <>
-            <HairlineCell label="Targets">
-              <Big value={usage.targets} format={(v) => v == null ? '—' : String(v)} />
-            </HairlineCell>
-            <HairlineCell label="Receptions">
-              <Big value={usage.receptions} format={(v) => v == null ? '—' : String(v)} />
-            </HairlineCell>
-            <HairlineCell label="Target share" testid="skill-target-share">
-              <Big value={usage.targetShare} format={formatPercent} />
-            </HairlineCell>
-            <HairlineCell label="YAC / reception">
-              <Big value={usage.yacPerReception} format={(v) => v == null ? '—' : v.toFixed(1) + ' yds'} />
-            </HairlineCell>
+            <StatCell label="Targets">
+              <StatValue><MetricValue value={usage.targets} format={(v) => v == null ? '—' : String(v)} /></StatValue>
+            </StatCell>
+            <StatCell label="Receptions">
+              <StatValue><MetricValue value={usage.receptions} format={(v) => v == null ? '—' : String(v)} /></StatValue>
+            </StatCell>
+            <StatCell label="Target share" testid="skill-target-share">
+              <StatValue><MetricValue value={usage.targetShare} format={formatPercent} /></StatValue>
+            </StatCell>
+            <StatCell label="YAC / reception">
+              <StatValue><MetricValue value={usage.yacPerReception} format={(v) => v == null ? '—' : v.toFixed(1) + ' yds'} /></StatValue>
+            </StatCell>
           </>
         )}
       </dl>
@@ -103,27 +112,4 @@ export async function SkillPlayerPage({
   );
 }
 
-function HairlineCell({
-  label,
-  children,
-  testid,
-}: {
-  label: string;
-  children: React.ReactNode;
-  testid?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-2 bg-bg p-6 md:p-8" data-testid={testid}>
-      <dt className="font-mono text-2xs uppercase tracking-widest text-text-muted">{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
 
-function Big<T>({ value, format }: { value: T | null | undefined; format: (v: T | null | undefined) => string }) {
-  return (
-    <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
-      <MetricValue value={value} format={format} />
-    </p>
-  );
-}

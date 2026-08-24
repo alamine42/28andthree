@@ -1,6 +1,6 @@
 import { getCurrentRosterSeason, getPatsRoster } from '@/lib/data/players-hub';
-import { getSeasonContext } from '@/lib/data/current-season';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
+import { NoSeasonData } from '@/components/NoSeasonData';
 import { RosterBrowser } from '@/components/players/RosterBrowser';
 import { SeasonNotice } from '@/components/SeasonNotice';
 
@@ -9,16 +9,12 @@ import { SeasonNotice } from '@/components/SeasonNotice';
 // keeps getCurrentRosterSeason (roster max), which stays correct through
 // the preseason transition window (review finding #8 in players-hub DAL).
 
-export async function PlayersHubPage({
-  season,
-  historical,
-}: {
-  /** Historical: the requested past season. Current: null → resolve from
-   * the roster tables. */
-  season: number | null;
-  historical: boolean;
-}) {
-  const ctx = await getSeasonContext();
+export async function PlayersHubPage(
+  props:
+    | { historical: true; season: number }
+    | { historical: false; season: null },
+) {
+  const { season, historical } = props;
   const rosterSeason = historical ? season : await getCurrentRosterSeason('NE');
   const roster = rosterSeason != null ? await getPatsRoster(rosterSeason, 'NE') : [];
 
@@ -40,7 +36,7 @@ export async function PlayersHubPage({
           )}
         </p>
         {historical && rosterSeason != null ? (
-          <HistoricalMarker season={rosterSeason} current={ctx.season} />
+          <HistoricalMarker season={rosterSeason} backHref="/players" />
         ) : null}
         <h1 className="max-w-4xl font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
           Patriots, the whole roster.
@@ -53,11 +49,15 @@ export async function PlayersHubPage({
       </header>
 
       {roster.length === 0 ? (
-        <p className="max-w-prose text-sm text-text-muted">
-          {historical
-            ? `No roster snapshots recorded for ${season}.`
-            : 'Roster data unavailable — check back after the next ETL run.'}
-        </p>
+        <NoSeasonData
+          season={season ?? 0}
+          variant={historical ? 'historical' : 'upcoming'}
+          message={
+            historical
+              ? `No roster snapshots recorded for ${season}.`
+              : 'Roster data unavailable — check back after the next ETL run.'
+          }
+        />
       ) : (
         <RosterBrowser
           roster={roster}

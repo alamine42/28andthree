@@ -27,8 +27,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...UNIT_SLUGS.map((slug) => entry(`/team/units/${slug}`, now, 'weekly', 0.6)),
   ];
 
-  const playerRoutes = await listPlayerRoutes();
-  const historicalRoutes = await listHistoricalRoutes();
+  const [playerRoutes, historicalRoutes] = await Promise.all([
+    listPlayerRoutes(),
+    listHistoricalRoutes(),
+  ]);
   return [...fixed, ...historicalRoutes, ...playerRoutes];
 }
 

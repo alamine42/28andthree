@@ -61,7 +61,7 @@ function DesktopNav() {
         <Link
           key={link.label}
           href={decorate(link.href, link.seasonAware, season)}
-          className="font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-positive"
+          className="font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-positive"
         >
           {link.label}
         </Link>
@@ -79,7 +79,7 @@ function MobileNavList({ onNavigate }: { onNavigate: () => void }) {
           <Link
             href={decorate(link.href, link.seasonAware, season)}
             onClick={onNavigate}
-            className="flex min-h-[44px] items-center font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive"
+            className="flex min-h-[44px] items-center font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive"
           >
             {link.label}
           </Link>
@@ -167,7 +167,7 @@ function DesktopNavFallback() {
         <Link
           key={link.label}
           href={link.href as Route}
-          className="font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-positive"
+          className="font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-positive"
         >
           {link.label}
         </Link>

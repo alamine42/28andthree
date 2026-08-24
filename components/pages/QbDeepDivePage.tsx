@@ -3,6 +3,7 @@ import { getSeasonContext } from '@/lib/data/current-season';
 import { getPlayer, getQbDeepDive } from '@/lib/data/player';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
 import { MetricValue } from '@/components/numeric';
+import { StatCell, StatValue } from '@/components/StatCell';
 import { NoSeasonData } from '@/components/NoSeasonData';
 import { SeasonNotice } from '@/components/SeasonNotice';
 import { formatEpa, formatPercent } from '@/lib/format/number';
@@ -36,8 +37,12 @@ export async function QbDeepDivePage({
     if (!historical && !ctx.awaitingFirstGame) notFound();
     return (
       <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
-        <PlayerHeader player={player} season={season} subtitle="Quarterback" />
-        {historical ? <HistoricalMarker season={season} current={ctx.season} /> : null}
+        <header className="flex flex-col gap-3">
+          <PlayerHeader player={player} season={season} subtitle="Quarterback" />
+          {historical ? (
+            <HistoricalMarker season={season} backHref={`/players/qb/${gsisId}`} />
+          ) : null}
+        </header>
         <NoSeasonData
           season={season}
           variant={historical ? 'historical' : 'upcoming'}
@@ -53,9 +58,13 @@ export async function QbDeepDivePage({
 
   return (
     <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
-      <PlayerHeader player={player} season={season} subtitle="Quarterback" />
-      {historical ? <HistoricalMarker season={season} current={ctx.season} /> : null}
       {historical ? null : <SeasonNotice />}
+      <header className="flex flex-col gap-3">
+        <PlayerHeader player={player} season={season} subtitle="Quarterback" />
+        {historical ? (
+          <HistoricalMarker season={season} backHref={`/players/qb/${gsisId}`} />
+        ) : null}
+      </header>
 
       <SmallSampleBanner kind="dropbacks" n={deepDive.dropbacks} threshold={100} />
 
@@ -63,26 +72,26 @@ export async function QbDeepDivePage({
         className="grid gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-4"
         data-testid="qb-hero-stats"
       >
-        <HairlineCell label="EPA / dropback">
-          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
+        <StatCell label="EPA / dropback">
+          <StatValue>
             <MetricValue value={deepDive.epaPerDropback} format={formatEpa} />
-          </p>
-        </HairlineCell>
-        <HairlineCell label="CPOE">
-          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
+            </StatValue>
+        </StatCell>
+        <StatCell label="CPOE">
+          <StatValue>
             <MetricValue value={deepDive.cpoe} format={(v) => v == null ? '—' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + '%'} />
-          </p>
-        </HairlineCell>
-        <HairlineCell label="aDOT">
-          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
+            </StatValue>
+        </StatCell>
+        <StatCell label="aDOT">
+          <StatValue>
             <MetricValue value={deepDive.adot} format={(v) => v == null ? '—' : v.toFixed(1) + ' yds'} />
-          </p>
-        </HairlineCell>
-        <HairlineCell label="Pressure rate">
-          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
+            </StatValue>
+        </StatCell>
+        <StatCell label="Pressure rate">
+          <StatValue>
             <MetricValue value={deepDive.pressureRate} format={formatPercent} />
-          </p>
-        </HairlineCell>
+            </StatValue>
+        </StatCell>
       </dl>
 
       <QbTrend weekly={deepDive.weekly} />
@@ -91,32 +100,32 @@ export async function QbDeepDivePage({
         className="grid gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-2"
         data-testid="qb-pressure-split"
       >
-        <HairlineCell label="Clean pocket (EPA/dropback)">
-          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
+        <StatCell label="Clean pocket (EPA/dropback)">
+          <StatValue>
             <MetricValue value={deepDive.cleanPocketEpaPerDropback} format={formatEpa} />
-          </p>
-        </HairlineCell>
-        <HairlineCell label="Under pressure (EPA/dropback)">
-          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
+            </StatValue>
+        </StatCell>
+        <StatCell label="Under pressure (EPA/dropback)">
+          <StatValue>
             <MetricValue value={deepDive.pressuredEpaPerDropback} format={formatEpa} />
-          </p>
-        </HairlineCell>
+            </StatValue>
+        </StatCell>
       </dl>
 
       <dl
         className="grid gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-2"
         data-testid="qb-deep-ball"
       >
-        <HairlineCell label="Deep-ball EPA (20+ air yds)">
-          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
+        <StatCell label="Deep-ball EPA (20+ air yds)">
+          <StatValue>
             <MetricValue value={deepDive.deepEpaPerAttempt} format={formatEpa} />
-          </p>
-        </HairlineCell>
-        <HairlineCell label="Success rate">
-          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
+            </StatValue>
+        </StatCell>
+        <StatCell label="Success rate">
+          <StatValue>
             <MetricValue value={deepDive.successRate} format={formatPercent} />
-          </p>
-        </HairlineCell>
+            </StatValue>
+        </StatCell>
       </dl>
 
       <MethodologyCallout />
@@ -124,14 +133,6 @@ export async function QbDeepDivePage({
   );
 }
 
-function HairlineCell({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2 bg-bg p-6 md:p-8">
-      <dt className="font-mono text-2xs uppercase tracking-widest text-text-muted">{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
 
 function MethodologyCallout() {
   return (

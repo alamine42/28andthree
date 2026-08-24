@@ -41,10 +41,10 @@ export async function TeamOverviewPage({
           className="flex flex-wrap items-center gap-x-2 font-mono text-2xs uppercase tracking-widest text-text-muted"
           data-testid="season-eyebrow"
         >
-          <span className="tabular-nums text-text">{season}</span>
+          <span className="tabular-nums">{season}</span>
           <span>{eyebrowSuffix}</span>
         </p>
-        {historical ? <HistoricalMarker season={season} current={ctx.season} /> : null}
+        {historical ? <HistoricalMarker season={season} backHref="/" /> : null}
         <h1 className="max-w-4xl font-display text-2xl font-bold leading-tight tracking-tightest text-text md:text-3xl">
           New England, {season} in one page.
         </h1>

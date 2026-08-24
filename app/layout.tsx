@@ -5,7 +5,7 @@ import { SandboxBanner } from '@/components/sandbox/SandboxBanner';
 import { SiteFooter } from '@/components/SiteFooter';
 import { SiteHeader } from '@/components/SiteHeader';
 import { getSeasonContext } from '@/lib/data/current-season';
-import { EARLIEST_SEASON } from '@/lib/season-view';
+import { browsableSeasons } from '@/lib/season-view';
 import { display, geistMono, geistSans } from './fonts';
 import './globals.css';
 
@@ -22,8 +22,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const ctx = await getSeasonContext();
-  const seasons: number[] = [];
-  for (let s = ctx.season; s >= EARLIEST_SEASON; s--) seasons.push(s);
+  const seasons = browsableSeasons(ctx.season);
   return (
     <html
       lang="en"

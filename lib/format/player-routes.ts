@@ -1,4 +1,5 @@
 import type { Route } from 'next';
+import { withSeason } from '@/lib/season-view';
 
 // Canonical player-role buckets. Drives routing from a roster card:
 //   qb/skill → player deep dive; ol/dline/defense → unit page; special → no
@@ -50,9 +51,9 @@ export function playerHref(
   seasonQuery?: number | null,
 ): Route | null {
   const base = basePlayerHref(entry);
-  if (base == null || seasonQuery == null) return base;
+  if (base == null) return base;
   // E11: while a past season is in view, links carry it forward.
-  return `${base}?season=${seasonQuery}` as Route;
+  return withSeason(base, seasonQuery) as Route;
 }
 
 function basePlayerHref(entry: { role: PlayerRole; gsisId: string }): Route | null {

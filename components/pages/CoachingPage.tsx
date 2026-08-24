@@ -3,8 +3,8 @@ import {
   getCoachSegments,
   getFourthDownDecisions,
 } from '@/lib/data/coaching';
-import { getSeasonContext } from '@/lib/data/current-season';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
+import { NoSeasonData } from '@/components/NoSeasonData';
 import { SeasonNotice } from '@/components/SeasonNotice';
 import { CoachSegmentBanner } from '@/components/coaching/CoachSegmentBanner';
 import { CoachingHero } from '@/components/coaching/CoachingHero';
@@ -32,7 +32,6 @@ export async function CoachingPage({
   season: number;
   historical: boolean;
 }) {
-  const ctx = await getSeasonContext();
   const [segments, fourthDowns] = await Promise.all([
     getCoachSegments(TEAM, season),
     getFourthDownDecisions(TEAM, season),
@@ -52,7 +51,7 @@ export async function CoachingPage({
         >
           <span className="tabular-nums">{season}</span> SEASON · COACHING TENDENCIES
         </p>
-        {historical ? <HistoricalMarker season={season} current={ctx.season} /> : null}
+        {historical ? <HistoricalMarker season={season} backHref="/coaching" /> : null}
         <h1 className="max-w-4xl font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
           Patriots coaching, the tendencies that decide games.
         </h1>
@@ -65,7 +64,15 @@ export async function CoachingPage({
       </header>
 
       {!hasData ? (
-        <CoachingEmptyState />
+        historical ? (
+          <NoSeasonData
+            season={season}
+            variant="historical"
+            message={`No ${season} coaching rollups.`}
+          />
+        ) : (
+          <CoachingEmptyState />
+        )
       ) : (
         <>
           <CoachingHero

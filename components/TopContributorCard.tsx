@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { PlayerAvatar } from './PlayerAvatar';
 import type { ContributorCard } from '@/lib/data/contributors';
+import { playerHref } from '@/lib/format/player-routes';
 
 type Props = {
   card: ContributorCard;
@@ -53,15 +54,13 @@ export function TopContributorCard({ card, seasonQuery }: Props) {
 }
 
 function hrefFor(card: ContributorCard, seasonQuery?: number | null): Route | '#' {
-  const base =
-    card.role === 'qb'
-      ? `/players/qb/${card.gsisId}`
-      : card.role === 'skill'
-        ? `/players/skill/${card.gsisId}`
-        : card.role === 'unit'
-          ? '/team/units/defense'
-          : null;
-  if (base == null) return '#';
-  if (seasonQuery == null) return base as Route;
-  return `${base}?season=${seasonQuery}` as Route;
+  // Route ownership lives in lib/format/player-routes; 'unit' contributor
+  // cards map onto the defense unit page.
+  if (card.role !== 'qb' && card.role !== 'skill' && card.role !== 'unit') return '#';
+  if (!card.gsisId && card.role !== 'unit') return '#';
+  const href = playerHref(
+    { role: card.role === 'unit' ? 'defense' : card.role, gsisId: card.gsisId ?? '' },
+    seasonQuery,
+  );
+  return href ?? '#';
 }

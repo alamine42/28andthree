@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { PHASES, type Phase } from '@/lib/constants/phases';
 import { teamPhaseSeason, teamPhaseWeekly } from '@/db/schema';
@@ -114,11 +115,11 @@ export type PhaseDetail = {
 
 /** Season-level detail for one phase. `totalQualified` lets the UI show
  * "of N qualified teams" when K<32. */
-export async function getPhaseDetail(
+export const getPhaseDetail = cache(async (
   phase: Phase,
   team: string,
   season: number,
-): Promise<PhaseDetail | null> {
+): Promise<PhaseDetail | null> => {
   if (isSandbox()) {
     const stub = await import('@/lib/sandbox/stubs/phases');
     return stub.getPhaseDetail(phase, team, season);
@@ -157,7 +158,7 @@ export async function getPhaseDetail(
     insufficientSample: row.insufficientSample,
     totalQualified: qualified[0]?.k ?? 32,
   };
-}
+});
 
 // ---- Weekly trend: Pats + league median + rolling4 (all precomputed in SQL)
 

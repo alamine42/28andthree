@@ -13,6 +13,7 @@ import { HistoricalMarker } from '@/components/HistoricalMarker';
 import { NoSeasonData } from '@/components/NoSeasonData';
 import { SeasonNotice } from '@/components/SeasonNotice';
 import { MetricValue, RankNumber } from '@/components/numeric';
+import { StatCell, StatValue } from '@/components/StatCell';
 import { formatEpa, formatPercent } from '@/lib/format/number';
 import { TrendChart } from '@/components/charts/TrendChart';
 import { DistributionPlot } from '@/components/charts/DistributionPlot';
@@ -53,13 +54,15 @@ export async function PhaseDetailPage({
       <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
         <PhaseBreadcrumb display={display} homeHref={homeHref} />
         <header className="flex flex-col gap-3">
+          {historical ? (
+            <HistoricalMarker season={season} backHref={`/phases/${phase}`} />
+          ) : null}
           <h1 className="font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
             {display}
           </h1>
           <p className="font-mono text-xs text-text-muted">
             EPA per play · regular season <span className="tabular-nums">{season}</span>
           </p>
-          {historical ? <HistoricalMarker season={season} current={ctx.season} /> : null}
         </header>
         <NoSeasonData season={season} variant={historical ? 'historical' : 'upcoming'} />
       </section>
@@ -72,6 +75,9 @@ export async function PhaseDetailPage({
       <PhaseBreadcrumb display={display} homeHref={homeHref} />
 
       <header className="flex flex-col gap-3">
+        {historical ? (
+          <HistoricalMarker season={season} backHref={`/phases/${phase}`} />
+        ) : null}
         <h1 className="font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
           {display}
         </h1>
@@ -88,26 +94,25 @@ export async function PhaseDetailPage({
             <InsufficientSampleChip plays={detail.plays} />
           ) : null}
         </p>
-        {historical ? <HistoricalMarker season={season} current={ctx.season} /> : null}
       </header>
 
       <dl
         className="grid gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-3"
         data-testid="phase-rank-card"
       >
-        <HairlineCell label="Rank">
+        <StatCell label="Rank">
           <RankNumber rank={detail.rank} className="text-display leading-none" />
-        </HairlineCell>
-        <HairlineCell label="EPA / play">
-          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
+        </StatCell>
+        <StatCell label="EPA / play">
+          <StatValue>
             <MetricValue value={detail.epaPerPlay} format={formatEpa} />
-          </p>
-        </HairlineCell>
-        <HairlineCell label="Success rate">
-          <p className="font-display text-3xl font-bold tabular-nums tracking-tighter text-text md:text-display">
+          </StatValue>
+        </StatCell>
+        <StatCell label="Success rate">
+          <StatValue>
             <MetricValue value={detail.successRate} format={formatPercent} />
-          </p>
-        </HairlineCell>
+          </StatValue>
+        </StatCell>
       </dl>
 
       <section className="flex flex-col gap-4">
@@ -129,7 +134,9 @@ export async function PhaseDetailPage({
           Top contributors
         </h2>
         {contributors.length === 0 ? (
-          <p className="text-text-muted">No contributor data yet.</p>
+          <p className="text-text-muted">
+            {historical ? `No ${season} contributor data.` : 'No contributor data yet.'}
+          </p>
         ) : (
           <>
             <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
@@ -184,11 +191,3 @@ function InsufficientSampleChip({ plays }: { plays: number }) {
   );
 }
 
-function HairlineCell({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2 bg-bg p-6 md:p-8">
-      <dt className="font-mono text-2xs uppercase tracking-widest text-text-muted">{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}

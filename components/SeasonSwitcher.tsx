@@ -66,12 +66,14 @@ export function SeasonSwitcher({ current, seasons }: Props) {
     return (s === current ? targetPath : `${targetPath}?season=${s}`) as Route;
   }
 
-  function onLinkClick(e: React.MouseEvent) {
+  function onLinkClick(e: React.MouseEvent, s: number) {
     // New-tab/window gestures: let the browser handle it, keep the menu
     // state untouched so the current page stays as-is.
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
     setOpen(false);
-    setPending(true);
+    // Same-season selection navigates to the same URL — the clearing
+    // effect never fires, so don't arm the pending state for it.
+    if (s !== season) setPending(true);
   }
 
   return (
@@ -85,7 +87,7 @@ export function SeasonSwitcher({ current, seasons }: Props) {
         aria-label={`Season ${season}. Change season`}
         data-testid="season-switcher"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex min-h-[32px] items-center gap-1.5 rounded-sm border px-2 font-mono text-2xs uppercase tracking-widest transition-colors hover:border-text hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive ${
+        className={`inline-flex min-h-[32px] items-center gap-2 rounded-sm border px-2 font-mono text-2xs uppercase tracking-widest transition-colors hover:border-text hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive ${
         historical ? 'border-positive text-text' : 'border-border-strong text-text-muted'
         } ${pending ? 'cursor-progress opacity-60' : ''}`}
       >
@@ -105,13 +107,13 @@ export function SeasonSwitcher({ current, seasons }: Props) {
                 <Link
                   href={hrefFor(s)}
                   aria-current={s === season ? 'true' : undefined}
-                  onClick={onLinkClick}
+                  onClick={(e) => onLinkClick(e, s)}
                   className={`flex min-h-[40px] w-full items-center justify-between px-3 font-mono text-2xs uppercase tracking-widest transition-colors hover:bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-positive ${
                     s === season ? 'text-text' : 'text-text-muted'
                   }`}
                 >
                   <span className="tabular-nums">{s}</span>
-                  <span className={s === current ? 'text-positive' : 'text-text-dim'}>
+                  <span className={s === current ? 'text-positive' : 'text-text-muted'}>
                     {s === current ? 'CURRENT' : 'FINAL'}
                   </span>
                 </Link>
@@ -130,7 +132,7 @@ export function SeasonSwitcherFallback({ current }: { current: number }) {
   return (
     <span
       aria-hidden="true"
-      className="inline-flex min-h-[32px] items-center gap-1.5 rounded-sm border border-border-strong px-2 font-mono text-2xs uppercase tracking-widest text-text-muted"
+      className="inline-flex min-h-[32px] items-center gap-2 rounded-sm border border-border-strong px-2 font-mono text-2xs uppercase tracking-widest text-text-muted"
     >
       <span className="tabular-nums">{current}</span>
       <Caret open={false} />

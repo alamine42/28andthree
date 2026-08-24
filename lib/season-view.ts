@@ -77,29 +77,15 @@ export function resolveSeasonRouting(
   };
 }
 
-export type SeasonView = {
-  /** Season the page renders. */
-  season: number;
-  /** True when the visitor navigated to a valid past season. */
-  historical: boolean;
-  /** Every browsable season, newest first. */
-  seasons: number[];
-};
-
-/** Resolve the season a page should render from the ?season= param,
- * against the current season (from getSeasonContext — one authority for
- * "current"). Invalid or out-of-range values fall back to current — never
- * a 404. */
-export function resolveSeasonView(
-  param: string | string[] | undefined,
-  currentSeason: number,
-): SeasonView {
+/** Every browsable season, newest first (current..EARLIEST_SEASON). */
+export function browsableSeasons(current: number): number[] {
   const seasons: number[] = [];
-  for (let s = currentSeason; s >= EARLIEST_SEASON; s--) seasons.push(s);
+  for (let s = current; s >= EARLIEST_SEASON; s--) seasons.push(s);
+  return seasons;
+}
 
-  const raw = Array.isArray(param) ? param[0] : param;
-  const parsed = parseSeasonParam(raw);
-  const season = parsed != null && parsed < currentSeason ? parsed : currentSeason;
-
-  return { season, historical: season !== currentSeason, seasons };
+/** Append ?season= to a path while a past season is in view — the one
+ * spelling of the param-carry used by cards and route helpers. */
+export function withSeason(path: string, season: number | null | undefined): string {
+  return season == null ? path : `${path}?season=${season}`;
 }

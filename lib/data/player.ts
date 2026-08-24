@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { and, eq, desc } from 'drizzle-orm';
 import {
   players,
@@ -21,10 +22,10 @@ export type PlayerIdentity = {
 /** Resolve a player's identity for a given season. Prefers roster_snapshots
  * (season-correct team/jersey); falls back to players.current_* only if no
  * snapshot exists. Review finding #12. */
-export async function getPlayer(
+export const getPlayer = cache(async (
   gsisId: string,
   season?: number,
-): Promise<PlayerIdentity | null> {
+): Promise<PlayerIdentity | null> => {
   const db = getDb();
   if (!db) return null;
 
@@ -56,7 +57,7 @@ export async function getPlayer(
     jerseyNumber: row.currentJerseyNumber,
     headshotUrl: row.headshotUrl,
   };
-}
+});
 
 // ---- QB deep dive -----------------------------------------------------------
 
@@ -88,10 +89,10 @@ export type QbWeeklyPoint = {
   primaryStarter: boolean;
 };
 
-export async function getQbDeepDive(
+export const getQbDeepDive = cache(async (
   gsisId: string,
   opts: { season: number; primaryStarterOnly?: boolean; team?: string },
-): Promise<QbDeepDive | null> {
+): Promise<QbDeepDive | null> => {
   const db = getDb();
   if (!db) return null;
 
@@ -139,7 +140,7 @@ export async function getQbDeepDive(
     deepEpaPerAttempt: s.deepEpaPerAttempt,
     weekly,
   };
-}
+});
 
 /** Current-season primary starter for a team. Used by /players/qb without an
  * id (e.g., "who is the Pats' QB?"). */
@@ -189,10 +190,10 @@ export type SkillWeeklyPoint = {
   yardsReceiving: number | null;
 };
 
-export async function getSkillUsage(
+export const getSkillUsage = cache(async (
   gsisId: string,
   opts: { season: number; team?: string },
-): Promise<SkillUsage | null> {
+): Promise<SkillUsage | null> => {
   const db = getDb();
   if (!db) return null;
 
@@ -261,4 +262,4 @@ export async function getSkillUsage(
     ypc: s.ypc,
     weekly,
   };
-}
+});

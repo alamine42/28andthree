@@ -2,9 +2,10 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   EARLIEST_SEASON,
+  browsableSeasons,
   isSeasonScopedPath,
   parseSeasonParam,
-  resolveSeasonView,
+  withSeason,
 } from '../../lib/season-view';
 
 // E11-01: one strict validator + one path allowlist, shared by middleware,
@@ -73,37 +74,17 @@ describe('lib/season-view — isSeasonScopedPath', () => {
   });
 });
 
-describe('lib/season-view — resolveSeasonView', () => {
-  it('should_resolve_a_valid_past_season_as_historical', () => {
-    const v = resolveSeasonView('2023', 2026);
-    assert.deepEqual(
-      { season: v.season, historical: v.historical },
-      { season: 2023, historical: true },
-    );
-  });
-
-  it('should_fall_back_to_current_for_invalid_params', () => {
-    for (const raw of ['2023x', 'abc', '1999', undefined, '']) {
-      const v = resolveSeasonView(raw as string | undefined, 2026);
-      assert.equal(v.season, 2026, String(raw));
-      assert.equal(v.historical, false, String(raw));
-    }
-  });
-
-  it('should_treat_current_and_future_seasons_as_current', () => {
-    assert.equal(resolveSeasonView('2026', 2026).historical, false);
-    assert.equal(resolveSeasonView('2030', 2026).historical, false);
-  });
-
-  it('should_take_the_first_value_of_an_array_param', () => {
-    const v = resolveSeasonView(['2022', '2024'], 2026);
-    assert.equal(v.season, 2022);
-  });
-
+describe('lib/season-view — browsableSeasons + withSeason', () => {
   it('should_list_seasons_newest_first_down_to_the_floor', () => {
-    const v = resolveSeasonView(undefined, 2026);
-    assert.equal(v.seasons[0], 2026);
-    assert.equal(v.seasons[v.seasons.length - 1], EARLIEST_SEASON);
-    assert.equal(v.seasons.length, 2026 - EARLIEST_SEASON + 1);
+    const seasons = browsableSeasons(2026);
+    assert.equal(seasons[0], 2026);
+    assert.equal(seasons[seasons.length - 1], EARLIEST_SEASON);
+    assert.equal(seasons.length, 2026 - EARLIEST_SEASON + 1);
+  });
+
+  it('should_append_the_season_param_only_when_present', () => {
+    assert.equal(withSeason('/phases/pass_offense', 2023), '/phases/pass_offense?season=2023');
+    assert.equal(withSeason('/coaching', null), '/coaching');
+    assert.equal(withSeason('/', undefined), '/');
   });
 });
