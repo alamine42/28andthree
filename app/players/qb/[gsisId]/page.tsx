@@ -3,9 +3,10 @@ import { notFound } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 import { qbSeason } from '@/db/schema';
 import { getDb } from '@/lib/db';
-import { getCurrentSeason } from '@/lib/data/current-season';
+import { getCurrentSeason, getSeasonContext } from '@/lib/data/current-season';
 import { getPlayer, getQbDeepDive } from '@/lib/data/player';
 import { MetricValue } from '@/components/numeric';
+import { NoSeasonData } from '@/components/NoSeasonData';
 import { formatEpa, formatPercent } from '@/lib/format/number';
 import { PlayerHeader } from '@/components/PlayerHeader';
 import { SmallSampleBanner } from '@/components/SmallSampleBanner';
@@ -57,12 +58,25 @@ export async function generateMetadata({
 
 export default async function QbDeepDivePage({ params }: { params: Params }) {
   const { gsisId } = await params;
-  const season = await getCurrentSeason();
+  const ctx = await getSeasonContext();
+  const season = ctx.season;
   const [player, deepDive] = await Promise.all([
     getPlayer(gsisId, season),
     getQbDeepDive(gsisId, { season }),
   ]);
-  if (!player || !deepDive) notFound();
+  if (!player) notFound();
+
+  // Preseason transition: the player exists but the new season has no
+  // snaps. Render the header with the blank-stats callout instead of 404.
+  if (!deepDive) {
+    if (!ctx.awaitingFirstGame) notFound();
+    return (
+      <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
+        <PlayerHeader player={player} season={season} subtitle="Quarterback" />
+        <NoSeasonData season={season} />
+      </section>
+    );
+  }
 
   return (
     <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">

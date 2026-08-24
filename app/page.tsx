@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { HeroStats } from '@/components/HeroStats';
 import { PhaseGrid } from '@/components/PhaseGrid';
 import { WeekResultsStrip } from '@/components/WeekResultsStrip';
-import { getCurrentSeason } from '@/lib/data/current-season';
+import { getSeasonContext, type SeasonContext } from '@/lib/data/current-season';
 import { getPatsPhaseSparklines, getPhaseRankSnapshot } from '@/lib/data/phases';
 import { getRecentGames, getTeamSeasonOverview } from '@/lib/data/team';
 import { getSchedulePhase, type ScheduleSnapshot } from '@/lib/schedule/phase';
@@ -12,7 +12,7 @@ import { pageMetadata } from '@/lib/seo/page-metadata';
 export const revalidate = 3600;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const season = await getCurrentSeason();
+  const { season } = await getSeasonContext();
   return pageMetadata({
     // Explicit brand suffix: Next's title.template from the root layout
     // isn't applied to generateMetadata() return values on the index route
@@ -30,7 +30,8 @@ export async function generateMetadata(): Promise<Metadata> {
 const TEAM = 'NE' as const;
 
 export default async function HomePage() {
-  const season = await getCurrentSeason();
+  const ctx = await getSeasonContext();
+  const season = ctx.season;
 
   const [snap, overview, snapshot, sparklines, games] = await Promise.all([
     getSchedulePhase(),
@@ -40,7 +41,7 @@ export default async function HomePage() {
     getRecentGames(TEAM, season, 6),
   ]);
 
-  const eyebrow = buildEyebrow(snap);
+  const eyebrow = buildEyebrow(snap, ctx);
 
   return (
     <section className="flex flex-col gap-10 py-8 md:gap-[60px] md:py-12">
@@ -79,7 +80,20 @@ const PLAYOFF_ROUND_LABEL = {
   super_bowl: 'SUPER BOWL',
 } as const;
 
-function buildEyebrow(snap: ScheduleSnapshot): React.ReactNode {
+function buildEyebrow(snap: ScheduleSnapshot, ctx: SeasonContext): React.ReactNode {
+  // Preseason transition: the page shows the new season (blank stats +
+  // SeasonNotice), so the eyebrow counts down to its kickoff instead of
+  // labeling the finished season. In the Week-1 lag (kickoff passed, no
+  // snaps loaded yet) kickoffInDays is null and the snap copy below
+  // already reads "{new season} SEASON · IN PROGRESS".
+  if (ctx.awaitingFirstGame && ctx.kickoffInDays != null) {
+    return (
+      <>
+        {ctx.season} SEASON · KICKOFF IN{' '}
+        <span className="text-text">{ctx.kickoffInDays}</span> DAYS
+      </>
+    );
+  }
   switch (snap.phase) {
     case 'regular':
       return `${snap.season} SEASON · IN PROGRESS`;

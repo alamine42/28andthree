@@ -3,12 +3,13 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { isValidPhase, type Phase } from '@/lib/constants/phases';
 import { phaseDisplayName } from '@/lib/format/phase';
-import { getCurrentSeason } from '@/lib/data/current-season';
+import { getCurrentSeason, getSeasonContext } from '@/lib/data/current-season';
 import {
   getLeagueDistribution,
   getPhaseDetail,
   getPhaseWeeklyTrend,
 } from '@/lib/data/phases';
+import { NoSeasonData } from '@/components/NoSeasonData';
 import { MetricValue, RankNumber } from '@/components/numeric';
 import { formatEpa, formatPercent } from '@/lib/format/number';
 import { TrendChart } from '@/components/charts/TrendChart';
@@ -67,25 +68,33 @@ export default async function PhaseDetailPage({ params }: { params: Params }) {
     getTopContributors(phase, 'NE', season, 3),
   ]);
 
-  if (!detail) notFound();
-
   const display = phaseDisplayName(phase);
+
+  // Preseason transition: no rows for the new season yet. Render the page
+  // shell with the blank-stats callout instead of 404 — outside the
+  // transition a missing detail still means a broken slug/season and 404s.
+  if (!detail) {
+    const ctx = await getSeasonContext();
+    if (!ctx.awaitingFirstGame) notFound();
+    return (
+      <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
+        <PhaseBreadcrumb display={display} />
+        <header className="flex flex-col gap-3">
+          <h1 className="font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
+            {display}
+          </h1>
+          <p className="font-mono text-xs text-text-muted">
+            EPA per play · regular season {season}
+          </p>
+        </header>
+        <NoSeasonData season={season} />
+      </section>
+    );
+  }
 
   return (
     <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
-      <nav
-        aria-label="Breadcrumb"
-        className="flex items-center font-mono text-2xs uppercase tracking-widest text-text-muted"
-      >
-        <Link
-          href="/"
-          className="inline-flex min-h-[44px] items-center underline underline-offset-4 decoration-border-strong hover:decoration-text hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
-        >
-          Season overview
-        </Link>
-        <span className="mx-2 text-text-muted">/</span>
-        <span className="text-text">{display}</span>
-      </nav>
+      <PhaseBreadcrumb display={display} />
 
       <header className="flex flex-col gap-3">
         <h1 className="font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
@@ -162,6 +171,24 @@ export default async function PhaseDetailPage({ params }: { params: Params }) {
         )}
       </section>
     </section>
+  );
+}
+
+function PhaseBreadcrumb({ display }: { display: string }) {
+  return (
+    <nav
+      aria-label="Breadcrumb"
+      className="flex items-center font-mono text-2xs uppercase tracking-widest text-text-muted"
+    >
+      <Link
+        href="/"
+        className="inline-flex min-h-[44px] items-center underline underline-offset-4 decoration-border-strong hover:decoration-text hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
+      >
+        Season overview
+      </Link>
+      <span className="mx-2 text-text-muted">/</span>
+      <span className="text-text">{display}</span>
+    </nav>
   );
 }
 

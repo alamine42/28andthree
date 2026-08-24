@@ -3,9 +3,10 @@ import { notFound } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 import { skillSeason } from '@/db/schema';
 import { getDb } from '@/lib/db';
-import { getCurrentSeason } from '@/lib/data/current-season';
+import { getCurrentSeason, getSeasonContext } from '@/lib/data/current-season';
 import { getPlayer, getSkillUsage } from '@/lib/data/player';
 import { MetricValue } from '@/components/numeric';
+import { NoSeasonData } from '@/components/NoSeasonData';
 import { formatPercent } from '@/lib/format/number';
 import { PlayerHeader } from '@/components/PlayerHeader';
 import { SmallSampleBanner } from '@/components/SmallSampleBanner';
@@ -57,12 +58,25 @@ export async function generateMetadata({
 
 export default async function SkillPage({ params }: { params: Params }) {
   const { gsisId } = await params;
-  const season = await getCurrentSeason();
+  const ctx = await getSeasonContext();
+  const season = ctx.season;
   const [player, usage] = await Promise.all([
     getPlayer(gsisId, season),
     getSkillUsage(gsisId, { season }),
   ]);
-  if (!player || !usage) notFound();
+  if (!player) notFound();
+
+  // Preseason transition: the player exists but the new season has no
+  // snaps. Render the header with the blank-stats callout instead of 404.
+  if (!usage) {
+    if (!ctx.awaitingFirstGame) notFound();
+    return (
+      <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
+        <PlayerHeader player={player} season={season} subtitle={player.position ?? undefined} />
+        <NoSeasonData season={season} />
+      </section>
+    );
+  }
 
   const isRb = usage.position === 'RB' || usage.position === 'HB' || usage.position === 'FB';
 
