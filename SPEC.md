@@ -248,6 +248,23 @@ For a data site, the real failure mode is shipping wrong numbers, not throwing e
 - Defensive individual metrics: revisit in v2 if a credible data source opens up.
 - `rpy2` vs. pure-Python port for `nfl4th` — decide in M5 based on deployment ease in GH Actions.
 
+## 10a. E11 addendum — historical season browsing (shipped)
+
+Season-by-season browsing across the loaded window (2020..current).
+
+- **URL contract:** `?season=YYYY` on season-scoped routes (`/`,
+  `/phases/[slug]`, `/team/units/[unit]`, `/coaching`, `/players`,
+  player deep-dives). Clean URL = current season. Invalid or
+  out-of-range values fall back to current — never a 404.
+- **Control:** SeasonSwitcher pill in the site header (menu of links);
+  the param rides every nav link while a past season is in view;
+  HistoricalMarker + "Back to current" on season-scoped pages.
+- **Rendering:** middleware rewrites valid `?season=` requests to the
+  internal static tree `/s/[season]/...` so clean URLs keep ISR and
+  immutable historical pages cache for a day. External `/s` hits 308 to
+  the public form. §3.5a data-integrity rules apply per rendered season.
+- Authority: docs/plans/e11-historical-seasons-plan.md.
+
 ## 11. NOT in scope for v1
 
 Explicitly deferred work, with one-line rationale:

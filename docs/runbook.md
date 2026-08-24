@@ -460,3 +460,22 @@ If the `ScheduleSnapshot` shape changes:
 2. Update both `lib/schedule/phase.ts` AND `etl/schedule.py` together.
 3. Run both test suites (`pnpm test` + `cd etl && uv run pytest tests/test_schedule.py`); they must agree byte-for-byte on every case.
 4. Touch the consumers (eyebrow / footer / freshness gate) — typecheck flags the contract mismatch.
+
+## season-rollover-cache
+
+E11 serves historical seasons from the internal ISR tree `/s/[season]/...`
+(middleware rewrite of `?season=` URLs). While a season is current, its
+`/s/{season}` entries cache a redirect-to-clean. At rollover the season
+becomes historical and those cached redirects are stale until cleared.
+
+Two safety nets, no manual step normally needed:
+1. `/s` pages revalidate every 86400s — worst-case one day of stale
+   redirects for the boundary season only.
+2. The ETL revalidation flush allowlist (`lib/revalidation/tags.ts`)
+   includes all `/s` paths; the first post-rollover ETL run (the
+   schedule-only ingest fires it) clears them within minutes.
+
+Symptom of staleness: `/?season={just-finished-season}` bounces back to
+`/` instead of showing the archived season. Manual fix: POST
+`/api/revalidate` with the token and empty paths (full-allowlist flush),
+or wait out the 24h TTL.
