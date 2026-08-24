@@ -36,6 +36,47 @@ export function isSeasonScopedPath(pathname: string): boolean {
   return SEASON_SCOPED_PATTERNS.some((re) => re.test(pathname));
 }
 
+export type SeasonRouting =
+  | { kind: 'rewrite'; pathname: string }
+  | { kind: 'redirect'; pathname: string; search: string };
+
+/** Pure decision core for the middleware branch (plan §3.1, §3.3).
+ *
+ * - Season-scoped public path + valid ?season= → rewrite into the internal
+ *   static tree /s/{season}{path}. The address bar keeps the public URL.
+ * - External hit on the internal /s tree → 308 to the public ?season=
+ *   form (valid season) or the clean path (malformed segment). Kills the
+ *   duplicate URL surface; not a loop — the redirect target is rewritten
+ *   internally on the next request.
+ * - Everything else → null (pass through).
+ *
+ * Deliberately DB-free: the current-season upper bound is enforced by the
+ * /s/[season] wrappers, which redirect season >= current to the clean
+ * path. */
+export function resolveSeasonRouting(
+  pathname: string,
+  seasonParam: string | null,
+): SeasonRouting | null {
+  if (pathname === '/s' || pathname.startsWith('/s/')) {
+    const rest = pathname === '/s' ? '' : pathname.slice(2);
+    const [, segment = '', ...restParts] = rest.split('/');
+    const cleanPath = restParts.length > 0 ? `/${restParts.join('/')}` : '/';
+    const season = parseSeasonParam(segment);
+    return {
+      kind: 'redirect',
+      pathname: cleanPath,
+      search: season != null ? `?season=${season}` : '',
+    };
+  }
+
+  const season = parseSeasonParam(seasonParam);
+  if (season == null || !isSeasonScopedPath(pathname)) return null;
+  return {
+    kind: 'rewrite',
+    pathname: `/s/${season}${pathname === '/' ? '' : pathname}`,
+  };
+}
+
 export type SeasonView = {
   /** Season the page renders. */
   season: number;

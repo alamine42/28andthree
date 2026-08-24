@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getEdgeRateLimiter, ipFromRequest } from '@/lib/ratelimit/edge';
+import { resolveSeasonRouting } from '@/lib/season-view';
 import { buildCsp, currentCspEnv, makeNonce } from '@/lib/security/csp';
 
-// One middleware wearing two hats:
+// One middleware wearing three hats:
 //
 //   1. CSP + nonce on every document response (E6-09). Nonces are
 //      per-request and echoed back as `x-nonce` so Server Components can
@@ -12,6 +13,11 @@ import { buildCsp, currentCspEnv, makeNonce } from '@/lib/security/csp';
 //   2. 60 req/min/IP rate limit on /api/* + /status/* only (E6-08).
 //      Separate buckets per path family so one burst can't exhaust the
 //      other. /status/data keeps its own inner 20/60s limit on top.
+//
+//   3. E11 historical seasons: ?season=YYYY on a season-scoped path
+//      rewrites to the internal static tree /s/[season]/... so clean URLs
+//      keep their ISR entries; external hits on /s redirect back to the
+//      public form. Decision core is pure + DB-free (lib/season-view.ts).
 
 export const config = {
   // Match everything except static chunks, the /og image, and the image
@@ -72,6 +78,26 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     res.headers.set('X-RateLimit-Limit', '60');
     res.headers.set('X-RateLimit-Remaining', String(remaining));
     res.headers.set('X-RateLimit-Reset', String(Math.floor(reset / 1000)));
+    return res;
+  }
+
+  const seasonRoute = resolveSeasonRouting(
+    pathname,
+    req.nextUrl.searchParams.get('season'),
+  );
+  if (seasonRoute) {
+    const url = req.nextUrl.clone();
+    url.pathname = seasonRoute.pathname;
+    if (seasonRoute.kind === 'redirect') {
+      url.search = seasonRoute.search;
+      return NextResponse.redirect(url, 308);
+    }
+    // Drop the season param from the internal URL: the /s route reads its
+    // segment, and a query-free destination keeps one cache entry per
+    // season instead of one per query-string variant.
+    url.searchParams.delete('season');
+    const res = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    if (csp) res.headers.set('Content-Security-Policy', csp);
     return res;
   }
 
