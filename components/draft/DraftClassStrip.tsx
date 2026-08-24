@@ -12,16 +12,18 @@ type Props = {
 
 // Top-of-page "at-a-glance" strip for /draft-roi. Hairline-gap grid mirroring
 // HeroStats — each cell is an in-page anchor to the matching class section.
-// Desktop: 5-col. Mobile: 2-col with last card spanning the full row.
+// lg: one column per class. md: 3-col. Mobile: 2-col; the last card spans
+// the full row only when the class count is odd.
 export function DraftClassStrip({ classes }: Props) {
+  const oddCount = classes.length % 2 === 1;
   return (
     <nav
-      aria-label="Draft classes 2021 to 2025"
+      aria-label={`Draft classes ${classes[classes.length - 1]?.year} to ${classes[0]?.year}`}
       data-testid="draft-strip"
-      className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-5"
+      className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-3 lg:grid-cols-6"
     >
       {classes.map((c, i) => (
-        <ClassCard key={c.year} card={c} isLast={i === classes.length - 1} />
+        <ClassCard key={c.year} card={c} isLast={oddCount && i === classes.length - 1} />
       ))}
     </nav>
   );

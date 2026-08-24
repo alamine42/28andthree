@@ -20,8 +20,8 @@ test.describe('E5 draft-roi + coaching', () => {
     if (nClasses === 0) {
       await expect(empty).toBeVisible();
     } else {
-      // At most 5 draft classes + 5 class summaries (test-id^="draft-class-")
-      expect(nClasses).toBeLessThanOrEqual(10);
+      // At most 6 draft classes + 6 class summaries (test-id^="draft-class-")
+      expect(nClasses).toBeLessThanOrEqual(12);
     }
   });
 

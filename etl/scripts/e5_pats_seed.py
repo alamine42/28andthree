@@ -22,7 +22,7 @@ import psycopg
 from etl.ingest.drafts import fetch_draft_picks, normalize_pats_picks
 from etl.load.drafts import upsert_draft_picks
 
-SEASONS = (2021, 2022, 2023, 2024, 2025)
+SEASONS = (2021, 2022, 2023, 2024, 2025, 2026)
 
 log = logging.getLogger("e5-pats-seed")
 

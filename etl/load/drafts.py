@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 
 import psycopg
@@ -9,6 +10,8 @@ from psycopg.types.json import Jsonb  # noqa: F401  (kept for future coaching lo
 
 from etl.ingest.drafts import HistoricalDraftOutcome, PatsDraftPick
 from etl.transform.slot_ev import SlotExpectedValue
+
+logger = logging.getLogger("etl.load.drafts")
 
 
 def upsert_historical_draft_outcomes(
@@ -48,12 +51,45 @@ def upsert_historical_draft_outcomes(
     return len(outcomes)
 
 
+def _known_gsis_ids(conn: psycopg.Connection, ids: set[str]) -> set[str]:
+    if not ids:
+        return set()
+    with conn.cursor() as cur:
+        cur.execute("SELECT gsis_id FROM players WHERE gsis_id = ANY(%s)", (list(ids),))
+        return {r[0] for r in cur.fetchall()}
+
+
 def upsert_draft_picks(
     conn: psycopg.Connection,
     picks: Sequence[PatsDraftPick],
 ) -> int:
     if not picks:
         return 0
+    # draft_picks.gsis_id FKs to players. Fresh draft classes carry ids for
+    # rookies who are not in players yet (rosters load after games start),
+    # and nflverse ships placeholder non-GSIS ids for some of them. Null the
+    # unknown ids — the grade reads "pending", which is correct — and let a
+    # later re-run restore them via the ON CONFLICT update.
+    candidate_ids = {p.gsis_id for p in picks if p.gsis_id is not None}
+    known = _known_gsis_ids(conn, candidate_ids)
+    unknown = candidate_ids - known
+    if unknown:
+        logger.info(
+            "draft_picks_gsis_nulled count=%d ids=%s", len(unknown), sorted(unknown)
+        )
+    picks = [
+        p if p.gsis_id is None or p.gsis_id in known
+        else PatsDraftPick(
+            draft_season=p.draft_season,
+            round=p.round,
+            pick_overall=p.pick_overall,
+            gsis_id=None,
+            position=p.position,
+            traded_to=p.traded_to,
+            player_name=p.player_name,
+        )
+        for p in picks
+    ]
     with conn.cursor() as cur:
         cur.executemany(
             """

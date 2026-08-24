@@ -10,15 +10,15 @@ export const revalidate = 3600;
 export const metadata: Metadata = pageMetadata({
   title: 'Draft ROI',
   description:
-    'Every Patriots pick 2021\u20132025 graded HIT / FAIR / MISS against a slot-expected-value curve fit from league-wide outcomes.',
+    'Every Patriots pick 2021\u20132026 graded HIT / FAIR / MISS against a slot-expected-value curve fit from league-wide outcomes.',
   og: {
     title: 'Mayo & Wolf, by the draft class',
-    eyebrow: 'DRAFT \u00B7 2021\u20132025',
+    eyebrow: 'DRAFT \u00B7 2021\u20132026',
   },
   canonical: '/draft-roi',
 });
 
-const DRAFT_CLASS_YEARS: readonly number[] = [2025, 2024, 2023, 2022, 2021];
+const DRAFT_CLASS_YEARS: readonly number[] = [2026, 2025, 2024, 2023, 2022, 2021];
 
 export default async function DraftRoiPage() {
   const currentSeason = await getCurrentSeason();
@@ -43,7 +43,7 @@ export default async function DraftRoiPage() {
           className="font-mono text-2xs uppercase tracking-widest text-text-muted"
           data-testid="draft-eyebrow"
         >
-          DRAFT · 2021–2025
+          DRAFT · 2021–2026
         </p>
         <h1 className="max-w-4xl font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
           Mayo &amp; Wolf, by the draft class.
