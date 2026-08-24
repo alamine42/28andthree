@@ -8,6 +8,8 @@ import { PlayerSearch } from './PlayerSearch';
 
 type Props = {
   roster: ReadonlyArray<RosterEntry>;
+  /** Past season in view — threaded into card + search links (E11). */
+  seasonQuery?: number | null;
 };
 
 type Chip = { label: string; value: PlayerCategory | 'ALL' };
@@ -22,7 +24,7 @@ const CHIPS: ReadonlyArray<Chip> = [
   { label: 'ST', value: 'ST' },
 ];
 
-export function RosterBrowser({ roster }: Props) {
+export function RosterBrowser({ roster, seasonQuery }: Props) {
   const [category, setCategory] = useState<PlayerCategory | 'ALL'>('ALL');
 
   const countByCategory = useMemo(() => {
@@ -38,7 +40,7 @@ export function RosterBrowser({ roster }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      <PlayerSearch roster={roster} />
+      <PlayerSearch seasonQuery={seasonQuery} roster={roster} />
 
       <div
         role="group"
@@ -74,7 +76,7 @@ export function RosterBrowser({ roster }: Props) {
       ) : (
         <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visible.map((p) => (
-            <RosterCard key={p.gsisId} player={p} />
+            <RosterCard seasonQuery={seasonQuery} key={p.gsisId} player={p} />
           ))}
         </div>
       )}

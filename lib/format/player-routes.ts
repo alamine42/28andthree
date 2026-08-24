@@ -45,7 +45,17 @@ export function categoryFor(position: string | null | undefined): PlayerCategory
 // Returns `null` for `special` so callers must render a non-clickable card;
 // there's no /team/units/special-teams page yet, and we'd rather surface
 // "coming soon" than pretend a kicker link goes somewhere useful.
-export function playerHref(entry: { role: PlayerRole; gsisId: string }): Route | null {
+export function playerHref(
+  entry: { role: PlayerRole; gsisId: string },
+  seasonQuery?: number | null,
+): Route | null {
+  const base = basePlayerHref(entry);
+  if (base == null || seasonQuery == null) return base;
+  // E11: while a past season is in view, links carry it forward.
+  return `${base}?season=${seasonQuery}` as Route;
+}
+
+function basePlayerHref(entry: { role: PlayerRole; gsisId: string }): Route | null {
   switch (entry.role) {
     case 'qb':      return `/players/qb/${entry.gsisId}` as Route;
     case 'skill':   return `/players/skill/${entry.gsisId}` as Route;

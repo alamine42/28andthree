@@ -8,6 +8,7 @@ import { RosterCardBody } from './RosterCardBody';
 
 type Props = {
   roster: ReadonlyArray<RosterEntry>;
+  seasonQuery?: number | null;
 };
 
 const MIN_QUERY = 2;
@@ -19,7 +20,7 @@ const MAX_RESULTS = 8;
 // their <li> elements carry no tabindex (review finding #3). Pointer clicks
 // on an option call preventDefault on mousedown so the input doesn't blur
 // before the click resolves (review finding #12).
-export function PlayerSearch({ roster }: Props) {
+export function PlayerSearch({ roster, seasonQuery }: Props) {
   const router = useRouter();
   const listboxId = useId();
   const [query, setQuery] = useState('');
@@ -42,7 +43,7 @@ export function PlayerSearch({ roster }: Props) {
 
   const navigate = useCallback(
     (player: RosterEntry) => {
-      const href = playerHref(player);
+      const href = playerHref(player, seasonQuery);
       if (href === null) return; // special-teams: no destination yet
       setOpen(false);
       setActiveIdx(null);

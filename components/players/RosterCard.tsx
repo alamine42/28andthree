@@ -11,8 +11,14 @@ import { RosterCardBody } from './RosterCardBody';
 // review finding #7). Focus styles sit on the actual focusable element to
 // avoid the display:contents trap we already hit once in
 // `docs/solutions/gotchas/display-contents-hides-focus-rings.md`.
-export function RosterCard({ player }: { player: RosterEntry }) {
-  const href = playerHref(player);
+export function RosterCard({
+  player,
+  seasonQuery,
+}: {
+  player: RosterEntry;
+  seasonQuery?: number | null;
+}) {
+  const href = playerHref(player, seasonQuery);
   const testId = `roster-card-${player.gsisId}`;
   const base = 'flex items-center gap-4 bg-bg p-5 transition-colors';
   const clickable =
