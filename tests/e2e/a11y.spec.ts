@@ -12,6 +12,7 @@ const ROUTES = [
   '/players',
   '/draft-roi',
   '/coaching',
+  '/trends',
   '/methodology',
   '/phases/pass_offense',
   `/players/qb/${QB_ID}`,

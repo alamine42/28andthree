@@ -13,6 +13,7 @@ const ROUTES = [
   '/players',
   '/draft-roi',
   '/coaching',
+  '/trends',
   '/status',
   ...PHASES.map((p) => `/phases/${p}`),
 ];

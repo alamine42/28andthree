@@ -18,6 +18,7 @@ const ROUTES: ReadonlyArray<RouteSpec> = [
   { path: '/players' },
   { path: '/draft-roi' },
   { path: '/coaching' },
+  { path: '/trends' },
   { path: '/methodology' },
   { path: '/phases/pass_offense' },
   { path: '/phases/run_defense' },

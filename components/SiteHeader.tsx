@@ -21,6 +21,9 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   { label: 'Players', href: '/players', seasonAware: true },
   { label: 'Draft', href: '/draft-roi', seasonAware: true },
   { label: 'Coaching', href: '/coaching', seasonAware: true },
+  // E12: season-agnostic (shows every season at once) but still carries the
+  // param so a detour from a historical page returns to it, same as Draft.
+  { label: 'Trends', href: '/trends', seasonAware: true },
 ];
 
 function Wordmark() {

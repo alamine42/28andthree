@@ -25,6 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry('/players', now, 'weekly', 0.8),
     entry('/draft-roi', now, 'weekly', 0.7),
     entry('/coaching', now, 'weekly', 0.8),
+    entry('/trends', now, 'weekly', 0.8),
     entry('/methodology', now, 'monthly', 0.5),
     ...PHASES.map((slug) => entry(`/phases/${slug}`, now, 'daily', 0.9)),
     ...UNIT_SLUGS.map((slug) => entry(`/team/units/${slug}`, now, 'weekly', 0.6)),

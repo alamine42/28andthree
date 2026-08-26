@@ -11,6 +11,7 @@ export const REVALIDATE_PATHS: readonly string[] = [
   '/players',
   '/draft-roi',
   '/coaching',
+  '/trends',
   ...PHASES.map((p) => `/phases/${p}`),
 ];
 

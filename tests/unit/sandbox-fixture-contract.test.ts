@@ -10,6 +10,8 @@ import { recentGames2025, teamOverview2025 } from '../../lib/sandbox/fixtures/te
 import { coachSegments2025, fourthDownDecisions2025 } from '../../lib/sandbox/fixtures/coaching';
 import { draftRoi } from '../../lib/sandbox/fixtures/draft';
 import { getTopContributors } from '../../lib/sandbox/stubs/contributors';
+import { trendRows } from '../../lib/sandbox/fixtures/trends';
+import { buildHistory } from '../../lib/data/trends';
 
 // E8-13: fixture shape contracts. If any of these drift out of sync
 // with the prod DAL types, the TS build would catch it — but the
@@ -137,6 +139,65 @@ describe('fixture contract — draft', () => {
       for (const p of picks) {
         assert.ok(p.round >= 1 && p.round <= 7, `invalid round: ${p.round}`);
       }
+    }
+  });
+});
+
+// E12: the trends fixture drives the /trends sandbox page. It must
+// exercise both thin-season states, or the sandbox renders a clean chart
+// while prod renders gaps.
+describe('fixture contract — trends', () => {
+  const through = 2026;
+  const series = buildHistory(trendRows(through), through);
+
+  it('covers every phase exactly once', () => {
+    assert.deepEqual(series.map((s) => s.phase), [...PHASES]);
+  });
+
+  it('every published rank is 1..32', () => {
+    for (const s of series) {
+      for (const p of s.points) {
+        if (p.rank === null) continue;
+        assert.ok(p.rank >= 1 && p.rank <= 32, `${s.phase} ${p.season}: rank ${p.rank}`);
+      }
+    }
+  });
+
+  it('nulls epa wherever it nulls rank, so no value renders without league context', () => {
+    for (const s of series) {
+      for (const p of s.points) {
+        assert.equal(
+          p.epaPerPlay === null,
+          p.rank === null,
+          `${s.phase} ${p.season}: epa and rank must be published together (SPEC §3.5a)`,
+        );
+      }
+    }
+  });
+
+  it('bakes a mid-series gap to exercise gap-render', () => {
+    const st = series.find((s) => s.phase === 'special_teams');
+    assert.ok(st);
+    const gap = st.points.find((p) => p.season === 2022);
+    assert.equal(gap?.epaPerPlay, null);
+    assert.equal(gap?.insufficientSample, true);
+    // Two published seasons must sit on each side. With fewer, a segment
+    // collapses to a lone point, which cannot stroke — the rendered line
+    // would look unbroken and the gap case would silently stop being tested.
+    const before = st.points.filter((p) => p.season < 2022 && p.epaPerPlay !== null);
+    const after = st.points.filter(
+      (p) => p.season > 2022 && p.epaPerPlay !== null,
+    );
+    assert.ok(before.length >= 2, `only ${before.length} published seasons before the gap`);
+    assert.ok(after.length >= 2, `only ${after.length} published seasons after the gap`);
+  });
+
+  it('leaves the barely-started newest season unpublished for every phase', () => {
+    for (const s of series) {
+      const newest = s.points.at(-1);
+      assert.equal(newest?.season, through);
+      assert.equal(newest?.epaPerPlay, null, `${s.phase} should not plot ${through}`);
+      assert.equal(newest?.insufficientSample, true);
     }
   });
 });

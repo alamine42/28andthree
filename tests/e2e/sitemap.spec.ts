@@ -30,6 +30,7 @@ test.describe('E6-04 sitemap + robots', () => {
       '/players',
       '/draft-roi',
       '/coaching',
+      '/trends',
       '/methodology',
       '/phases/pass_offense',
       '/phases/overall',
