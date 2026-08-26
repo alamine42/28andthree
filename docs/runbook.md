@@ -210,6 +210,47 @@ vercel --prod
 
 **Preview-only gate:** through 2026-05-18 (30 days post-E2), prod requests return 404 regardless of the token. Invoke via preview URL. Gate auto-lifts on that date.
 
+## isr-revalidation
+
+`/api/revalidate` is the on-demand cache flush the ETL calls after a
+successful run. It needs `REVALIDATE_TOKEN` set in **two** places, with the
+same value:
+
+| where | command |
+|---|---|
+| Vercel production env | `vercel env add REVALIDATE_TOKEN production` |
+| GitHub Actions secret | `gh secret set REVALIDATE_TOKEN` |
+
+A Vercel env change only reaches the running deployment after a redeploy:
+`vercel redeploy <current-prod-url> --target production`.
+
+### Verifying
+
+Probe with a deliberately wrong token. The status code tells you which half
+is broken:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -X POST https://28andthree.com/api/revalidate \
+  -H 'x-revalidate-token: wrong' -H 'content-type: application/json' -d '{"paths":[]}'
+```
+
+- `401` — configured correctly (it rejected a bad token).
+- `503` — `REVALIDATE_TOKEN` is missing from the Vercel env, or the deployment
+  predates it. The route fails closed.
+
+A successful call returns `200` with the list of revalidated paths plus
+`"revalidatedLayouts":["/s/[season]"]`.
+
+### Failure mode to watch for
+
+Both halves were missing from 2026-04 until 2026-08-26 (bd
+patsbythenumbers-ezr). Nothing alerted, because `.github/workflows/etl.yml`
+guards the step: with no token it prints `REVALIDATE_TOKEN not set — skipping
+cache flush` and exits 0. **A green ETL run does not prove the flush
+happened.** Check that step's log for a curl response rather than the skip
+message. Without it, pages self-heal only on TTL — 1h for most routes, 24h
+for the sitemap and the `/s` tree.
+
 ## budget-alerts
 
 Alert destinations (see `docs/budget.md` for thresholds):
