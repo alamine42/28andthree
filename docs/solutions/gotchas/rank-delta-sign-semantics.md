@@ -73,7 +73,10 @@ Two cheap safeguards:
 
 Anywhere a lower raw value is better, the same sign flip bites:
 
-- **Rank 1–32.** Handled (this bug).
+- **Rank 1–32.** The *delta* is handled (this bug). The *ordering* was
+  NOT — defensive phases ranked backwards until 2026-08-26. See
+  `one-sort-direction-inverts-lower-is-better-ranks.md`. Fixing one
+  instance of a class is not fixing the class.
 - **Pressure rate allowed** (E4). Lower = better defense. Delta should
   compute as `prev - current` too.
 - **Score differential allowed** (E5 coaching tendencies).
