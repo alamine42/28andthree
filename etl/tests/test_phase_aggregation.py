@@ -58,13 +58,24 @@ def _insert_synthetic_plays(
     week: int,
     pass_plays: list[float],
     rush_plays: list[float] | None = None,
+    redzone: bool = False,
+    third_down: bool = False,
 ) -> None:
     """Insert `len(pass_plays)` dropback plays + optional rush plays.
 
     Play_ids are derived from the next available id within the game so
     multiple invocations for the same game don't collide on the composite PK.
+
+    `redzone` / `third_down` drive the situational phases. is_redzone and
+    is_third_down are GENERATED columns (yardline_100 <= 20, down = 3), so
+    they cannot be inserted — these kwargs set the source columns instead.
+    Without them the redzone_* and third_down_* phases have no qualifying
+    plays and silently produce no rows.
     """
     rush_plays = rush_plays or []
+    # Generated: is_redzone = yardline_100 <= 20, is_third_down = down = 3.
+    yardline = 10 if redzone else 50
+    down = 3 if third_down else 1
     with conn.cursor() as cur:
         cur.execute(
             "SELECT COALESCE(MAX(play_id), 0) FROM plays WHERE game_id = %s",
@@ -78,12 +89,14 @@ def _insert_synthetic_plays(
         rows.append((
             game_id, play_id, season, week, "REG", posteam, defteam,
             "pass", epa, epa > 0, True, False, False, False, False,
+            yardline, down,
         ))
         play_id += 1
     for epa in rush_plays:
         rows.append((
             game_id, play_id, season, week, "REG", posteam, defteam,
             "run", epa, epa > 0, False, False, False, False, True,
+            yardline, down,
         ))
         play_id += 1
 
@@ -93,8 +106,8 @@ def _insert_synthetic_plays(
             INSERT INTO plays
                 (game_id, play_id, season, week, season_type, posteam, defteam,
                  play_type, epa, success, qb_dropback, qb_kneel, qb_spike,
-                 two_point_attempt, rush_attempt)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 two_point_attempt, rush_attempt, yardline_100, down)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             rows,
         )
@@ -360,3 +373,101 @@ def test_nfl_teams_constant_matches_db_expectations() -> None:
     # Guard against the Python constant drifting from the schema's implicit
     # 32-team expectation.
     assert len(NFL_TEAMS) == 32
+
+
+# ---- Rank direction (bd patsbythenumbers-78e) -------------------------------
+#
+# Every phase shared one DESC sort until 2026-08-26, which handed rank 1 to the
+# WORST defense in the league. The existing rank tests all used pass_offense,
+# where DESC happens to be correct, so nothing failed. These cover the other
+# side of the ball.
+
+
+def test_defensive_rank_1_goes_to_the_lowest_epa_allowed(
+    db_conn: psycopg.Connection,
+) -> None:
+    # Arrange: PIT's defense allows 0.5/play, NE's allows 0.2, KC's allows 0.8.
+    # Lower allowed = better defense, so NE must rank 1 and KC last.
+    _insert_game(db_conn, game_id="2025_01_NE_PIT", home="PIT", away="NE")
+    _insert_game(db_conn, game_id="2025_01_BUF_KC", home="KC", away="BUF")
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_NE_PIT", posteam="NE", defteam="PIT",
+        season=2025, week=1, pass_plays=[0.5] * 15,
+    )
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_NE_PIT", posteam="PIT", defteam="NE",
+        season=2025, week=1, pass_plays=[0.2] * 15,
+    )
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_BUF_KC", posteam="BUF", defteam="KC",
+        season=2025, week=1, pass_plays=[0.8] * 15,
+    )
+
+    recompute_weekly(db_conn, season=2025, weeks=[1])
+
+    rows = _fetch_phase_rows(db_conn, phase="pass_defense", season=2025, week=1)
+    team_to_rank = {r["team"]: r["rank"] for r in rows}
+    # NE allowed 0.2 — the stingiest — so NE is the best pass defense.
+    assert team_to_rank["NE"] == 1, "rank 1 must be the LOWEST EPA allowed"
+    assert team_to_rank["PIT"] == 2
+    assert team_to_rank["KC"] == 3, "the most generous defense must rank last"
+
+
+def test_every_defensive_phase_ranks_best_defense_first(
+    db_conn: psycopg.Connection,
+) -> None:
+    # Guard the whole class, not just pass_defense. Each defensive phase gets
+    # two teams; the one allowing less must rank 1 in every one of them.
+    _insert_game(db_conn, game_id="2025_01_NE_PIT", home="PIT", away="NE")
+    # NE's defense faces PIT: stingy. PIT's defense faces NE: generous.
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_NE_PIT", posteam="PIT", defteam="NE",
+        season=2025, week=1, pass_plays=[-0.3] * 20, rush_plays=[-0.3] * 20,
+        redzone=True, third_down=True,
+    )
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_NE_PIT", posteam="NE", defteam="PIT",
+        season=2025, week=1, pass_plays=[0.4] * 20, rush_plays=[0.4] * 20,
+        redzone=True, third_down=True,
+    )
+
+    recompute_weekly(db_conn, season=2025, weeks=[1])
+
+    for phase in (
+        "pass_defense",
+        "run_defense",
+        "redzone_defense",
+        "third_down_defense",
+    ):
+        rows = _fetch_phase_rows(db_conn, phase=phase, season=2025, week=1)
+        ranked = {r["team"]: r["rank"] for r in rows if r["rank"] is not None}
+        if not ranked:
+            continue
+        best = min(ranked, key=lambda t: ranked[t])
+        by_epa = {r["team"]: r["epa_per_play"] for r in rows}
+        assert best == "NE", (
+            f"{phase}: rank 1 went to {best} "
+            f"(NE allowed {by_epa.get('NE')}, PIT allowed {by_epa.get('PIT')})"
+        )
+
+
+def test_offensive_rank_direction_is_unchanged(
+    db_conn: psycopg.Connection,
+) -> None:
+    # The fix must not flip the side that was already correct.
+    _insert_game(db_conn, game_id="2025_01_NE_PIT", home="PIT", away="NE")
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_NE_PIT", posteam="NE", defteam="PIT",
+        season=2025, week=1, pass_plays=[0.6] * 15,
+    )
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_NE_PIT", posteam="PIT", defteam="NE",
+        season=2025, week=1, pass_plays=[0.1] * 15,
+    )
+
+    recompute_weekly(db_conn, season=2025, weeks=[1])
+
+    rows = _fetch_phase_rows(db_conn, phase="pass_offense", season=2025, week=1)
+    team_to_rank = {r["team"]: r["rank"] for r in rows}
+    assert team_to_rank["NE"] == 1, "higher offensive EPA must still rank first"
+    assert team_to_rank["PIT"] == 2
