@@ -24,7 +24,16 @@
 # rather than catching it. They have been re-recorded from the corrected
 # aggregation — but they are still source=self, i.e. still anchored to our own
 # arithmetic. Upgrading even ONE defensive row to source=rbsdm would have
-# surfaced this in April. Do that before trusting this file on defense.
+# surfaced this in April.
+#
+# 2022 pass_defense is now anchored to SumerSports (rank 3) and agrees with us.
+# That is ONE row. The remaining 11 defensive rows are still source=self —
+# finish the job (bd patsbythenumbers-0ab).
+#
+# Known open divergence: Sumer ranks NE's 2022 RUSH defense ~24th; we rank it
+# 7th. Likely definitional — docs/phase-definitions.md excludes scrambles from
+# rushes (they are dropbacks), and counting them as rushes would worsen a
+# defense's rush EPA. Verify against rbsdm before anchoring run_defense.
 
 entries:
   # --- 2020 ---
@@ -45,7 +54,7 @@ entries:
   - { season: 2022, team: NE, phase: pass_offense,    expected_rank: 23, source: self, recorded_on: 2026-04-19 }
   - { season: 2022, team: NE, phase: rush_offense,    expected_rank: 21, source: self, recorded_on: 2026-04-19 }
   - { season: 2022, team: NE, phase: overall, expected_rank: 9, source: self, recorded_on: 2026-04-19 }
-  - { season: 2022, team: NE, phase: pass_defense,    expected_rank: 3,  source: self, recorded_on: 2026-08-26, note: corrected-78e }
+  - { season: 2022, team: NE, phase: pass_defense,    expected_rank: 3,  source: 'sumersports.com/teams/defensive/?season=2022', recorded_on: 2026-08-26, note: 'external anchor — Sumer EPA/Pass -0.11, rank 3; ours -0.089, rank 3' }
   - { season: 2022, team: NE, phase: run_defense,     expected_rank: 7,  source: self, recorded_on: 2026-08-26, note: corrected-78e }
 
   # --- 2023 ---
