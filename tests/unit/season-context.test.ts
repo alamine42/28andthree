@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   PRESEASON_WINDOW_DAYS,
   resolveSeasonContext,
+  seasonNoticeCopy,
+  WEEKLY_CADENCE_COPY,
 } from '../../lib/logic/season-context';
 
 // The preseason transition: the site flips to the new season (blank stats
@@ -120,5 +122,27 @@ describe('lib/logic/season-context — resolveSeasonContext', () => {
       awaitingFirstGame: true,
       kickoffInDays: null,
     });
+  });
+});
+
+// The notice must not claim "no snap taken" once games have been played
+// and the site is only waiting on Tuesday's ETL run.
+describe('lib/logic/season-context — seasonNoticeCopy', () => {
+  it('should_say_no_snap_yet_before_kickoff', () => {
+    const copy = seasonNoticeCopy({ season: 2026, kickoffInDays: 12 });
+    assert.match(copy, /haven't taken a regular-season snap yet/);
+    assert.ok(copy.endsWith(WEEKLY_CADENCE_COPY));
+  });
+
+  it('should_not_claim_no_snap_during_week_1_lag', () => {
+    const copy = seasonNoticeCopy({ season: 2026, kickoffInDays: null });
+    assert.doesNotMatch(copy, /snap/);
+    assert.match(copy, /No 2026 stats are loaded yet\./);
+    assert.ok(copy.endsWith(WEEKLY_CADENCE_COPY));
+  });
+
+  it('should_state_the_tuesday_cadence_not_a_week_1_promise', () => {
+    assert.match(WEEKLY_CADENCE_COPY, /Tuesday/);
+    assert.doesNotMatch(WEEKLY_CADENCE_COPY, /after Week 1/);
   });
 });

@@ -1,3 +1,5 @@
+import { WEEKLY_CADENCE_COPY } from '@/lib/logic/season-context';
+
 /** Blank-stats placeholder. Two situations share it (plan §2):
  * - upcoming: the preseason transition window — stats are coming.
  * - historical: a past season with no rows for this view — they are not.
@@ -16,7 +18,7 @@ export function NoSeasonData({
     message ??
     (variant === 'historical'
       ? `No ${season} stats for this view.`
-      : `No ${season} snaps yet. Stats populate after Week 1 of the regular season.`);
+      : `No ${season} stats for this view yet. ${WEEKLY_CADENCE_COPY}`);
   return (
     <p
       data-testid="no-season-data"

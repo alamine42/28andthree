@@ -1,7 +1,10 @@
 import { getSeasonContext } from '@/lib/data/current-season';
+import { seasonNoticeCopy } from '@/lib/logic/season-context';
 
-/** Preseason notice. Renders only in the transition window: the new
- * season's schedule is loaded but no regular-season snaps exist. E11:
+/** Awaiting-data notice. Renders in the transition window: the new
+ * season's schedule is loaded but no snaps are in the DB yet — either
+ * because kickoff has not happened or because the Tuesday ETL has not run
+ * since it did. seasonNoticeCopy picks the wording for the two cases. E11:
  * rendered by the season-scoped page templates when !historical (plan
  * §3.5), server-side — no client guard, no hydration flash. Callout style
  * per DESIGN.md — surface bg, 2px positive left border. */
@@ -25,11 +28,7 @@ export async function SeasonNotice() {
         ) : null}
       </p>
       <p className="mt-1 text-sm text-text-muted">
-        {/* Explicit {' '} — the JSX transform dropped the plain space
-            between the expression and this text node. */}
-        The {ctx.season}{' '}
-        Patriots haven&apos;t taken a regular-season snap yet. Stats
-        populate after Week 1.
+        {seasonNoticeCopy(ctx)}
       </p>
     </aside>
   );
