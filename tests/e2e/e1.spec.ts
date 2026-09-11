@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { NAV_LINKS } from '../../lib/constants/nav';
 
 // E1 epic smoke suite — the automated half of the Sprint 1 exit criteria.
 // Authored BEFORE implementation (TDD) per /build-it. Tests start red and flip
@@ -19,7 +20,7 @@ test.describe('E1 smoke: home + chrome', () => {
     await expect(wordmark).toBeVisible();
 
     const navLinks = page.getByRole('navigation').getByRole('link');
-    await expect(navLinks).toHaveCount(5);
+    await expect(navLinks).toHaveCount(NAV_LINKS.length);
 
     const footer = page.getByRole('contentinfo');
     await expect(footer).toContainText(/Not affiliated with/i);

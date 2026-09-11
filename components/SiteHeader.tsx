@@ -3,28 +3,11 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { Suspense, useEffect, useId, useState } from 'react';
+import { NAV_LINKS } from '@/lib/constants/nav';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { SeasonSwitcher, SeasonSwitcherFallback } from '@/components/SeasonSwitcher';
 import { parseSeasonParam } from '@/lib/season-view';
 
-// Top nav links for the header. Team = home; Players = E7 hub; Draft + Coaching
-// = E5 pages. Phases has no index page — links to the phase grid section on
-// the home page via #phases anchor (component PhaseGrid carries the id).
-// The season param rides every nav link while a past season is active —
-// pages that are season-agnostic (Draft, Status) simply ignore it, so the
-// context survives a detour and is still there when the visitor returns
-// to a season-scoped page. (User decision, prototype round 3.)
-type NavLink = { label: string; href: string; seasonAware: boolean };
-const NAV_LINKS: ReadonlyArray<NavLink> = [
-  { label: 'Team', href: '/', seasonAware: true },
-  { label: 'Phases', href: '/#phases', seasonAware: true },
-  { label: 'Players', href: '/players', seasonAware: true },
-  { label: 'Draft', href: '/draft-roi', seasonAware: true },
-  { label: 'Coaching', href: '/coaching', seasonAware: true },
-  // E12: season-agnostic (shows every season at once) but still carries the
-  // param so a detour from a historical page returns to it, same as Draft.
-  { label: 'Trends', href: '/trends', seasonAware: true },
-];
 
 function Wordmark() {
   return (
