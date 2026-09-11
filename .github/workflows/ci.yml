@@ -32,7 +32,13 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
 
-      - run: pnpm build
+      # The build prerenders phase/player pages. Without a database those
+      # readers return nothing, the notFound() guards fire, and the 404 is
+      # baked into the artifact the e2e job then serves. See PR #16.
+      - name: Build
+        run: pnpm build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       # `.next` is a dot-directory, and upload-artifact excludes hidden
       # paths by default — without include-hidden-files the glob matches
@@ -51,7 +57,11 @@ jobs:
   e2e:
     name: E2E — chromium smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 180 tests, one worker. Measured at 6m10s locally against a seeded
+    # database with retries off; CI adds install + browser download, and
+    # retries: 2 multiplies any failure. 15 minutes cancelled the job
+    # mid-run. 30 leaves headroom without letting a hang sit forever.
+    timeout-minutes: 30
     needs: web
     steps:
       - uses: actions/checkout@v4
@@ -87,6 +97,9 @@ jobs:
         run: pnpm exec playwright test --project=chromium --reporter=github
         env:
           CI: '1'
+          # `next start` serves the downloaded build, but ISR revalidation
+          # and the dynamic /s routes still query at request time.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Upload Playwright report on failure
         if: failure()

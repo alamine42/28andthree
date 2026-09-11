@@ -31,7 +31,10 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined
     : {
-        command: 'pnpm dev',
+        // CI downloads the `web` job's production build and serves it, so
+        // the smoke tests exercise what actually deploys. Locally `pnpm
+        // dev` keeps the no-build-required workflow.
+        command: isCI ? 'pnpm start' : 'pnpm dev',
         url: baseURL,
         reuseExistingServer: !isCI,
         timeout: 120_000,
