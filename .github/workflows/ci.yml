@@ -34,12 +34,19 @@ jobs:
 
       - run: pnpm build
 
+      # `.next` is a dot-directory, and upload-artifact excludes hidden
+      # paths by default — without include-hidden-files the glob matches
+      # nothing. if-no-files-found: error makes that fail here, in the job
+      # that builds, instead of handing a green light to the e2e job that
+      # then dies on a missing artifact.
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: next-build
           path: .next
           retention-days: 1
+          include-hidden-files: true
+          if-no-files-found: error
 
   e2e:
     name: E2E — chromium smoke
