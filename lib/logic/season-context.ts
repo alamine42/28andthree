@@ -52,3 +52,26 @@ export function resolveSeasonContext(input: {
   }
   return { season: statsSeason, awaitingFirstGame: false, kickoffInDays: null };
 }
+
+/** The refresh cadence, stated once. The ETL runs Tuesday morning ET and
+ * loads whatever nflverse has published, so a week's stats appear the
+ * Tuesday after that week's last game (Monday night) is final.
+ * See .github/workflows/etl.yml. */
+export const WEEKLY_CADENCE_COPY =
+  "Each week's stats populate on Tuesday, once every game that week is final.";
+
+/** Copy for the awaitingFirstGame notice. Two states, two openers:
+ * - Preseason (kickoffInDays != null): no snap has been played.
+ * - Week 1 lag (kickoffInDays == null): games have been played but the
+ *   Tuesday ETL has not loaded them. Saying "haven't taken a snap" here is
+ *   simply false, which is what this split exists to prevent. */
+export function seasonNoticeCopy(ctx: {
+  season: number;
+  kickoffInDays: number | null;
+}): string {
+  const opener =
+    ctx.kickoffInDays != null
+      ? `The ${ctx.season} Patriots haven't taken a regular-season snap yet.`
+      : `No ${ctx.season} stats are loaded yet.`;
+  return `${opener} ${WEEKLY_CADENCE_COPY}`;
+}
