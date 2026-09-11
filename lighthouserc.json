@@ -4,7 +4,7 @@
       "url": [
         "http://localhost:3000/",
         "http://localhost:3000/phases/pass_offense",
-        "http://localhost:3000/players/qb/00-0039851"
+        "http://localhost:3000/players"
       ],
       "numberOfRuns": 3,
       "startServerCommand": "pnpm start",
