@@ -58,10 +58,11 @@ def _insert_synthetic_plays(
     week: int,
     pass_plays: list[float],
     rush_plays: list[float] | None = None,
+    scramble_plays: list[float] | None = None,
     redzone: bool = False,
     third_down: bool = False,
 ) -> None:
-    """Insert `len(pass_plays)` dropback plays + optional rush plays.
+    """Insert `len(pass_plays)` dropback plays + optional rush/scramble plays.
 
     Play_ids are derived from the next available id within the game so
     multiple invocations for the same game don't collide on the composite PK.
@@ -73,6 +74,10 @@ def _insert_synthetic_plays(
     plays and silently produce no rows.
     """
     rush_plays = rush_plays or []
+    # A scramble is the one play that is BOTH a dropback and a rush attempt.
+    # That overlap is the whole subject of patsbythenumbers-tbc, so the
+    # fixtures have to be able to express it.
+    scramble_plays = scramble_plays or []
     # Generated: is_redzone = yardline_100 <= 20, is_third_down = down = 3.
     yardline = 10 if redzone else 50
     down = 3 if third_down else 1
@@ -96,6 +101,13 @@ def _insert_synthetic_plays(
         rows.append((
             game_id, play_id, season, week, "REG", posteam, defteam,
             "run", epa, epa > 0, False, False, False, False, True,
+            yardline, down,
+        ))
+        play_id += 1
+    for epa in scramble_plays:
+        rows.append((
+            game_id, play_id, season, week, "REG", posteam, defteam,
+            "run", epa, epa > 0, True, False, False, False, True,
             yardline, down,
         ))
         play_id += 1
@@ -471,3 +483,92 @@ def test_offensive_rank_direction_is_unchanged(
     team_to_rank = {r["team"]: r["rank"] for r in rows}
     assert team_to_rank["NE"] == 1, "higher offensive EPA must still rank first"
     assert team_to_rank["PIT"] == 2
+
+
+# --- Scrambles are dropbacks, not rushes (patsbythenumbers-tbc) -------------
+#
+# A QB scramble carries rush_attempt = true AND qb_dropback = true. Before
+# 2026-09-12 the rush phases filtered on rush_attempt alone, so scrambles
+# landed in the rush bucket as well as the pass bucket. Scrambles average
+# roughly +0.5 EPA against roughly -0.06 for designed runs, so the blend
+# inflated rush offense and deflated run defense.
+#
+# Each of these fails if the predicate loses its `qb_dropback = false` clause.
+
+
+def test_scrambles_are_excluded_from_rush_offense(
+    db_conn: psycopg.Connection,
+) -> None:
+    _insert_game(db_conn, game_id="2025_01_NE_PIT", home="PIT", away="NE")
+    # 20 designed runs at -0.1, plus 10 scrambles at +1.0. If scrambles count,
+    # the mean is positive; designed runs alone keep it at -0.1.
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_NE_PIT", posteam="NE", defteam="PIT",
+        season=2025, week=1, pass_plays=[],
+        rush_plays=[-0.1] * 20, scramble_plays=[1.0] * 10,
+    )
+
+    recompute_weekly(db_conn, season=2025, weeks=[1])
+
+    rows = _fetch_phase_rows(db_conn, phase="rush_offense", season=2025, week=1)
+    ne = next(r for r in rows if r["team"] == "NE")
+    assert ne["plays"] == 20, "scrambles must not be counted as rushes"
+    assert ne["epa_per_play"] == pytest.approx(-0.1, abs=1e-6)
+
+
+def test_scrambles_are_excluded_from_run_defense(
+    db_conn: psycopg.Connection,
+) -> None:
+    _insert_game(db_conn, game_id="2025_01_NE_PIT", home="PIT", away="NE")
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_NE_PIT", posteam="PIT", defteam="NE",
+        season=2025, week=1, pass_plays=[],
+        rush_plays=[-0.1] * 20, scramble_plays=[1.0] * 10,
+    )
+
+    recompute_weekly(db_conn, season=2025, weeks=[1])
+
+    rows = _fetch_phase_rows(db_conn, phase="run_defense", season=2025, week=1)
+    ne = next(r for r in rows if r["team"] == "NE")
+    assert ne["plays"] == 20, "scrambles allowed must not count as runs allowed"
+    assert ne["epa_per_play"] == pytest.approx(-0.1, abs=1e-6)
+
+
+def test_scrambles_still_count_as_dropbacks(
+    db_conn: psycopg.Connection,
+) -> None:
+    # The other half of the contract: §2.1 puts scrambles in the pass bucket
+    # on purpose. Excluding them from rushes must not drop them entirely.
+    _insert_game(db_conn, game_id="2025_01_NE_PIT", home="PIT", away="NE")
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_NE_PIT", posteam="NE", defteam="PIT",
+        season=2025, week=1, pass_plays=[0.2] * 15, scramble_plays=[1.0] * 5,
+    )
+
+    recompute_weekly(db_conn, season=2025, weeks=[1])
+
+    rows = _fetch_phase_rows(db_conn, phase="pass_offense", season=2025, week=1)
+    ne = next(r for r in rows if r["team"] == "NE")
+    assert ne["plays"] == 20, "scrambles must still count as dropbacks"
+
+
+def test_scramble_is_counted_once_in_union_phases(
+    db_conn: psycopg.Connection,
+) -> None:
+    # `overall`, redzone, third-down and explosive all filter on
+    # (qb_dropback OR rush_attempt). That union already counted a scramble
+    # once, so this change must leave their play counts alone.
+    _insert_game(db_conn, game_id="2025_01_NE_PIT", home="PIT", away="NE")
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_NE_PIT", posteam="NE", defteam="PIT",
+        season=2025, week=1, pass_plays=[0.2] * 10,
+        rush_plays=[-0.1] * 10, scramble_plays=[1.0] * 5,
+        redzone=True, third_down=True,
+    )
+
+    recompute_weekly(db_conn, season=2025, weeks=[1])
+
+    for phase in ("redzone_offense", "third_down_offense", "explosive_offense"):
+        rows = _fetch_phase_rows(db_conn, phase=phase, season=2025, week=1)
+        ne = next(r for r in rows if r["team"] == "NE")
+        assert ne["plays"] == 25, f"{phase} must count the scramble exactly once"
