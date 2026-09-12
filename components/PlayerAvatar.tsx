@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { headshotAtWidth } from '@/lib/format/headshot';
 
 type Props = {
   displayName: string;
@@ -6,18 +7,24 @@ type Props = {
   size?: number;
 };
 
-// Player headshot or initials fallback. `next/image` handles format + sizing.
-// When headshot_url is null (never captured or HEAD-check failed during ETL)
-// we fall back to an initials bubble — no decorative fill, just token colors.
+// Player headshot or initials fallback. When headshot_url is null (never
+// captured or HEAD-check failed during ETL) we fall back to an initials
+// bubble — no decorative fill, just token colors.
 // Review finding #6: URL comes from nflreadpy roster data, not a hardcoded
 // club-logo pattern.
+//
+// `unoptimized` keeps these off Vercel's image optimizer. That is deliberate,
+// but it also means next/image does no resizing, so the source resolution is
+// whatever the CDN sends — ~1 MB per headshot, and /players renders a hundred
+// of them. headshotAtWidth asks the CDN for the size we actually paint at
+// (2x for retina), which is what keeps that page from weighing 58 MB.
 export function PlayerAvatar({ displayName, headshotUrl, size = 64 }: Props) {
   if (!headshotUrl) {
     return <InitialsBubble displayName={displayName} size={size} />;
   }
   return (
     <Image
-      src={headshotUrl}
+      src={headshotAtWidth(headshotUrl, size * 2)}
       alt={`${displayName} headshot`}
       width={size}
       height={size}
