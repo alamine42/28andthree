@@ -1,12 +1,17 @@
 import { expect, test } from '@playwright/test';
+import { seasonPath } from './helpers/season';
 
 // E3 epic smoke: home renders with data, phase detail routes work, toggle
 // flips state, unknown slug 404s. Kept focused — the no-bad-numbers spec
 // covers the exhaustive numeric-sanity crawl.
+//
+// The specs that assert on real numbers navigate with seasonPath() so they
+// read a completed season. The current season holds no rows until Week 1
+// loads, and these tests are not the place to discover that.
 
 test.describe('E3 smoke', () => {
   test('home renders hero stats + 11 phase cards with real data', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(seasonPath('/'));
 
     // Eyebrow + H1 render
     await expect(page.getByTestId('season-eyebrow')).toBeVisible();
@@ -30,21 +35,21 @@ test.describe('E3 smoke', () => {
   });
 
   test('phase detail shows rank card + trend chart + distribution plot', async ({ page }) => {
-    await page.goto('/phases/pass_offense');
+    await page.goto(seasonPath('/phases/pass_offense'));
     await expect(page.getByTestId('phase-rank-card')).toBeVisible();
     await expect(page.getByTestId('trend-chart')).toBeVisible();
     await expect(page.getByTestId('distribution-plot')).toBeVisible();
   });
 
   test('distribution plot has the Pats dot with data-team NE', async ({ page }) => {
-    await page.goto('/phases/pass_offense');
+    await page.goto(seasonPath('/phases/pass_offense'));
     const ne = page.locator('[data-testid="distribution-plot"] [data-team="NE"]');
     await expect(ne).toBeVisible();
     await expect(ne).toHaveAttribute('data-tier', /positive|neutral|negative/);
   });
 
   test('trend chart rolling/raw toggle updates aria-pressed state', async ({ page }) => {
-    await page.goto('/phases/pass_offense');
+    await page.goto(seasonPath('/phases/pass_offense'));
     const rolling = page.getByRole('button', { name: /rolling/i });
     await expect(rolling).toHaveAttribute('aria-pressed', 'true');
     await page.getByRole('button', { name: /raw/i }).click();
