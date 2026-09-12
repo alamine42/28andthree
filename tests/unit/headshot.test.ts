@@ -33,6 +33,21 @@ describe('lib/format/headshot — headshotAtWidth', () => {
     );
   });
 
+  it('should_add_width_to_a_private_delivery_url', () => {
+    assert.equal(
+      headshotAtWidth(
+        'https://static.www.nfl.com/image/private/f_auto,q_auto/league/cvtae9fiee1vgzac4b2b',
+        128,
+      ),
+      'https://static.www.nfl.com/image/private/f_auto,q_auto,w_128/league/cvtae9fiee1vgzac4b2b',
+    );
+  });
+
+  it('should_keep_a_private_delivery_url_that_already_has_a_width', () => {
+    const url = 'https://static.www.nfl.com/image/private/w_64,f_auto/league/abc';
+    assert.equal(headshotAtWidth(url, 128), url);
+  });
+
   it('should_pass_a_non_cloudinary_url_through_untouched', () => {
     const url = 'https://example.com/headshots/abc.png';
     assert.equal(headshotAtWidth(url, 128), url);
