@@ -283,8 +283,18 @@ def test_c11_latest_ok_run_wallclock_under_budget(loaded_db: psycopg.Connection)
     assert wall_seconds < 600, f"ok run for season {season} took {wall_seconds:.1f}s, budget 600s"
 
 
+RBSDM_RANK_TOLERANCE = 2  # see the header of golden_values.yml for why 2
+
+
 def test_c12_golden_values_match_stored_ranks(loaded_db: psycopg.Connection) -> None:
-    """E2-11a: externally-anchored NE ranks from rbsdm / Sumer Sports."""
+    """E2-11a: NE season ranks match the anchors in golden_values.yml.
+
+    Two checks per row. `expected_rank` must match exactly. When the row
+    carries `rbsdm_rank` (NE's rank on rbsdm.com, an external source), the
+    stored rank must sit within RBSDM_RANK_TOLERANCE of it. The second check
+    is what makes re-recording `expected_rank` from buggy output insufficient:
+    a rank inversion moves NE by 10-28 places and rbsdm does not move with it.
+    """
     path = Path(__file__).parent / "golden_values.yml"
     if not path.exists():
         pytest.skip("golden_values.yml not yet present")
@@ -316,6 +326,13 @@ def test_c12_golden_values_match_stored_ranks(loaded_db: psycopg.Connection) -> 
             failures.append(
                 f"{entry['team']} {entry['season']} {entry['phase']}: "
                 f"expected {entry['expected_rank']} got {actual}"
+            )
+        external = entry.get("rbsdm_rank")
+        if external is not None and abs(actual - external) > RBSDM_RANK_TOLERANCE:
+            failures.append(
+                f"{entry['team']} {entry['season']} {entry['phase']}: "
+                f"stored {actual} is more than {RBSDM_RANK_TOLERANCE} places "
+                f"from rbsdm {external} (recorded {entry.get('rbsdm_on')})"
             )
     assert not failures, "golden-value mismatches:\n  " + "\n  ".join(failures)
 

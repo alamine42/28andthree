@@ -1,92 +1,103 @@
 # Golden-value anchor fixture (E2-11a).
 #
 # Contract test #12 (etl/tests/test_contracts.py::test_c12_golden_values_match_stored_ranks)
-# reads this file after every ETL run and asserts that Pats season-end ranks
-# match the recorded values. Any drift flags an investigation.
+# reads this file after every ETL run and asserts two things per row:
 #
-# ─── Two levels of anchoring ─────────────────────────────────────────────────
-#   source=self : baseline captured from the first clean backfill (2026-04-19).
-#                 Catches aggregation-logic drift (filter changes, rank-tiebreak
-#                 tweaks, sample-size edits) that would move ranks from same
-#                 input data. Does NOT catch source-data drift (nflverse EPA
-#                 model shift, upstream schema reinterpretation).
-#   source=rbsdm / sumer : externally-computed rank from an independent source.
-#                 Upgrade entries to this level opportunistically — catches both
-#                 aggregation drift AND source-data drift.
+#   1. team_phase_season.rank == expected_rank      (exact)
+#   2. |team_phase_season.rank - rbsdm_rank| <= 2   (when rbsdm_rank is present)
 #
-# To upgrade a row: visit rbsdm.com/stats/stats/, filter to the season + NE +
-# phase, record the rank, and set source to the rbsdm URL + recorded_on date.
-# If the external rank differs from ours, investigate before overwriting.
+# ─── Three levels of anchoring ───────────────────────────────────────────────
+#   source=self
+#       Captured from our own ETL output. Catches nothing on its own: if the
+#       aggregation is wrong, the anchor is wrong the same way. This is how the
+#       inverted defensive ranks (bd patsbythenumbers-78e) lived from
+#       2026-04-19 to 2026-08-26, and how scrambles-as-rushes
+#       (bd patsbythenumbers-tbc) lived until 2026-09-12.
+#   source=nflverse-independent
+#       Reproduced by `etl/scripts/verify_anchors.py`, which reads the nflverse
+#       parquet release directly and shares no code with etl/. Catches
+#       aggregation drift and drift between our `plays` table and the current
+#       nflverse release. Does NOT catch an nflfastR EPA-model change (both
+#       sides would move together).
+#   rbsdm_rank
+#       NE's rank on rbsdm.com/stats/stats/ (Offense / Defense tabs, Dropback
+#       EPA and Rush EPA columns, regular season, all downs, all quarters,
+#       0% garbage-time filter). rbsdm runs the same nflfastR EPA model but
+#       its `pass`/`rush` flags keep penalty no_play rows that §1.2 excludes,
+#       so ranks land within one or two places of ours, never further. A
+#       78e-style inversion moves a rank by 10-28 places; tolerance 2 catches
+#       that and tolerates the known filter gap.
 #
-# ⚠ 2026-08-26: every defensive row below was WRONG from 2026-04-19 until now.
-# Defensive ranks were inverted league-wide (bd patsbythenumbers-78e) and these
-# anchors were captured from that buggy output, so they locked the bug in
-# rather than catching it. They have been re-recorded from the corrected
-# aggregation — but they are still source=self, i.e. still anchored to our own
-# arithmetic. Upgrading even ONE defensive row to source=rbsdm would have
-# surfaced this in April.
+# rbsdm publishes no team EPA differential, so the `overall` rows have no
+# rbsdm_rank. They are still nflverse-independent.
 #
-# 2022 pass_defense is now anchored to SumerSports (rank 3) and agrees with us.
-# That is ONE row. The remaining 11 defensive rows are still source=self —
-# finish the job (bd patsbythenumbers-0ab).
+# ─── How to re-verify ────────────────────────────────────────────────────────
+#   cd etl && uv run python -m etl.scripts.verify_anchors
 #
-# ⚠ 2026-09-12: all 12 rush_offense / run_defense rows below were re-recorded
-# after bd patsbythenumbers-tbc. Scrambles used to count as rushes, against
-# what docs/phase-definitions.md §2.2 has always said; the predicate is now
-# `rush_attempt = true AND qb_dropback = false` and prod was recomputed for
-# 2020–2025. The old numbers were not wrong arithmetic, they measured a
-# different population.
+# To re-record an rbsdm_rank: open rbsdm.com/stats/stats/, set Season Min and
+# Max to the season and Regular Week Max to 18 (17 for 2020), type the values
+# with the keyboard (programmatic form fill does not fire the Shiny events),
+# click Update, then sort the Dropback EPA / Rush EPA column on the Offense or
+# Defense tab. Record NE's position and the date in rbsdm_on.
 #
-# These 12 are source=self AGAIN. That is the exact shape of the April→August
-# failure noted above, so treat them as unverified until upgraded. They are
-# recorded because contract test #12 runs against prod after every ETL and
-# would otherwise fail on stale values — not because anyone confirmed them.
+# If verify_anchors.py disagrees with a row, the ETL aggregation drifted.
+# Investigate before overwriting. If rbsdm disagrees by more than 2, the same.
 #
-# Known open divergence, and the scramble fix did NOT explain it: Sumer ranks
-# NE's 2022 rush defense ~24th. We ranked it 7th before the fix and 9th after,
-# so removing scrambles moved us two places the wrong way. The hypothesis
-# recorded here previously — that counting scrambles as rushes explained the
-# gap — is now disproven. Cause unknown. See bd patsbythenumbers-0ab.
+# ─── History ─────────────────────────────────────────────────────────────────
+# 2026-04-19  First clean backfill; all rows source=self.
+# 2026-08-26  Defensive rows re-recorded after 78e (inverted ranks).
+# 2026-09-12  rush_offense / run_defense re-recorded after tbc (scrambles).
+# 2026-09-12  All 30 rows upgraded to nflverse-independent; 24 pass/rush rows
+#             got rbsdm_rank. 14 of 24 match rbsdm exactly, 9 differ by one
+#             place, 2022 run_defense differs by two (ours 9, rbsdm 11; NE is
+#             within 0.002 EPA of two neighbours). See bd patsbythenumbers-0ab.
+#
+# The earlier note that SumerSports ranked NE's 2022 run defense "~24th" was a
+# misread. Sumer's 2022 defensive table (read 2026-09-12) shows NE at -0.12
+# EPA/rush allowed, 3rd or 4th in the league. Sumer also moved its 2022 NE
+# EPA/pass from -0.11 to -0.14 between 2026-08-26 and 2026-09-12 — their model
+# is re-fit, so it is not a stable anchor. rbsdm is.
+
 
 entries:
   # --- 2020 ---
-  - { season: 2020, team: NE, phase: pass_offense,    expected_rank: 28, source: self, recorded_on: 2026-04-19 }
-  - { season: 2020, team: NE, phase: rush_offense,     expected_rank: 3,   source: self, recorded_on: 2026-09-12, note: 'recomputed-tbc — scrambles excluded' }
-  - { season: 2020, team: NE, phase: overall, expected_rank: 22, source: self, recorded_on: 2026-04-19 }
-  - { season: 2020, team: NE, phase: pass_defense,    expected_rank: 19, source: self, recorded_on: 2026-08-26, note: corrected-78e }
-  - { season: 2020, team: NE, phase: run_defense,     expected_rank: 29,  source: self, recorded_on: 2026-09-12, note: 'recomputed-tbc — scrambles excluded' }
+  - { season: 2020, team: NE, phase: pass_offense,  expected_rank: 28, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 27, rbsdm_on: 2026-09-12 }
+  - { season: 2020, team: NE, phase: rush_offense,  expected_rank:  3, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank:  3, rbsdm_on: 2026-09-12 }
+  - { season: 2020, team: NE, phase: overall,       expected_rank: 22, source: nflverse-independent, recorded_on: 2026-09-12 }
+  - { season: 2020, team: NE, phase: pass_defense,  expected_rank: 19, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 19, rbsdm_on: 2026-09-12 }
+  - { season: 2020, team: NE, phase: run_defense,   expected_rank: 29, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 29, rbsdm_on: 2026-09-12 }
 
   # --- 2021 ---
-  - { season: 2021, team: NE, phase: pass_offense,    expected_rank: 11, source: self, recorded_on: 2026-04-19 }
-  - { season: 2021, team: NE, phase: rush_offense,     expected_rank: 6,   source: self, recorded_on: 2026-09-12, note: 'recomputed-tbc — scrambles excluded' }
-  - { season: 2021, team: NE, phase: overall, expected_rank: 4, source: self, recorded_on: 2026-04-19 }
-  - { season: 2021, team: NE, phase: pass_defense,    expected_rank: 5,  source: self, recorded_on: 2026-08-26, note: corrected-78e }
-  - { season: 2021, team: NE, phase: run_defense,     expected_rank: 14,  source: self, recorded_on: 2026-09-12, note: 'recomputed-tbc — scrambles excluded' }
+  - { season: 2021, team: NE, phase: pass_offense,  expected_rank: 11, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 11, rbsdm_on: 2026-09-12 }
+  - { season: 2021, team: NE, phase: rush_offense,  expected_rank:  6, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank:  7, rbsdm_on: 2026-09-12 }
+  - { season: 2021, team: NE, phase: overall,       expected_rank:  4, source: nflverse-independent, recorded_on: 2026-09-12 }
+  - { season: 2021, team: NE, phase: pass_defense,  expected_rank:  5, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank:  4, rbsdm_on: 2026-09-12 }
+  - { season: 2021, team: NE, phase: run_defense,   expected_rank: 14, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 14, rbsdm_on: 2026-09-12 }
 
   # --- 2022 ---
-  - { season: 2022, team: NE, phase: pass_offense,    expected_rank: 23, source: self, recorded_on: 2026-04-19 }
-  - { season: 2022, team: NE, phase: rush_offense,     expected_rank: 21,  source: self, recorded_on: 2026-09-12, note: 'recomputed-tbc — scrambles excluded' }
-  - { season: 2022, team: NE, phase: overall, expected_rank: 9, source: self, recorded_on: 2026-04-19 }
-  - { season: 2022, team: NE, phase: pass_defense,    expected_rank: 3,  source: 'sumersports.com/teams/defensive/?season=2022', recorded_on: 2026-08-26, note: 'external anchor — Sumer EPA/Pass -0.11, rank 3; ours -0.089, rank 3' }
-  - { season: 2022, team: NE, phase: run_defense,     expected_rank: 9,   source: self, recorded_on: 2026-09-12, note: 'recomputed-tbc — scrambles excluded' }
+  - { season: 2022, team: NE, phase: pass_offense,  expected_rank: 23, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 22, rbsdm_on: 2026-09-12 }
+  - { season: 2022, team: NE, phase: rush_offense,  expected_rank: 21, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 21, rbsdm_on: 2026-09-12 }
+  - { season: 2022, team: NE, phase: overall,       expected_rank:  9, source: nflverse-independent, recorded_on: 2026-09-12 }
+  - { season: 2022, team: NE, phase: pass_defense,  expected_rank:  3, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank:  3, rbsdm_on: 2026-09-12 }
+  - { season: 2022, team: NE, phase: run_defense,   expected_rank:  9, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 11, rbsdm_on: 2026-09-12 }
 
   # --- 2023 ---
-  - { season: 2023, team: NE, phase: pass_offense,    expected_rank: 31, source: self, recorded_on: 2026-04-19 }
-  - { season: 2023, team: NE, phase: rush_offense,     expected_rank: 22,  source: self, recorded_on: 2026-09-12, note: 'recomputed-tbc — scrambles excluded' }
-  - { season: 2023, team: NE, phase: overall, expected_rank: 27, source: self, recorded_on: 2026-04-19 }
-  - { season: 2023, team: NE, phase: pass_defense,    expected_rank: 16, source: self, recorded_on: 2026-08-26, note: corrected-78e }
-  - { season: 2023, team: NE, phase: run_defense,     expected_rank: 2,   source: self, recorded_on: 2026-09-12, note: 'recomputed-tbc — scrambles excluded' }
+  - { season: 2023, team: NE, phase: pass_offense,  expected_rank: 31, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 31, rbsdm_on: 2026-09-12 }
+  - { season: 2023, team: NE, phase: rush_offense,  expected_rank: 22, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 22, rbsdm_on: 2026-09-12 }
+  - { season: 2023, team: NE, phase: overall,       expected_rank: 27, source: nflverse-independent, recorded_on: 2026-09-12 }
+  - { season: 2023, team: NE, phase: pass_defense,  expected_rank: 16, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 15, rbsdm_on: 2026-09-12 }
+  - { season: 2023, team: NE, phase: run_defense,   expected_rank:  2, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank:  2, rbsdm_on: 2026-09-12 }
 
   # --- 2024 ---
-  - { season: 2024, team: NE, phase: pass_offense,    expected_rank: 23, source: self, recorded_on: 2026-04-19 }
-  - { season: 2024, team: NE, phase: rush_offense,     expected_rank: 30,  source: self, recorded_on: 2026-09-12, note: 'recomputed-tbc — scrambles excluded' }
-  - { season: 2024, team: NE, phase: overall, expected_rank: 27, source: self, recorded_on: 2026-04-19 }
-  - { season: 2024, team: NE, phase: pass_defense,    expected_rank: 29, source: self, recorded_on: 2026-08-26, note: corrected-78e }
-  - { season: 2024, team: NE, phase: run_defense,     expected_rank: 22,  source: self, recorded_on: 2026-09-12, note: 'recomputed-tbc — scrambles excluded' }
+  - { season: 2024, team: NE, phase: pass_offense,  expected_rank: 23, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 23, rbsdm_on: 2026-09-12 }
+  - { season: 2024, team: NE, phase: rush_offense,  expected_rank: 30, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 30, rbsdm_on: 2026-09-12 }
+  - { season: 2024, team: NE, phase: overall,       expected_rank: 27, source: nflverse-independent, recorded_on: 2026-09-12 }
+  - { season: 2024, team: NE, phase: pass_defense,  expected_rank: 29, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 30, rbsdm_on: 2026-09-12 }
+  - { season: 2024, team: NE, phase: run_defense,   expected_rank: 22, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 21, rbsdm_on: 2026-09-12 }
 
   # --- 2025 ---
-  - { season: 2025, team: NE, phase: pass_offense,    expected_rank: 1,  source: self, recorded_on: 2026-04-19 }
-  - { season: 2025, team: NE, phase: rush_offense,     expected_rank: 24,  source: self, recorded_on: 2026-09-12, note: 'recomputed-tbc — scrambles excluded' }
-  - { season: 2025, team: NE, phase: overall, expected_rank: 2,  source: self, recorded_on: 2026-04-19 }
-  - { season: 2025, team: NE, phase: pass_defense,    expected_rank: 11, source: self, recorded_on: 2026-08-26, note: corrected-78e }
-  - { season: 2025, team: NE, phase: run_defense,     expected_rank: 16,  source: self, recorded_on: 2026-09-12, note: 'recomputed-tbc — scrambles excluded' }
+  - { season: 2025, team: NE, phase: pass_offense,  expected_rank:  1, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank:  1, rbsdm_on: 2026-09-12 }
+  - { season: 2025, team: NE, phase: rush_offense,  expected_rank: 24, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 25, rbsdm_on: 2026-09-12 }
+  - { season: 2025, team: NE, phase: overall,       expected_rank:  2, source: nflverse-independent, recorded_on: 2026-09-12 }
+  - { season: 2025, team: NE, phase: pass_defense,  expected_rank: 11, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 10, rbsdm_on: 2026-09-12 }
+  - { season: 2025, team: NE, phase: run_defense,   expected_rank: 16, source: nflverse-independent, recorded_on: 2026-09-12, rbsdm_rank: 16, rbsdm_on: 2026-09-12 }

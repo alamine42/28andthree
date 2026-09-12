@@ -357,7 +357,27 @@ See `schema-changes` above for the full flow. TL;DR:
 6. Nuclear option: Neon PITR (Point-in-Time Restore) to just-before the bad ETL run. See `etl-rollback` section.
 7. Post a retraction: edit the methodology page with a one-line note dating the bad publish window and the correction. Quiet transparency > silent fix.
 
-**Prevention:** `etl/tests/test_contracts.py` golden values (contract test #12) is the primary guardrail. Anchor new golden values after any meaningful data-shape change.
+**Prevention:** `etl/tests/test_contracts.py` golden values (contract test #12) is the primary guardrail. Anchor new golden values after any meaningful data-shape change — see `verifying-anchors` below for how to anchor them to something other than our own output.
+
+## verifying-anchors
+
+`etl/tests/golden_values.yml` pins NE's season-end rank for five phases across 2020–2025. Contract test #12 compares prod against it after every ETL run. The file header explains the three anchor levels; the short version is that a value copied from our own output proves nothing (that is how `78e` and `tbc` each lived for months), so every row must be checked against something we did not compute.
+
+**After any change to `etl/transform/phases.py` or `docs/phase-definitions.md`:**
+
+1. Recompute prod (`etl.scripts.recompute_phase_ranks`) and re-record `expected_rank` where it moved.
+2. Run the independent check. It reads the nflverse parquet straight from GitHub and shares no code with `etl/`:
+   ```bash
+   cd etl && uv run python -m etl.scripts.verify_anchors        # ~5 s once the parquet is cached
+   ```
+   Any `DIFF` line means our aggregation and the raw data disagree. Do not re-record; investigate.
+3. If a phase's *filter* changed (not only its numbers), re-record `rbsdm_rank` for the affected rows. Open [rbsdm.com/stats/stats/](https://rbsdm.com/stats/stats/), set Season Min/Max and Regular Week Max (18, or 17 for 2020), type the values — Shiny ignores programmatic form fill — click **Update**, then read the Dropback EPA / Rush EPA column on the Offense or Defense tab. Sort ascending for defense. rbsdm keeps penalty `no_play` rows that §1.2 excludes, so expect NE within one or two places of ours. Contract test #12 fails past two.
+4. Run contract test #12 against prod:
+   ```bash
+   cd etl && TEST_DATABASE_URL="$ETL_DATABASE_URL" PYTHONPATH=.. uv run pytest tests/test_contracts.py -k c12
+   ```
+
+**Do not** anchor to SumerSports. They re-fit their own EPA model; NE's 2022 EPA/pass allowed moved from −0.11 to −0.14 between 2026-08-26 and 2026-09-12 with no data change on our side.
 
 ## dns-issue
 
