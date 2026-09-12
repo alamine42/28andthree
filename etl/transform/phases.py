@@ -67,8 +67,8 @@ class PhaseFilter:
 # and the growing share meant the distortion drifted season over season —
 # straight through /trends, the page built to compare seasons.
 #
-# See bd patsbythenumbers-tbc. Kneels are a separate open contaminant
-# (patsbythenumbers-h38).
+# See bd patsbythenumbers-tbc. Kneels, spikes and two-point plays are already
+# out via GARBAGE_PLAY_PREDICATE below.
 RUSH = "rush_attempt = true AND qb_dropback = false"
 
 PHASE_FILTERS: dict[str, PhaseFilter] = {

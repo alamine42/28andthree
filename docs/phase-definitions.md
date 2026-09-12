@@ -72,8 +72,6 @@ to +0.54 EPA against −0.06 to −0.10 for designed runs, at 6.2% of rushes in
 2020 rising to 7.5% in 2025 — so the blend both inflated rush offense and
 drifted season over season. See `bd patsbythenumbers-tbc`.
 
-Kneels (`qb_kneel = true`) are still counted here, roughly 450 a season. That
-is a separate open question: `bd patsbythenumbers-h38`.
 
 ### 2.3 `overall` — metric: team EPA differential (SPEC §3.2 #12)
 
