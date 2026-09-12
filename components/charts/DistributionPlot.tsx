@@ -44,7 +44,7 @@ export function DistributionPlot({ rows, highlightTeam, phaseLabel }: Props) {
       className="w-full"
       data-testid="distribution-plot"
     >
-      <title>{phaseLabel} — league distribution</title>
+      <title>{`${phaseLabel} — league distribution`}</title>
 
       <g transform={`translate(${MARGIN.left}, ${MARGIN.top})`}>
         {/* Horizontal axis */}

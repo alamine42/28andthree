@@ -14,6 +14,9 @@ export default [
       'playwright-report/**',
       'test-results/**',
       '.vercel/**',
+      // Worktrees hold full untracked repo copies with their own node_modules.
+      // Without this, `pnpm lint` reports ~20k errors, none in project code.
+      '.claude/**',
       'next-env.d.ts',
       '*.config.js',
       '*.config.mjs',

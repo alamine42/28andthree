@@ -71,7 +71,7 @@ export function TrendChart({ points, phaseLabel }: Props) {
         viewBox={`0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`}
         className="w-full"
       >
-        <title>{phaseLabel} trend</title>
+        <title>{`${phaseLabel} trend`}</title>
 
         {/* Y-axis gridlines + labels */}
         <g transform={`translate(${MARGIN.left}, ${MARGIN.top})`}>
