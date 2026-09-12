@@ -1,4 +1,5 @@
 import { devices, expect, test } from '@playwright/test';
+import { NAV_LINKS } from '../../lib/constants/nav';
 
 // E6-05c: mobile pass for the remaining public + internal routes —
 // /draft-roi, /coaching, /methodology, /status. Gates: no horizontal scroll
@@ -84,9 +85,10 @@ test('nav drawer opens, lists primary links, closes on Escape', async ({
   await toggle.click();
   await expect(panel).toBeVisible();
 
-  // Drawer contains all five primary links.
+  // Drawer lists every primary nav link. Counted from the shared
+  // constant so adding a link cannot silently break this.
   const links = panel.getByRole('link');
-  await expect(links).toHaveCount(5);
+  await expect(links).toHaveCount(NAV_LINKS.length);
 
   // Escape closes the drawer per existing SiteHeader behavior.
   await page.keyboard.press('Escape');
