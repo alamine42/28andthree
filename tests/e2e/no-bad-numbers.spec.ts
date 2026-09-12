@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { PHASES } from '../../lib/constants/phases';
+import { seasonPath } from './helpers/season';
 
 // Crawls every user-facing route and asserts no rendered element with
 // data-numeric="true" contains a bad-number string (NaN, null, undefined,
@@ -47,8 +48,11 @@ test.describe('no-bad-numbers crawler', () => {
     expect(count).toBeGreaterThanOrEqual(12);
   });
 
+  // The crawl above deliberately stays on the current season: an
+  // awaiting-data shell is exactly where a bad number would surface. This
+  // one counts rendered metrics, so it needs a season that has them.
   test('phase detail page has at least 3 numeric elements (rank + EPA + success)', async ({ page }) => {
-    await page.goto('/phases/pass_offense');
+    await page.goto(seasonPath('/phases/pass_offense'));
     const count = await page.locator('[data-numeric="true"]').count();
     expect(count).toBeGreaterThanOrEqual(3);
   });

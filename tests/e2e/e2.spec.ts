@@ -13,13 +13,23 @@ test.describe('E2 smoke', () => {
     expect(errors).toEqual([]);
   });
 
-  test('/status shows row counts grid once ETL has loaded data', async ({ page }) => {
+  test('/status renders every row count as a formatted number', async ({ page }) => {
     await page.goto('/status');
     const rowCounts = page.getByTestId('row-counts');
     // Only asserts presence when data has loaded — lets the test pass in a
     // pristine env without gating on the ETL having run.
-    if (await rowCounts.isVisible()) {
-      await expect(rowCounts).toContainText(/plays/);
+    if (!(await rowCounts.isVisible())) return;
+
+    // The grid mirrors the latest etl_runs row, and a heartbeat run records
+    // only {heartbeat: 1}. Asserting a specific table ("plays") assumed the
+    // last run was a full ingest, so this went red for every week the
+    // freshness gate short-circuited. Assert the render contract instead:
+    // at least one count, each a formatted integer.
+    const values = rowCounts.locator('dl > div > span:last-child');
+    const count = await values.count();
+    expect(count).toBeGreaterThan(0);
+    for (let i = 0; i < count; i++) {
+      expect((await values.nth(i).textContent())?.trim() ?? '').toMatch(/^\d{1,3}(,\d{3})*$/);
     }
   });
 
