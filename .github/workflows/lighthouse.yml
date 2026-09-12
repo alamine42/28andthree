@@ -27,10 +27,31 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Without a database the audited pages are 404s, not pages. Phase and
+      # player routes call notFound() when their query returns nothing
+      # (components/pages/PhaseDetailPage.tsx), and generateStaticParams
+      # prerenders them, so the 404 is baked into the build output and
+      # Lighthouse aborts the whole run with ERRORED_DOCUMENT_REQUEST.
+      # Fail here with a readable message instead of there with a 404.
+      - name: Require DATABASE_URL
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL secret is not set. Lighthouse audits a production build, and the phase/player URLs in lighthouserc.json render as 404 without data. Add a read-only (app_read) connection string as the DATABASE_URL repo secret — see docs/runbook.md#db-roles."
+            exit 1
+          fi
+
+      # DATABASE_URL is needed at BUILD time, not just at serve time: the
+      # phase pages are prerendered by generateStaticParams, so whatever the
+      # build sees is what `pnpm start` serves back to Lighthouse.
       - name: Build production bundle
         run: pnpm build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Run Lighthouse CI
         run: pnpm exec lhci autorun
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
