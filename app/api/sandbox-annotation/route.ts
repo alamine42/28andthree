@@ -19,6 +19,10 @@ const AnnotationSchema = z.object({
   selector: z.string().min(1).max(500),
   note: z.string().min(1).max(2000),
   priority: z.number().int().min(0).max(4).default(2),
+  // Smoke tests set this to prove the gate + validation are wired
+  // without filing a real issue. Six "[sandbox] / — [data-test=noop]"
+  // tasks reached the tracker before this existed.
+  dryRun: z.boolean().default(false),
 });
 
 export async function POST(req: Request) {
@@ -41,9 +45,13 @@ export async function POST(req: Request) {
     );
   }
 
-  const { page, selector, note, priority } = parsed.data;
+  const { page, selector, note, priority, dryRun } = parsed.data;
   const title = `[sandbox] ${page} — ${selector}`.slice(0, 180);
   const description = `Auto-filed from the sandbox Agentation toolbar.\n\nPage: ${page}\nSelector: ${selector}\n\nNote:\n${note}`;
+
+  if (dryRun) {
+    return NextResponse.json({ ok: true, dryRun: true, taskId: null, title });
+  }
 
   try {
     const { stdout } = await run(
@@ -57,8 +65,9 @@ export async function POST(req: Request) {
       ],
       { timeout: 10_000, maxBuffer: 512_000 },
     );
-    // Probe the returned issue id (bd prints `bd-XXXX`).
-    const match = stdout.match(/bd-\d+/);
+    // Probe the returned issue id (bd prints `<prefix>-<id>`, e.g.
+    // `patsbythenumbers-rml`; older builds printed `bd-1234`).
+    const match = stdout.match(/\b[a-z0-9]+-[a-z0-9]{3,}\b/i);
     const taskId = match?.[0] ?? null;
     return NextResponse.json({ ok: true, taskId, raw: stdout });
   } catch (err) {

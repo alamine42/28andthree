@@ -46,7 +46,9 @@ Three layers, belt + suspenders + CI sentinel:
 
 ## Agentation bridge
 
-Sandbox ships with a floating **Agentation** toolbar (bottom-right). Click an element to focus it, add a note, hit **File annotation**. The client posts to `/api/sandbox-annotation`, which calls `bd create` with the selector + note and returns the new `bd-XXXX` task id.
+Sandbox ships with a floating **Agentation** toolbar (bottom-right). Click an element to focus it, add a note, hit **File annotation**. The client posts to `/api/sandbox-annotation`, which calls `bd create` with the selector + note and returns the new task id.
+
+Send `dryRun: true` in the body to exercise the gate and validation without filing anything. The sandbox smoke spec does this; before it did, every run left a `[sandbox] / — [data-test="noop"]` task in the tracker.
 
 Security on the bridge:
 - Route returns 403 unless `SANDBOX_ACTIVE` is true.

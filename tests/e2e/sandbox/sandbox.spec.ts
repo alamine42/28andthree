@@ -48,12 +48,14 @@ test.describe('sandbox smoke', () => {
         selector: '[data-test="noop"]',
         note: 'sandbox e2e smoke',
         priority: 2,
+        // Never file a real issue from a test run. A 403 would mean the
+        // gate failed, a 400 that validation broke — those are the
+        // failures this guards against. dryRun skips `bd create`.
+        dryRun: true,
       },
     });
-    // The route returns 200 with taskId, OR 500 if bd isn't on PATH in
-    // CI — both confirm the route is wired. A 403 would mean the gate
-    // failed and is the real failure we're guarding against.
-    expect([200, 500]).toContain(res.status());
+    expect(res.status()).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, dryRun: true, taskId: null });
   });
 
   test('agentation bridge rejects a malformed body', async ({ request }) => {
