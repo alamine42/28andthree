@@ -51,15 +51,35 @@ class PhaseFilter:
     rank_direction: RankDirection = "desc"
 
 
+# Designed runs only. A QB scramble carries rush_attempt = true AND
+# qb_dropback = true in nflverse, so a bare `rush_attempt = true` puts it in
+# the rush bucket as well as the pass bucket.
+#
+# docs/phase-definitions.md §2.2 always said scrambles do not belong here
+# ("they're dropbacks, not rushes"), but its own SQL block read
+# `rush_attempt = true` and the code followed the SQL. §2.1 puts scrambles in
+# the dropback bucket deliberately, citing the nflfastR/rbsdm convention.
+#
+# The two populations are not close. Measured on prod across 2020-2025,
+# scrambles average +0.47 to +0.54 EPA against -0.06 to -0.10 for designed
+# runs, at 6.2% of rushes in 2020 rising to 7.5% in 2025. Blending them let a
+# team rank well at "rushing" because its quarterback escaped pressure well,
+# and the growing share meant the distortion drifted season over season —
+# straight through /trends, the page built to compare seasons.
+#
+# See bd patsbythenumbers-tbc. Kneels are a separate open contaminant
+# (patsbythenumbers-h38).
+RUSH = "rush_attempt = true AND qb_dropback = false"
+
 PHASE_FILTERS: dict[str, PhaseFilter] = {
     "pass_offense":        PhaseFilter("qb_dropback = true", "posteam", "epa", "desc"),
-    "rush_offense":        PhaseFilter("rush_attempt = true", "posteam", "epa", "desc"),
+    "rush_offense":        PhaseFilter(RUSH, "posteam", "epa", "desc"),
     # `overall` (E3-16): team EPA differential. predicate scopes the plays that
     # count toward either side; group_by is unused (built differently). Higher
     # differential is genuinely better, so this one stays 'desc'.
     "overall":             PhaseFilter("(qb_dropback = true OR rush_attempt = true)", "posteam", "differential", "desc"),
     "pass_defense":        PhaseFilter("qb_dropback = true", "defteam", "epa", "asc"),
-    "run_defense":         PhaseFilter("rush_attempt = true", "defteam", "epa", "asc"),
+    "run_defense":         PhaseFilter(RUSH, "defteam", "epa", "asc"),
     "redzone_offense":     PhaseFilter("(qb_dropback = true OR rush_attempt = true) AND is_redzone = true", "posteam", "epa", "desc"),
     "redzone_defense":     PhaseFilter("(qb_dropback = true OR rush_attempt = true) AND is_redzone = true", "defteam", "epa", "asc"),
     "third_down_offense":  PhaseFilter("(qb_dropback = true OR rush_attempt = true) AND is_third_down = true", "posteam", "epa", "desc"),

@@ -57,11 +57,23 @@ Includes sacks and scrambles (nflverse `qb_dropback` is true for all three). Thi
 ### 2.2 `rush_offense` — metric: EPA/rush
 
 ```sql
-rush_attempt = true
+rush_attempt = true AND qb_dropback = false
 GROUP BY posteam
 ```
 
 Includes QB-designed runs. Excludes scrambles (they're dropbacks, not rushes).
+
+A scramble carries `rush_attempt = true` **and** `qb_dropback = true` in
+nflverse, so the `qb_dropback = false` clause is what enforces the sentence
+above. Until 2026-09-12 this block read `rush_attempt = true` on its own and
+the code followed the SQL, so scrambles were counted here as well as in §2.1.
+The two populations are far apart — across 2020–2025 scrambles average +0.47
+to +0.54 EPA against −0.06 to −0.10 for designed runs, at 6.2% of rushes in
+2020 rising to 7.5% in 2025 — so the blend both inflated rush offense and
+drifted season over season. See `bd patsbythenumbers-tbc`.
+
+Kneels (`qb_kneel = true`) are still counted here, roughly 450 a season. That
+is a separate open question: `bd patsbythenumbers-h38`.
 
 ### 2.3 `overall` — metric: team EPA differential (SPEC §3.2 #12)
 
@@ -105,9 +117,12 @@ Same filter as 2.1, but grouping the other side of the ball.
 ### 2.5 `run_defense` — metric: EPA/rush allowed
 
 ```sql
-rush_attempt = true
+rush_attempt = true AND qb_dropback = false
 GROUP BY defteam
 ```
+
+Mirrors §2.2: designed runs only. Scrambles allowed belong to §2.4
+`pass_defense`, which is grouped on the same `qb_dropback` population.
 
 ### 2.6 `redzone_offense` — metric: EPA/play inside the 20
 
