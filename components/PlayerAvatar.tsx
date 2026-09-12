@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { headshotAtWidth } from '@/lib/format/headshot';
 
 type Props = {
   displayName: string;
@@ -6,7 +7,10 @@ type Props = {
   size?: number;
 };
 
-// Player headshot or initials fallback. `next/image` handles format + sizing.
+// Player headshot or initials fallback. `next/image` runs unoptimized — no
+// `images.remotePatterns` is configured and Vercel optimization would cost
+// money — so we ask the NFL CDN for the right size ourselves. 2x the rendered
+// box covers retina screens.
 // When headshot_url is null (never captured or HEAD-check failed during ETL)
 // we fall back to an initials bubble — no decorative fill, just token colors.
 // Review finding #6: URL comes from nflreadpy roster data, not a hardcoded
@@ -17,7 +21,7 @@ export function PlayerAvatar({ displayName, headshotUrl, size = 64 }: Props) {
   }
   return (
     <Image
-      src={headshotUrl}
+      src={headshotAtWidth(headshotUrl, size * 2)}
       alt={`${displayName} headshot`}
       width={size}
       height={size}
