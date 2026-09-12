@@ -215,7 +215,20 @@ A: The raw-average approach already weights by usage — a team with 50 dropback
 
 ---
 
-## 4. Versioning
+## 4. Unit rollups that reuse phase populations
+
+`etl/transform/unit_rollups.py` feeds the team unit pages, not the phase pages, so §2 does not govern it directly. Where a unit metric slices the same play population as a phase, it uses the same predicate:
+
+| Metric | Tables | Population | Mirrors |
+|---|---|---|---|
+| `coverage_epa_allowed`, `pressure_rate`, `pass_rush_win_rate`, `sack_rate` | `team_defense_*`, `team_dl_*` | `qb_dropback = true` | §2.4 |
+| `run_stop_rate` | `team_defense_*`, `team_dl_*` | `rush_attempt = true AND qb_dropback = false` | §2.5 |
+
+`run_stop_rate` counted scrambles as runs until 2026-09-12. A scramble is a dropback that already sits in the coverage bucket, and scrambles rarely gain two yards or fewer, so the blend understated NE by 1.0 to 2.4 points every season. See `bd patsbythenumbers-4zm`.
+
+---
+
+## 5. Versioning
 
 Any change to these filters is a **contract change**. Procedure:
 

@@ -10,6 +10,14 @@ from __future__ import annotations
 import psycopg
 from psycopg import sql
 
+# Designed runs only. A scramble carries rush_attempt = true AND qb_dropback
+# = true; it already lands in coverage_epa_allowed / pass_rush_win_rate via
+# the qb_dropback filter, and scrambles rarely gain 2 yards or fewer, so
+# counting them here understated NE's run stop rate by 1.0-2.4 points every
+# season 2020-2025. Same population as docs/phase-definitions.md §2.2 / §2.5.
+# See bd patsbythenumbers-4zm and docs/phase-definitions.md §4.
+_DESIGNED_RUN = sql.SQL("(rush_attempt = true AND qb_dropback = false)")
+
 _GARBAGE_FILTER = sql.SQL(
     """
     season_type = 'REG'
@@ -60,7 +68,7 @@ _DEFENSE_WEEKLY_SQL = sql.SQL(
                ELSE 0.0 END) FILTER (WHERE qb_dropback = true)::float8 AS pressure_rate,
       AVG(epa) FILTER (WHERE qb_dropback = true)::float8 AS coverage_epa_allowed,
       AVG(CASE WHEN yards_gained <= 2 THEN 1.0 ELSE 0.0 END)
-        FILTER (WHERE rush_attempt = true)::float8 AS run_stop_rate,
+        FILTER (WHERE {designed_run})::float8 AS run_stop_rate,
       COUNT(*) FILTER (
         WHERE coalesce(is_explosive_pass, false) OR coalesce(is_explosive_run, false)
       )::smallint AS explosive_plays_allowed,
@@ -69,7 +77,7 @@ _DEFENSE_WEEKLY_SQL = sql.SQL(
     WHERE season = %(season)s AND {garbage} AND defteam IS NOT NULL
     GROUP BY defteam, season, week
     """
-).format(garbage=_GARBAGE_FILTER)
+).format(garbage=_GARBAGE_FILTER, designed_run=_DESIGNED_RUN)
 
 _DEFENSE_SEASON_SQL = sql.SQL(
     """
@@ -142,7 +150,7 @@ _DL_WEEKLY_SQL = sql.SQL(
                WHEN was_pressure IS NULL THEN NULL
                ELSE 0.0 END) FILTER (WHERE qb_dropback = true)::float8 AS pass_rush_win_rate,
       AVG(CASE WHEN yards_gained <= 2 THEN 1.0 ELSE 0.0 END)
-        FILTER (WHERE rush_attempt = true)::float8 AS run_stop_rate,
+        FILTER (WHERE {designed_run})::float8 AS run_stop_rate,
       (COUNT(*) FILTER (WHERE sack = true)::float8
         / NULLIF(COUNT(*) FILTER (WHERE qb_dropback = true), 0))::float8 AS sack_rate,
       now()
@@ -150,7 +158,7 @@ _DL_WEEKLY_SQL = sql.SQL(
     WHERE season = %(season)s AND {garbage} AND defteam IS NOT NULL
     GROUP BY defteam, season, week
     """
-).format(garbage=_GARBAGE_FILTER)
+).format(garbage=_GARBAGE_FILTER, designed_run=_DESIGNED_RUN)
 
 _DL_SEASON_SQL = sql.SQL(
     """
