@@ -28,6 +28,7 @@ const SANDBOX_ALIAS_KEYS = [
   '@/lib/sandbox/stubs/current-season',
   '@/lib/sandbox/stubs/contributors',
   '@/lib/sandbox/stubs/schedule',
+  '@/lib/sandbox/season-state',
 ];
 const turbopackAliasMap: Record<string, string> = SANDBOX_ON
   ? {}

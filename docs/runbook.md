@@ -522,6 +522,16 @@ If the `ScheduleSnapshot` shape changes:
 3. Run both test suites (`pnpm test` + `cd etl && uv run pytest tests/test_schedule.py`); they must agree byte-for-byte on every case.
 4. Touch the consumers (eyebrow / footer / freshness gate) — typecheck flags the contract mismatch.
 
+## e2e-seasons
+
+The data-dependent smoke specs (`e2`, `e3`, `e4`, `no-bad-numbers`) assert on real numbers, and a season has no rows until the first Tuesday ETL of the year loads Week 1. `tests/e2e/helpers/season.ts` therefore pins them to a completed season, 2025 by default. Override with `E2E_DATA_SEASON` when the target database does not hold 2025. The `no-bad-numbers` crawl deliberately stays on the current season, because the awaiting-data shell is where a bad number would surface.
+
+The awaiting-data shell itself has a positive assertion in the sandbox suite: `tests/e2e/sandbox/awaiting-data.spec.ts` sends the `x-sandbox-season-state: awaiting` header, which every data stub honours (`lib/sandbox/season-state.ts`). Run it with the rest of the sandbox specs:
+
+```bash
+pnpm playwright test -c playwright.sandbox.config.ts
+```
+
 ## season-rollover-cache
 
 E11 serves historical seasons from the internal ISR tree `/s/[season]/...`

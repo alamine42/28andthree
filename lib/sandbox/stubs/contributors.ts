@@ -5,6 +5,7 @@
 
 import type { ContributorCard } from '@/lib/data/contributors';
 import type { Phase } from '@/lib/constants/phases';
+import { isAwaiting } from '../season-state';
 
 const QB: ContributorCard = {
   gsisId: '00-2024-MAYE',
@@ -148,6 +149,7 @@ export async function getTopContributors(
   _season: number,
   limit = 3,
 ): Promise<ContributorCard[]> {
+  if (await isAwaiting()) return [];
   switch (phase) {
     case 'pass_offense':
     case 'third_down_offense':
