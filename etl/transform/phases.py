@@ -251,6 +251,12 @@ def _build_differential_sql(
     Both sides use the same predicate (typically offensive + defensive plays
     counted identically). success_rate is NULL for `overall` rows — a single
     success-rate figure across both sides of the ball isn't a real stat.
+
+    A team with rows on one side only (partial ingest, one-sided week filter)
+    gets a NULL differential and insufficient_sample = true. Coalescing the
+    missing side to 0.0 produced a confidently wrong number that still
+    cleared the sample floor. Cannot happen on complete data: every game
+    produces both a posteam and a defteam row.
     """
     parts = _granularity_parts(granularity, weeks_filter)
     predicate = sql.SQL(filt.predicate)
@@ -287,7 +293,12 @@ def _build_differential_sql(
                    COALESCE(off.season, def.season) AS season
                    {rollups_week_col},
                    COALESCE(off.off_plays, 0) + COALESCE(def.def_plays, 0) AS plays,
-                   (COALESCE(off.off_epa, 0) - COALESCE(def.def_epa, 0))::double precision AS epa_per_play,
+                   -- A side with no rows is unknown, not 0.0 EPA. Emit NULL so
+                   -- the row is flagged insufficient_sample and never ranked
+                   -- against teams with both sides (bd patsbythenumbers-bfk).
+                   CASE WHEN off.off_epa IS NULL OR def.def_epa IS NULL THEN NULL
+                        ELSE (off.off_epa - def.def_epa)::double precision
+                   END AS epa_per_play,
                    NULL::double precision AS success_rate
             FROM off
             FULL OUTER JOIN def USING (team, season{week_using})
@@ -326,7 +337,9 @@ def _insert_tail(
         """
         ,
         flagged AS (
-            SELECT *, (plays < {threshold}) AS insufficient_sample
+            -- A NULL metric can never rank, whatever the play count says.
+            -- Today only `overall` emits one (a one-sided differential).
+            SELECT *, (plays < {threshold} OR epa_per_play IS NULL) AS insufficient_sample
             FROM rollups
         ),
         ranked AS (

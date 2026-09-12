@@ -572,3 +572,37 @@ def test_scramble_is_counted_once_in_union_phases(
         rows = _fetch_phase_rows(db_conn, phase=phase, season=2025, week=1)
         ne = next(r for r in rows if r["team"] == "NE")
         assert ne["plays"] == 25, f"{phase} must count the scramble exactly once"
+
+
+def test_one_sided_overall_differential_is_null_not_zero(
+    db_conn: psycopg.Connection,
+) -> None:
+    # bd patsbythenumbers-bfk: a team with rows on one side only used to get
+    # COALESCE(missing, 0), i.e. a confidently wrong differential that still
+    # cleared the sample floor and ranked. Cannot happen on complete data;
+    # can happen on a partial ingest. Here NE only ever has the ball and PIT
+    # only ever defends, while MIA and NYJ have both sides.
+    _insert_game(db_conn, game_id="2025_01_NE_PIT", home="PIT", away="NE")
+    _insert_game(db_conn, game_id="2025_01_MIA_NYJ", home="NYJ", away="MIA")
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_NE_PIT", posteam="NE", defteam="PIT",
+        season=2025, week=1, pass_plays=[0.5] * 30,
+    )
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_MIA_NYJ", posteam="MIA", defteam="NYJ",
+        season=2025, week=1, pass_plays=[0.2] * 20,
+    )
+    _insert_synthetic_plays(
+        db_conn, game_id="2025_01_MIA_NYJ", posteam="NYJ", defteam="MIA",
+        season=2025, week=1, pass_plays=[-0.1] * 20,
+    )
+
+    recompute_weekly(db_conn, season=2025, weeks=[1])
+
+    rows = {r["team"]: r for r in _fetch_phase_rows(db_conn, phase="overall", season=2025, week=1)}
+    for team in ("NE", "PIT"):
+        assert rows[team]["epa_per_play"] is None, f"{team} one-sided differential must be NULL"
+        assert rows[team]["insufficient_sample"] is True
+        assert rows[team]["rank"] is None
+    assert rows["MIA"]["rank"] == 1 and rows["NYJ"]["rank"] == 2
+    assert rows["MIA"]["epa_per_play"] == pytest.approx(0.3, abs=1e-6)

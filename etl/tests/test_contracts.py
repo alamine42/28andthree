@@ -303,6 +303,10 @@ def test_c12_golden_values_match_stored_ranks(loaded_db: psycopg.Connection) -> 
     if not entries:
         pytest.skip("golden_values.yml has no entries")
 
+    row = _fetchone(loaded_db, "SELECT count(*) FROM team_phase_season")
+    if row is None or row[0] == 0:
+        pytest.skip("team_phase_season is empty — anchors only mean something against loaded data")
+
     failures: list[str] = []
     for entry in entries:
         if entry.get("expected_rank") == "pending":
