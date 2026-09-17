@@ -173,7 +173,7 @@ Thresholds (set on load):
 
 These thresholds match FTN Fantasy and are the de-facto industry standard. The 20-yard pass / 15-yard run split accounts for the different per-play expected gains.
 
-**Storage convention (small samples):** `insufficient_sample = true` always means `rank` and `percentile` are NULL. On `team_phase_weekly` the metric columns are NULL too (a 4-play week renders "—"). On `team_phase_season` the metric columns keep their computed value so the site can show the number with an "n < 30" badge and withhold only the rank (SPEC §3.5a). Readers that must not surface thin values (multi-season charts, distributions) filter on the flag, not on the column being NULL.
+**Storage convention (small samples):** on `team_phase_weekly`, `insufficient_sample = true` means `rank`, `percentile` and the metric columns are all NULL (a 4-play week renders "—"). On `team_phase_season` the flag is a caution only: the metric columns keep their computed value and the team is ranked and percentiled like everyone else, so the site shows the number and the rank with an "n < 30" badge (SPEC §3.5a). At either granularity `rank` is NULL only when the metric could not be computed (one-sided `overall` differential), and K for percentiles is the count of ranked rows. Readers that must not surface thin values (the multi-season trends chart) filter on the flag, not on a column being NULL.
 
 **Storage convention (rate phases):** for rate phases (2.10, 2.11), the `epa_per_play` column holds the **rate** (0.0–1.0), not EPA. `success_rate` holds the same value for consistency. Schema doesn't need a new column — the phase name tells downstream consumers which interpretation to apply. Documented here because E3 chart code will need to format accordingly.
 

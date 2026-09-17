@@ -34,7 +34,7 @@ export function HeroStats({ overview }: Props) {
             className="flex items-baseline gap-1.5"
             title={
               currentSeasonRank == null
-                ? 'Season rank available after week 3'
+                ? 'Season rank available after the first game'
                 : prevSeasonRank == null
                   ? `No ${prevSeason} season data`
                   : undefined

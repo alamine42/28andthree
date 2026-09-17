@@ -40,11 +40,17 @@ describe('fixture contract — phases', () => {
     assert.deepEqual(ranks, ['rush_offense', 'special_teams']);
   });
 
-  it('explosive_defense is flagged insufficientSample with totalQualified < 32', () => {
+  it('explosive_defense is flagged insufficientSample but still ranked', () => {
+    // SPEC §3.5a season rule: the flag is a caution badge, not a gate. The
+    // row keeps its rank, percentile and value, and counts toward K.
     const detail = phaseDetails2025['explosive_defense'];
     assert.equal(detail.insufficientSample, true);
-    assert.ok(detail.totalQualified < 32, 'K should be reduced when insufficient');
-    assert.equal(detail.rank, null, 'insufficient samples must null out rank');
+    assert.ok(detail.rank != null && detail.rank >= 1 && detail.rank <= 32, 'thin season row keeps its rank');
+    assert.ok(detail.percentile != null, 'thin season row keeps its percentile');
+    assert.ok(detail.epaPerPlay != null, 'thin season row keeps its value');
+    const card = phaseSnapshot2025.find((s) => s.phase === 'explosive_defense');
+    assert.equal(card?.insufficientSample, true);
+    assert.equal(card?.rank, detail.rank, 'home card and detail agree on the rank');
   });
 
   it('sparklines have at least one null point to exercise gap-render', () => {

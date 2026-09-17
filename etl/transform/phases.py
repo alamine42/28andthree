@@ -27,14 +27,16 @@ Granularity = Literal["weekly", "season"]
 RankDirection = Literal["asc", "desc"]
 
 # Sample-size thresholds per SPEC §3.5a. Below the floor a row is flagged
-# insufficient_sample and never ranked. What happens to the metric itself
-# differs by granularity (see _insert_tail):
-#   weekly  → epa_per_play / success_rate stored NULL. A 4-play red-zone week
-#             is not a number anyone should read, and the spec renders "—".
-#   season  → the value is KEPT. Only rank + percentile are withheld. Every
-#             team-stats site (Sumer, rbsdm, FTN) shows the raw number from
-#             week 1 because all 32 teams share the same small sample; what
-#             misleads is the rank, so that is what we suppress.
+# insufficient_sample. What that flag does differs by granularity (see
+# _granularity_parts + _insert_tail):
+#   weekly  → epa_per_play / success_rate stored NULL and no rank. A 4-play
+#             red-zone week is not a number anyone should read; the spec
+#             renders "—".
+#   season  → the value is KEPT and the team IS RANKED. The flag only drives
+#             the "n < 30" caution badge. Every team-stats site (Sumer,
+#             rbsdm, FTN) ranks from week 1 because all 32 teams share the
+#             same small sample. The one thing that never ranks at either
+#             granularity is a NULL metric (one-sided `overall` differential).
 WEEKLY_MIN_PLAYS = 10
 SEASON_MIN_PLAYS = 30
 
@@ -175,6 +177,12 @@ def _granularity_parts(granularity: Granularity, weeks_filter: list[int] | None)
         # Weekly rows null the metric below the floor; season rows keep it.
         metric_when_insufficient=sql.SQL("NULL") if is_weekly else sql.SQL("epa_per_play"),
         success_when_insufficient=sql.SQL("NULL") if is_weekly else sql.SQL("success_rate"),
+        # What excludes a row from ranking. Weekly: the sample floor. Season:
+        # only a metric that could not be computed.
+        unranked_expr=(
+            sql.SQL("(plays < {t} OR epa_per_play IS NULL)").format(t=sql.Literal(WEEKLY_MIN_PLAYS))
+            if is_weekly else sql.SQL("(epa_per_play IS NULL)")
+        ),
         week_projection=sql.SQL(", week") if is_weekly else sql.SQL(""),
         week_select=sql.SQL("week,") if is_weekly else sql.SQL(""),
         insert_cols=sql.SQL(
@@ -336,11 +344,13 @@ def _insert_tail(
     """Shared rank + percentile + upsert logic. Same for all phase kinds —
     the differences live upstream in the rollups CTE.
 
-    An insufficient_sample row never gets a rank or percentile at either
-    granularity. Whether it keeps its metric value is decided per
-    granularity in _granularity_parts: weekly rows store NULL, season rows
-    store the computed value so the site can show "EPA −0.12, n < 30,
-    unranked" instead of a bare dash (SPEC §3.5a).
+    Two flags come out of `rollups`: `insufficient_sample` (below the play
+    floor, or no metric) and `unranked` (excluded from ROW_NUMBER and K).
+    They coincide on weekly rows. On season rows `unranked` is only "no
+    metric", so a thin team is ranked and percentiled like everyone else
+    and the flag merely drives the "n < 30" badge (SPEC §3.5a). Whether a
+    flagged row keeps its metric value is also per granularity: weekly
+    rows store NULL, season rows store the computed value.
 
     `rank_direction` drives BOTH the primary metric sort and the success-rate
     tiebreak. SPEC §3.5a phrases tiebreak #2 as "higher success rate", which
@@ -356,16 +366,18 @@ def _insert_tail(
         flagged AS (
             -- A NULL metric can never rank, whatever the play count says.
             -- Today only `overall` emits one (a one-sided differential).
-            SELECT *, (plays < {threshold} OR epa_per_play IS NULL) AS insufficient_sample
+            SELECT *,
+                   (plays < {threshold} OR epa_per_play IS NULL) AS insufficient_sample,
+                   {unranked_expr} AS unranked
             FROM rollups
         ),
         ranked AS (
             SELECT *,
-                   CASE WHEN insufficient_sample THEN NULL::smallint
+                   CASE WHEN unranked THEN NULL::smallint
                         ELSE ROW_NUMBER() OVER (
                              PARTITION BY {partition_cols}
                              ORDER BY
-                               CASE WHEN insufficient_sample THEN 1 ELSE 0 END,
+                               CASE WHEN unranked THEN 1 ELSE 0 END,
                                ROUND(epa_per_play::numeric, 6) {direction} NULLS LAST,
                                plays DESC,
                                ROUND(success_rate::numeric, 6) {direction} NULLS LAST,
@@ -408,5 +420,6 @@ def _insert_tail(
         phase_literal=phase_literal,
         conflict_cols=parts["conflict_cols"],
         metric_when_insufficient=parts["metric_when_insufficient"],
+        unranked_expr=parts["unranked_expr"],
         success_when_insufficient=parts["success_when_insufficient"],
     )

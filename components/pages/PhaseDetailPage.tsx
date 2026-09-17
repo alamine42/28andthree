@@ -181,11 +181,11 @@ function PhaseBreadcrumb({ display, homeHref }: { display: string; homeHref: str
 function InsufficientSampleChip({ plays }: { plays: number }) {
   // Surface the SPEC §3.5a small-sample state explicitly on the phase page.
   // Home grid already shows an "n<30" badge; this brings the phase detail
-  // in sync so users know why the rank renders as an em-dash while the
-  // EPA value still shows.
+  // in sync. The rank and EPA still render; the chip says they rest on a
+  // thin sample and will move.
   return (
     <span
-      title={`${plays} plays — below the 30-play season floor, so no rank yet (SPEC §3.5a)`}
+      title={`${plays} plays — below the 30-play season floor; rank is provisional (SPEC §3.5a)`}
       className="rounded-sm border border-border-strong px-2 py-0.5 uppercase tracking-widest text-text-muted"
     >
       n&lt;30 · insufficient sample

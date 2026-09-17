@@ -88,7 +88,7 @@ export const phaseSnapshot2025: PhaseSnapshot[] = [
     phase: "explosive_defense",
     plays: 963,
     epaPerPlay: 0.0612668743509865,
-    rank: null,
+    rank: 24,
     insufficientSample: true,
   },
   {
@@ -621,10 +621,10 @@ export const phaseDetails2025: Record<Phase, PhaseDetail> = {
     plays: 963,
     epaPerPlay: 0.0612668743509865,
     successRate: 0.446521287642783,
-    rank: null,
-    percentile: null,
+    rank: 24,
+    percentile: 0.28125,
     insufficientSample: true,
-    totalQualified: 28,
+    totalQualified: 32,
   },
   special_teams: {
     phase: "special_teams",
