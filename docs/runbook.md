@@ -186,6 +186,7 @@ Triage:
    - Neon connection timeout during long-running backfill → retry; per-season commits mean only the failing season re-runs.
    - Advisory-lock conflict → another run in flight. Wait or cancel duplicate.
 4. **Manual retry.** `gh workflow run etl.yml --field mode=season --field season=2026`. For a full rebuild: `--field mode=full`.
+5. **Re-applying an aggregation change.** `mode=season` goes through the freshness gate, and once nflverse and the DB agree on the latest week the gate answers `already_loaded` and writes only a heartbeat. To recompute a season anyway (for example after a change to `etl/transform/phases.py`, which is a pure function of `plays`), add `--field force=true`. It is the same idempotent upsert path the cron takes, so it is safe to repeat; it just costs one nflverse fetch. Before this input existed the only way to re-apply such a change was `mode=full`.
 
 ## status-data-auth
 
