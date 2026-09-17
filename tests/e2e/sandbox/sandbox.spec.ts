@@ -24,11 +24,12 @@ test.describe('sandbox smoke', () => {
     await expect(page.getByTestId('phase-rank-card')).toContainText('1st');
   });
 
-  test('phase with insufficient sample shows K<32 copy', async ({ page }) => {
+  test('phase with insufficient sample shows the n<30 chip and still ranks', async ({ page }) => {
     await page.goto('/phases/explosive_defense');
-    // K=28 is baked into phaseDetails2025.explosive_defense. Copy varies
-    // by component — assert the number 28 appears somewhere on the page.
-    await expect(page.locator('body')).toContainText('28');
+    // phaseDetails2025.explosive_defense is the flagged exemplar: the chip
+    // renders, and the rank card still carries an ordinal (SPEC §3.5a).
+    await expect(page.locator('body')).toContainText(/n\s*<\s*30/i);
+    await expect(page.getByTestId('phase-rank-card')).toContainText('24th');
   });
 
   test('draft-roi page renders fixture classes', async ({ page }) => {

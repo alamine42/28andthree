@@ -16,7 +16,9 @@ const MARGIN = { top: 16, right: 16, bottom: 40, left: 16 };
  * highlighted team renders enlarged + amber; the rest fade to muted.
  * Plain SVG — no chart library — keeps the bundle tight. */
 export function DistributionPlot({ rows, highlightTeam, phaseLabel }: Props) {
-  const qualifying = rows.filter((r) => !r.insufficientSample && r.epaPerPlay != null);
+  // Every ranked team plots. A thin-sample season row still carries a rank
+  // (SPEC §3.5a); only a row with no metric at all is left out.
+  const qualifying = rows.filter((r) => r.rank != null && r.epaPerPlay != null);
   if (qualifying.length === 0) {
     return (
       <div className="rounded-md border border-dashed border-border p-6 text-text-muted">

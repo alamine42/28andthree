@@ -33,9 +33,9 @@ export function PhaseCard({
   const display = phaseDisplayName(phase);
   const values = sparkline.map((p) => p.value);
 
-  // Below the SPEC §3.5a season floor the ETL withholds the rank but keeps
-  // the EPA value, so a thin-sample card reads "— n < 30" over a real number
-  // rather than two dashes. The badge explains the missing rank.
+  // Below the SPEC §3.5a season floor the ETL still ranks the team and keeps
+  // the EPA value; the "n < 30" badge beside the rank is a caution that the
+  // sample is thin and the rank will move.
   //
   // No trend arrow on the headline rank: the big number is a season-to-date
   // cumulative rank but the weekly delta would compare isolated single-week

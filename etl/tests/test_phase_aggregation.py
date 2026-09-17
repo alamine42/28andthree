@@ -312,12 +312,13 @@ def test_season_threshold_differs_from_weekly(
 
     assert ne_weekly["insufficient_sample"] is False
     assert ne_seasonal["insufficient_sample"] is True
-    assert ne_seasonal["rank"] is None
-    assert ne_seasonal["percentile"] is None
-    # SPEC §3.5a: a thin season row keeps its metric (the site shows the
-    # number with an "n < 30" badge) and only withholds the rank. Weekly
-    # rows below their floor still store NULL — see the test above.
+    # SPEC §3.5a: a thin season row keeps its metric AND its rank; the flag
+    # only drives the "n < 30" caution badge. NE is the sole team with a
+    # metric here, so it ranks 1 of K=1. Weekly rows below their floor
+    # still store NULL and never rank — see the test above.
     assert ne_seasonal["epa_per_play"] == pytest.approx(0.5, abs=1e-6)
+    assert ne_seasonal["rank"] == 1
+    assert ne_seasonal["percentile"] == pytest.approx(1.0)
 
 
 # ---- Idempotency -----------------------------------------------------------

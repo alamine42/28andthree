@@ -18,7 +18,7 @@ export type PhaseSnapshot = {
   rank: number | null;
   /** ETL-owned SPEC §3.5a flag. True below the 30-play season floor OR when
    * the metric could not be computed (one-sided `overall` differential).
-   * The value still renders; only the rank is withheld. */
+   * Season rows keep both value and rank; the flag drives the caution badge. */
   insufficientSample: boolean;
 };
 
@@ -149,7 +149,10 @@ export const getPhaseDetail = cache(async (
 
   const qualified = await db
     .select({
-      k: sql<number>`COUNT(*) FILTER (WHERE ${teamPhaseSeason.insufficientSample} = false)::int`,
+      // K = teams that hold a rank. A thin season row is ranked (the flag
+      // only drives the badge), so K drops below 32 only when a metric
+      // could not be computed at all.
+      k: sql<number>`COUNT(*) FILTER (WHERE ${teamPhaseSeason.rank} IS NOT NULL)::int`,
     })
     .from(teamPhaseSeason)
     .where(and(eq(teamPhaseSeason.season, season), eq(teamPhaseSeason.phase, phase)));

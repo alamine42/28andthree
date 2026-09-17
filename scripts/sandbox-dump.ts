@@ -304,18 +304,13 @@ async function dumpPhases(args: Args, season: number): Promise<void> {
   }
   if (args.augment) {
     // Always force explosive_defense to be the insufficient-sample
-    // exemplar — fixture-contract test asserts this exact phase + the
-    // K<32 copy path needs a deterministic anchor.
+    // exemplar — fixture-contract test asserts this exact phase. The rank
+    // and K stay as dumped: a thin season row is still ranked (SPEC §3.5a),
+    // the flag only drives the badge.
     const ed = detailsEmit['explosive_defense'];
     detailsEmit = {
       ...detailsEmit,
-      explosive_defense: {
-        ...ed,
-        insufficientSample: true,
-        totalQualified: Math.min(28, ed.totalQualified > 0 ? ed.totalQualified - 4 : 28),
-        rank: null,
-        percentile: null,
-      },
+      explosive_defense: { ...ed, insufficientSample: true },
     };
 
     // Force a tied rank at 14 between rush_offense and special_teams so
@@ -325,13 +320,10 @@ async function dumpPhases(args: Args, season: number): Promise<void> {
       .filter((s) => s.rank !== null)
       .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
     const augmented = new Map(snapshot.map((s) => [s.phase, { ...s }]));
-    // Keep the home-grid card in step with the forced detail above: rank
-    // withheld, value kept, badge on (SPEC §3.5a season rule).
+    // Keep the home-grid card in step with the forced detail above: badge
+    // on, rank and value kept (SPEC §3.5a season rule).
     const edCard = augmented.get('explosive_defense');
-    if (edCard) {
-      edCard.rank = null;
-      edCard.insufficientSample = true;
-    }
+    if (edCard) edCard.insufficientSample = true;
     const rush = augmented.get('rush_offense');
     const st = augmented.get('special_teams');
     if (rush && st) {

@@ -46,3 +46,17 @@ the column being NULL.
 `PhaseGrid` used to re-derive the badge as `plays < 30` on the client. It now
 reads the ETL flag, which also covers the one-sided `overall` differential
 (flagged with plays well above 30).
+
+## Revision (2026-09-17, same day)
+
+After seeing the result live, the owner asked for ranks from week 1 as
+well. The season floor no longer withholds anything: `team_phase_season`
+rows below 30 plays are ranked and percentiled like everyone else, and
+`insufficient_sample` only drives the "n < 30" badge. K for percentiles is
+the count of ranked rows, so it drops below 32 only when a metric could not
+be computed (one-sided `overall` differential). Weekly rows are unchanged.
+The multi-season trends chart still leaves sub-floor seasons unplotted.
+
+Rule of thumb that survives both revisions: the flag is a presentation
+signal on season rows and a gate on weekly rows. Readers decide which they
+need; nothing infers "unranked" from the flag.
