@@ -107,7 +107,7 @@ Rule must be applied in the ETL aggregation query (not at render time) so ranks 
 **Empty / small-sample states (phase pages, §3.2).** Some phases have very few plays in a given week (e.g., special-teams EPA in a game with no punts or FGs). Rules:
 - If plays-in-phase < **10** for a team in a week: show "—" and a small "n=X, insufficient sample" tooltip in place of the EPA number. Do not compute a rank for that team-week-phase.
 - Rolling 4-week averages include only weeks where n ≥ 10.
-- Season-to-date views always render once cumulative plays-in-phase ≥ 30.
+- Season-to-date views: once cumulative plays-in-phase ≥ **30** the team is ranked. Below 30, show the EPA value with a small "n < 30" badge and withhold the rank and percentile; the team is excluded from that phase's 1–32 denominator. The number stays visible because all 32 teams share the same early-season sample, so the value is honest even when a rank would not be (this is what Sumer Sports, rbsdm and FTN do). Multi-season trend charts leave a sub-floor season unplotted rather than drawing a point that will move.
 - Never display `NaN`, `null`, or `0` when the correct answer is "not enough data."
 
 **Mid-season personnel changes (QB §3.3, HC/OC §3.4).**

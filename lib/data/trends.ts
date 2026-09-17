@@ -11,10 +11,12 @@ import { EARLIEST_SEASON } from '@/lib/season-view';
 // headline metric across every season. Deliberately NOT season-scoped: it
 // lives outside app/s and takes no ?season= (plan: bd patsbythenumbers-pt2).
 
-/** SPEC §3.5a: "Season-to-date views always render once cumulative
- * plays-in-phase >= 30." Below the floor the season has no publishable
- * number, so epa/rank are nulled at the DAL rather than at render time —
- * a gap in the line, never a fake zero. */
+/** SPEC §3.5a: a season is ranked once cumulative plays-in-phase >= 30.
+ * The home grid and phase pages still show the EPA value below the floor
+ * (with an "n < 30" badge and no rank), but this multi-season chart does
+ * not: a sub-floor point would move every week and draw a cliff that isn't
+ * real, so epa/rank are nulled here at the DAL — a gap in the line, never
+ * a fake zero. */
 export const SEASON_SAMPLE_FLOOR = 30;
 
 export type SeasonPoint = {

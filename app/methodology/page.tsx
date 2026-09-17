@@ -187,8 +187,12 @@ export default function MethodologyPage() {
             </li>
             <li>
               <strong>Season-to-date:</strong> cumulative plays &lt; 30
-              &rarr; no season rank. The team is excluded from the 1&ndash;32
-              denominator for that phase that week.
+              &rarr; no season rank, and an <code>n &lt; 30</code> badge
+              beside it. The EPA value still shows: every team is working
+              from the same short sample in September, so the number is
+              honest even when a 1&ndash;32 rank would not be. The team is
+              excluded from the 1&ndash;32 denominator for that phase until
+              it clears the floor.
             </li>
             <li>
               <strong>Rolling 4-week averages</strong> include only weeks

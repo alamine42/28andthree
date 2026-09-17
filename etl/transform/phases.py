@@ -26,7 +26,15 @@ MetricKind = Literal["epa", "rate", "differential"]
 Granularity = Literal["weekly", "season"]
 RankDirection = Literal["asc", "desc"]
 
-# Sample-size thresholds per SPEC §3.5a.
+# Sample-size thresholds per SPEC §3.5a. Below the floor a row is flagged
+# insufficient_sample and never ranked. What happens to the metric itself
+# differs by granularity (see _insert_tail):
+#   weekly  → epa_per_play / success_rate stored NULL. A 4-play red-zone week
+#             is not a number anyone should read, and the spec renders "—".
+#   season  → the value is KEPT. Only rank + percentile are withheld. Every
+#             team-stats site (Sumer, rbsdm, FTN) shows the raw number from
+#             week 1 because all 32 teams share the same small sample; what
+#             misleads is the rank, so that is what we suppress.
 WEEKLY_MIN_PLAYS = 10
 SEASON_MIN_PLAYS = 30
 
@@ -164,6 +172,9 @@ def _granularity_parts(granularity: Granularity, weeks_filter: list[int] | None)
         partition_cols=sql.SQL("season, week") if is_weekly else sql.SQL("season"),
         group_cols=sql.SQL("team, season, week") if is_weekly else sql.SQL("team, season"),
         threshold=sql.Literal(WEEKLY_MIN_PLAYS if is_weekly else SEASON_MIN_PLAYS),
+        # Weekly rows null the metric below the floor; season rows keep it.
+        metric_when_insufficient=sql.SQL("NULL") if is_weekly else sql.SQL("epa_per_play"),
+        success_when_insufficient=sql.SQL("NULL") if is_weekly else sql.SQL("success_rate"),
         week_projection=sql.SQL(", week") if is_weekly else sql.SQL(""),
         week_select=sql.SQL("week,") if is_weekly else sql.SQL(""),
         insert_cols=sql.SQL(
@@ -325,6 +336,12 @@ def _insert_tail(
     """Shared rank + percentile + upsert logic. Same for all phase kinds —
     the differences live upstream in the rollups CTE.
 
+    An insufficient_sample row never gets a rank or percentile at either
+    granularity. Whether it keeps its metric value is decided per
+    granularity in _granularity_parts: weekly rows store NULL, season rows
+    store the computed value so the site can show "EPA −0.12, n < 30,
+    unranked" instead of a bare dash (SPEC §3.5a).
+
     `rank_direction` drives BOTH the primary metric sort and the success-rate
     tiebreak. SPEC §3.5a phrases tiebreak #2 as "higher success rate", which
     is written from an offensive point of view: on a defensive row
@@ -363,8 +380,8 @@ def _insert_tail(
         )
         INSERT INTO {target_table} {insert_cols}
         SELECT team, season, {week_select} {phase_literal}::phase_enum, plays,
-               CASE WHEN insufficient_sample THEN NULL ELSE epa_per_play END,
-               CASE WHEN insufficient_sample THEN NULL ELSE success_rate END,
+               CASE WHEN insufficient_sample THEN {metric_when_insufficient} ELSE epa_per_play END,
+               CASE WHEN insufficient_sample THEN {success_when_insufficient} ELSE success_rate END,
                rank,
                CASE WHEN rank IS NULL OR k IS NULL OR k = 0 THEN NULL
                     ELSE ((k - rank + 1)::double precision / k::double precision)
@@ -390,4 +407,6 @@ def _insert_tail(
         week_select=parts["week_select"],
         phase_literal=phase_literal,
         conflict_cols=parts["conflict_cols"],
+        metric_when_insufficient=parts["metric_when_insufficient"],
+        success_when_insufficient=parts["success_when_insufficient"],
     )

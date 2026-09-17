@@ -325,6 +325,13 @@ async function dumpPhases(args: Args, season: number): Promise<void> {
       .filter((s) => s.rank !== null)
       .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
     const augmented = new Map(snapshot.map((s) => [s.phase, { ...s }]));
+    // Keep the home-grid card in step with the forced detail above: rank
+    // withheld, value kept, badge on (SPEC §3.5a season rule).
+    const edCard = augmented.get('explosive_defense');
+    if (edCard) {
+      edCard.rank = null;
+      edCard.insufficientSample = true;
+    }
     const rush = augmented.get('rush_offense');
     const st = augmented.get('special_teams');
     if (rush && st) {
