@@ -20,6 +20,11 @@ on:
         description: 'Week (optional, with mode=season)'
         required: false
         type: string
+      force:
+        description: 'Skip the freshness gate (only with mode=season). Use to re-apply an aggregation change to a season the gate reports as already_loaded.'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -99,10 +104,12 @@ jobs:
           ETL_DATABASE_URL: ${{ secrets.ETL_DATABASE_URL }}
           SENTRY_DSN_ETL: ${{ secrets.SENTRY_DSN_ETL }}
         run: |
+          FORCE=""
+          if [ "${{ inputs.force }}" = "true" ]; then FORCE="--force"; fi
           if [ -n "${{ inputs.week }}" ]; then
-            uv run --project etl python -m etl.main --season ${{ inputs.season }} --week ${{ inputs.week }}
+            uv run --project etl python -m etl.main --season ${{ inputs.season }} --week ${{ inputs.week }} $FORCE
           else
-            uv run --project etl python -m etl.main --season ${{ inputs.season }}
+            uv run --project etl python -m etl.main --season ${{ inputs.season }} $FORCE
           fi
 
       - name: Full backfill (manual)

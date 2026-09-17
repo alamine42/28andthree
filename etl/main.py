@@ -4,7 +4,8 @@ Modes:
   --heartbeat                      Write a single heartbeat row; exit. Used
                                     by the off-season / not-yet-fresh path.
   --full                            Backfill all 2020..current seasons.
-  --season N [--week W]            Refresh season N (all weeks, or just W).
+  --season N [--week W] [--force]  Refresh season N (all weeks, or just W).
+                                   --force skips the freshness gate.
   --freshness-gate                 Dry-run the gate and exit 0/1 based on
                                     whether we'd run. Used by GH Actions
                                     to decide primary-vs-retry semantics.
@@ -462,12 +463,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Inspect freshness; exit 0 either way but write heartbeat when stale",
     )
     parser.add_argument("--week", type=int, help="Optional week filter (only with --season)")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help=(
+            "Skip the freshness gate and refresh even when nflverse and the DB "
+            "already agree (only with --season). Use after an aggregation change "
+            "that must be applied to rows the gate considers already loaded."
+        ),
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     configure_logging()
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.force and args.season is None:
+        parser.error("--force is only valid with --season")
 
     try:
         settings = EtlSettings()  # type: ignore[call-arg]
@@ -498,10 +511,16 @@ def main(argv: list[str] | None = None) -> int:
             raise
 
     if args.season is not None:
-        result = run_freshness_gate(settings, target_season=args.season)
-        if not result.should_run:
-            _write_heartbeat(settings, reason=result.reason)
-            return 0
+        if args.force:
+            # The gate exists to skip redundant ingests, not to protect the
+            # data. A forced run is the same idempotent upsert path the cron
+            # takes; it only costs one nflverse fetch.
+            logger.info("freshness_gate skipped reason=force season=%d", args.season)
+        else:
+            result = run_freshness_gate(settings, target_season=args.season)
+            if not result.should_run:
+                _write_heartbeat(settings, reason=result.reason)
+                return 0
         _write_meta_refresh_running(settings, season=args.season, week=args.week)
         try:
             run_season(settings, season=args.season, week=args.week)
