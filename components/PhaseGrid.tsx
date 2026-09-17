@@ -33,7 +33,7 @@ export function PhaseGrid({ snapshot, sparklines, seasonQuery }: Props) {
               rank={s?.rank ?? null}
               epaPerPlay={s?.epaPerPlay ?? null}
               sparkline={points}
-              insufficientSample={s ? s.plays < 30 : false}
+              insufficientSample={s?.insufficientSample ?? false}
               seasonQuery={seasonQuery}
             />
           );

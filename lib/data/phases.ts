@@ -16,6 +16,10 @@ export type PhaseSnapshot = {
   plays: number;
   epaPerPlay: number | null;
   rank: number | null;
+  /** ETL-owned SPEC §3.5a flag. True below the 30-play season floor OR when
+   * the metric could not be computed (one-sided `overall` differential).
+   * The value still renders; only the rank is withheld. */
+  insufficientSample: boolean;
 };
 
 /** Season-to-date rank for every phase of a given team-season. */
@@ -36,6 +40,7 @@ export async function getPhaseRankSnapshot(
       plays: teamPhaseSeason.plays,
       epaPerPlay: teamPhaseSeason.epaPerPlay,
       rank: teamPhaseSeason.rank,
+      insufficientSample: teamPhaseSeason.insufficientSample,
     })
     .from(teamPhaseSeason)
     .where(and(eq(teamPhaseSeason.team, team), eq(teamPhaseSeason.season, season)));
@@ -51,6 +56,7 @@ export async function getPhaseRankSnapshot(
         plays: 0,
         epaPerPlay: null,
         rank: null,
+        insufficientSample: false,
       },
   );
 }
