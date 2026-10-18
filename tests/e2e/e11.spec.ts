@@ -65,16 +65,20 @@ test.describe('E11 historical season browsing', () => {
     }
   });
 
-  test('current-season param redirects to the clean URL', async ({ page }) => {
+  test('current-season param renders the clean view', async ({ page }) => {
     // Read the real current season from the header pill, then request it as
-    // a param: middleware rewrites to /s/{current}, whose wrapper redirects
-    // back to the clean URL (the exact rollover-critical path — code review
-    // pass 2: a junk year like 2099 never reaches the wrapper).
+    // a param: middleware rewrites to /s/{current}, whose wrapper renders
+    // the current view in place (the exact rollover-critical path — code
+    // review pass 2: a junk year like 2099 never reaches the wrapper).
+    // It must not bounce: a redirect out of a rewritten response has no
+    // Location, only a meta refresh, which reads as a blank page (#25).
     await page.goto('/');
     const current = (await page.getByTestId('season-switcher').innerText()).trim();
-    await page.goto(`/?season=${current}`);
-    await page.waitForURL((url) => !url.searchParams.has('season'));
+    const rewritten = await page.goto(`/?season=${current}`);
+    expect(rewritten?.status()).toBe(200);
+    await expect(page.getByTestId('hero-stats')).toBeVisible();
     await expect(page.getByTestId('historical-marker')).toHaveCount(0);
+    await expect(page.locator('meta[http-equiv="refresh"]')).toHaveCount(0);
 
     // Junk future years never rewrite at all — clean page, param inert.
     const response = await page.goto('/?season=2099');

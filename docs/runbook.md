@@ -249,8 +249,11 @@ patsbythenumbers-ezr). Nothing alerted, because `.github/workflows/etl.yml`
 guards the step: with no token it prints `REVALIDATE_TOKEN not set — skipping
 cache flush` and exits 0. **A green ETL run does not prove the flush
 happened.** Check that step's log for a curl response rather than the skip
-message. Without it, pages self-heal only on TTL — 1h for most routes, 24h
-for the sitemap and the `/s` tree.
+message. Without it, pages self-heal only on TTL — 1h for most routes,
+including the `/s` tree, and 24h for the sitemap. The `/s` tree used to sit
+at 24h; it dropped to 1h when those pages started rendering the current
+season as well as history, so `?season=<current>` cannot fall behind the
+clean URL it canonicalises to.
 
 ## budget-alerts
 

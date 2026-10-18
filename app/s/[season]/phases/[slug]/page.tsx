@@ -1,15 +1,14 @@
 import { notFound } from 'next/navigation';
 import { isValidPhase, type Phase } from '@/lib/constants/phases';
 import { PhaseDetailPage } from '@/components/pages/PhaseDetailPage';
-import { requireHistoricalSeason } from '@/lib/season-route';
+import { resolveSeasonSegment, seasonCanonical } from '@/lib/season-route';
 import type { Metadata } from 'next';
 import { phaseDisplayName } from '@/lib/format/phase';
 import { getPhaseDetail } from '@/lib/data/phases';
 import { formatEpa } from '@/lib/format/number';
-import { parseSeasonParam } from '@/lib/season-view';
 import { pageMetadata } from '@/lib/seo/page-metadata';
 
-export const revalidate = 86400;
+export const revalidate = 3600;
 
 export default async function HistoricalPhaseDetail({
   params,
@@ -18,8 +17,8 @@ export default async function HistoricalPhaseDetail({
 }) {
   const { season: seasonSegment, slug } = await params;
   if (!isValidPhase(slug)) notFound();
-  const season = await requireHistoricalSeason(seasonSegment, `/phases/${slug}`);
-  return <PhaseDetailPage phase={slug as Phase} season={season} historical={true} />;
+  const { season, historical } = await resolveSeasonSegment(seasonSegment);
+  return <PhaseDetailPage phase={slug as Phase} season={season} historical={historical} />;
 }
 
 export async function generateMetadata({
@@ -28,21 +27,24 @@ export async function generateMetadata({
   params: Promise<{ season: string; slug: string }>;
 }): Promise<Metadata> {
   const { season: seasonSegment, slug } = await params;
-  const season = parseSeasonParam(seasonSegment);
-  if (season == null || !isValidPhase(slug)) return {};
+  if (!isValidPhase(slug)) return {};
+  const view = await resolveSeasonSegment(seasonSegment);
+  const { season, historical } = view;
   const display = phaseDisplayName(slug as Phase);
   const detail = await getPhaseDetail(slug as Phase, 'NE', season);
   const rank = detail?.rank != null ? String(detail.rank).padStart(2, '0') : undefined;
   const epa = detail?.epaPerPlay != null ? formatEpa(detail.epaPerPlay) : null;
   return pageMetadata({
     title: `${display} · ${season}`,
-    description: `Patriots ${display.toLowerCase()} in ${season}: final rank and EPA per play against the 32-team league, weekly trend, top contributors.`,
+    description: historical
+      ? `Patriots ${display.toLowerCase()} in ${season}: final rank and EPA per play against the 32-team league, weekly trend, top contributors.`
+      : `Patriots ${display.toLowerCase()} in ${season}: rank and EPA per play season-to-date against the 32-team league, weekly trend, top contributors.`,
     og: {
       title: display,
       eyebrow: `PHASES · ${season}`,
       rank,
       stat: epa ? `${epa} EPA/play` : undefined,
     },
-    canonical: `/phases/${slug}?season=${season}`,
+    canonical: seasonCanonical(`/phases/${slug}`, view),
   });
 }
