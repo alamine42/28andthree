@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getCurrentSeason } from '@/lib/data/current-season';
 import { type DraftClassSummary, type DraftRoiRow, getDraftRoiByClass } from '@/lib/data/draft';
 import { ClassTable } from '@/components/draft/ClassTable';
-import { DataRail } from '@/components/DataRail';
+import { DataRailLive } from '@/components/DataRailLive';
 import { PageHead, PageShell, RailBlock, RailRow } from '@/components/PageShell';
 import { DraftClassStrip } from '@/components/draft/DraftClassStrip';
 import { pageMetadata } from '@/lib/seo/page-metadata';
@@ -120,7 +120,7 @@ function Rail({
           enough snaps to judge.
         </p>
       </RailBlock>
-      <DataRail />
+      <DataRailLive />
     </>
   );
 }

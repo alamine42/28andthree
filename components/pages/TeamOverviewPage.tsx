@@ -1,4 +1,4 @@
-import { DataRail } from '@/components/DataRail';
+import { DataRailLive } from '@/components/DataRailLive';
 import { HeroStats } from '@/components/HeroStats';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
 import { PageHead, PageShell, RailBlock, RailRow } from '@/components/PageShell';
@@ -103,7 +103,7 @@ function Rail({
           <RailRow label="Games played" value={String(played)} />
         </dl>
       </RailBlock>
-      <DataRail />
+      <DataRailLive />
     </>
   );
 }

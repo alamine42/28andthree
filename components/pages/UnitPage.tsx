@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { UNIT_DISPLAY_NAMES, type UnitSlug } from '@/lib/constants/units';
 import { getDefenseUnit, getDlUnit, getOlUnit } from '@/lib/data/units';
-import { DataRail } from '@/components/DataRail';
+import { DataRailLive } from '@/components/DataRailLive';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
 import { PageHead, PageShell } from '@/components/PageShell';
 import { SeasonNotice } from '@/components/SeasonNotice';
@@ -27,7 +27,7 @@ export async function UnitPage({
   const display = UNIT_DISPLAY_NAMES[unit];
 
   return (
-    <PageShell rail={<DataRail />}>
+    <PageShell rail={<DataRailLive />}>
       <section className="flex flex-col gap-8 md:gap-[60px]">
         {historical ? null : <SeasonNotice />}
         <nav

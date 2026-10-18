@@ -4,7 +4,7 @@ import { getCurrentSeason } from '@/lib/data/current-season';
 import { getPhaseSeasonHistory, SEASON_SAMPLE_FLOOR } from '@/lib/data/trends';
 import { EARLIEST_SEASON } from '@/lib/season-view';
 import { SeasonRankChart } from '@/components/charts/SeasonRankChart';
-import { DataRail } from '@/components/DataRail';
+import { DataRailLive } from '@/components/DataRailLive';
 import { PageHead, PageShell } from '@/components/PageShell';
 import { SeasonHistoryCard } from '@/components/SeasonHistoryCard';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -48,7 +48,7 @@ export default async function TrendsPage() {
   const anyPublished = history.some((s) => s.publishedCount > 0);
 
   return (
-    <PageShell rail={<DataRail />}>
+    <PageShell rail={<DataRailLive />}>
       <section className="flex flex-col gap-8 md:gap-[60px]">
         <PageHead
           testId="trends-eyebrow"

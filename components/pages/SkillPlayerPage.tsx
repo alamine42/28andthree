@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getSeasonContext } from '@/lib/data/current-season';
 import { getPlayer, getSkillUsage } from '@/lib/data/player';
-import { DataRail } from '@/components/DataRail';
+import { DataRailLive } from '@/components/DataRailLive';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
 import { PageShell } from '@/components/PageShell';
 import { MetricValue } from '@/components/numeric';
@@ -36,7 +36,7 @@ export async function SkillPlayerPage({
   if (!usage) {
     if (!historical && !ctx.awaitingFirstGame) notFound();
     return (
-      <PageShell rail={<DataRail />}>
+      <PageShell rail={<DataRailLive />}>
         <section className="flex flex-col gap-8 md:gap-[60px]">
           {historical ? null : <SeasonNotice />}
           <header className="flex flex-col gap-3">
@@ -56,7 +56,7 @@ export async function SkillPlayerPage({
   const isRb = usage.position === 'RB' || usage.position === 'HB' || usage.position === 'FB';
 
   return (
-    <PageShell rail={<DataRail />}>
+    <PageShell rail={<DataRailLive />}>
       <section className="flex flex-col gap-8 md:gap-[60px]">
         {historical ? null : <SeasonNotice />}
         {/* Back target is the roster hub, not this player's clean URL — a

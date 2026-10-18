@@ -7,15 +7,22 @@ import { RailBlock } from '@/components/PageShell';
 // where a number came from has to scroll past the whole page to reach
 // them; in the rail they sit beside the number.
 //
-// Deliberately no "last refresh" timestamp here. SiteFooter owns that line
-// and is the single source for it — duplicating a freshness claim in two
-// places invites them to disagree. (Note: the footer is currently rendered
-// without `lastRefreshIso` from the root layout, so it always reads
-// "never" — a real bug, tracked separately, not papered over here.)
-export function DataRail() {
+// The freshness line reads the same cached DAL as SiteFooter, so the two
+// can never disagree about when the numbers landed — the reason this block
+// originally shipped without a timestamp at all.
+//
+// Kept synchronous, prop-driven, and free of any DB import: app/error.tsx
+// is a client component (it reports to Sentry in an effect), so everything
+// this module touches is bundled for the browser. Importing the refresh DAL
+// here dragged `pg` into the client bundle and 500'd every route. The
+// fetching wrapper lives in DataRailLive.tsx for that reason. The error page
+// passes nothing and shows "unknown", which is the truth there anyway — if
+// the render failed, a freshness query is not to be trusted either.
+export function DataRail({ lastRefresh }: { lastRefresh?: string | null }) {
   return (
     <RailBlock title="Data">
       <dl className="space-y-2 font-mono text-2xs">
+        <Row label="Last refresh" value={lastRefresh ?? 'unknown'} />
         <Row label="Source" href="https://github.com/nflverse" value="nflverse" external />
         <Row label="Models" value="nflfastR · nfl4th" />
         <Row label="Status" href="/status" value="ETL heartbeat" />

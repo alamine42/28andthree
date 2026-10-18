@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { DataRail } from '@/components/DataRail';
+import { DataRailLive } from '@/components/DataRailLive';
 import { PageHead, PageShell, RailBlock } from '@/components/PageShell';
 
 export const metadata: Metadata = {
@@ -63,7 +63,7 @@ function NotFoundRail() {
           <li>A season before 2020, which the data does not cover.</li>
         </ul>
       </RailBlock>
-      <DataRail />
+      <DataRailLive />
     </>
   );
 }

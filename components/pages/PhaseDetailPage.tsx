@@ -5,7 +5,7 @@ import { type Phase } from '@/lib/constants/phases';
 import { phaseDisplayName } from '@/lib/format/phase';
 import { getSeasonContext } from '@/lib/data/current-season';
 import { getLeagueDistribution, getPhaseDetail, getPhaseWeeklyTrend } from '@/lib/data/phases';
-import { DataRail } from '@/components/DataRail';
+import { DataRailLive } from '@/components/DataRailLive';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
 import { PageHead, PageShell, RailBlock } from '@/components/PageShell';
 import { PhaseRailList } from '@/components/PhaseRailList';
@@ -202,7 +202,7 @@ function Rail({
           seasonQuery={historical ? season : null}
         />
       </RailBlock>
-      <DataRail />
+      <DataRailLive />
     </>
   );
 }

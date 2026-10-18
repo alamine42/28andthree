@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { getCurrentRosterSeason, getPatsRoster } from '@/lib/data/players-hub';
-import { DataRail } from '@/components/DataRail';
+import { DataRailLive } from '@/components/DataRailLive';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
 import { NoSeasonData } from '@/components/NoSeasonData';
 import { PageHead, PageShell, RailBlock, RailRow } from '@/components/PageShell';
@@ -111,7 +111,7 @@ function Rail({ roster }: { roster: ReadonlyArray<RosterEntry> }) {
           Line and secondary play is measured as a unit, not per player.
         </p>
       </RailBlock>
-      <DataRail />
+      <DataRailLive />
     </>
   );
 }

@@ -3,7 +3,7 @@ import {
   getCoachSegments,
   getFourthDownDecisions,
 } from '@/lib/data/coaching';
-import { DataRail } from '@/components/DataRail';
+import { DataRailLive } from '@/components/DataRailLive';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
 import { PageHead, PageShell, RailBlock, RailRow } from '@/components/PageShell';
 import { NoSeasonData } from '@/components/NoSeasonData';
@@ -184,7 +184,7 @@ function Rail({
           A mid-season coaching change splits each tendency into date-range rows.
         </p>
       </RailBlock>
-      <DataRail />
+      <DataRailLive />
     </>
   );
 }

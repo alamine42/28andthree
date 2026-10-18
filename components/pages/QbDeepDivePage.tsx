@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getSeasonContext } from '@/lib/data/current-season';
 import { getPlayer, getQbDeepDive } from '@/lib/data/player';
-import { DataRail } from '@/components/DataRail';
+import { DataRailLive } from '@/components/DataRailLive';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
 import { PageShell, RailBlock, RailRow } from '@/components/PageShell';
 import { MetricValue } from '@/components/numeric';
@@ -159,7 +159,7 @@ function Rail({ dropbacks, season }: { dropbacks: number | null; season: number 
           is ≥ 80% (SPEC §3.3); em-dashes otherwise.
         </p>
       </RailBlock>
-      <DataRail />
+      <DataRailLive />
     </>
   );
 }

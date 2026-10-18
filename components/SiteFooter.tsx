@@ -1,3 +1,4 @@
+import { formatRefresh, getLastRefresh } from '@/lib/data/refresh';
 import { getSchedulePhase } from '@/lib/schedule/phase';
 
 // Disclaimer text matches DESIGN.md §Footer verbatim. Do not modify without
@@ -11,23 +12,17 @@ const NEXT_REFRESH_FORMATTER = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York',
 });
 
-type FooterProps = {
-  lastRefreshIso?: string;
-};
-
-export async function SiteFooter({ lastRefreshIso }: FooterProps = {}) {
-  const snap = await getSchedulePhase();
+// E13-01: the footer used to take an optional `lastRefreshIso` prop that
+// no caller ever passed, so the line rendered "Last refresh: never" in
+// production — a fresh site reading as a dead one. It now reads the value
+// itself, from the same cached DAL the data rail uses.
+export async function SiteFooter() {
+  const [snap, refresh] = await Promise.all([getSchedulePhase(), getLastRefresh()]);
   const isOffseason = snap.phase === 'offseason';
 
-  const lastRefreshDisplay = lastRefreshIso
-    ? new Date(lastRefreshIso).toLocaleString('en-US', {
-        weekday: 'short',
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZone: 'America/New_York',
-        timeZoneName: 'short',
-      })
-    : 'never';
+  // "unknown" rather than "never": we know an ETL has run, we just could
+  // not read when. "Never" claims something stronger and worse.
+  const lastRefreshDisplay = formatRefresh(refresh.completedAt) ?? 'unknown';
 
   // Offseason: rephrase the freshness indicator + dim the live dot. Stops
   // implying staleness when the data is intentionally frozen until the
