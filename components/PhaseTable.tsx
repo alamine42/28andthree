@@ -38,8 +38,15 @@ type Props = {
 const TABLE_PHASES = PHASES.filter((p) => p !== 'overall');
 
 // Shared column track, so the header labels line up with every row.
+//
+// Phones keep name, rank, EPA and the sparkline — the card this replaced
+// showed all four, and dropping two of them would have made the overview
+// strictly less useful on the device most people read it on. Only the
+// league-position bar waits for sm: it is the one column that needs real
+// width to mean anything, and it is the only one with no equivalent on
+// the old card.
 const COLUMNS =
-  'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 sm:grid-cols-[minmax(0,1fr)_4.5rem_5.5rem_5rem_4.5rem]';
+  'grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 sm:grid-cols-[minmax(0,1fr)_4.5rem_5.5rem_5rem_4.5rem] sm:gap-x-4';
 
 export function PhaseTable({ snapshot, sparklines, seasonQuery }: Props) {
   const byPhase = new Map<Phase, PhaseSnapshot>(snapshot.map((s) => [s.phase, s]));
@@ -56,8 +63,8 @@ export function PhaseTable({ snapshot, sparklines, seasonQuery }: Props) {
       >
         <span>Phase</span>
         <span className="text-right">Rank</span>
-        <span className="hidden text-right sm:block">EPA/play</span>
-        <span className="hidden text-right sm:block">Trend</span>
+        <span className="text-right">EPA/play</span>
+        <span className="text-right">Trend</span>
         <span className="hidden text-right sm:block">League</span>
       </div>
 
@@ -89,10 +96,10 @@ export function PhaseTable({ snapshot, sparklines, seasonQuery }: Props) {
                 <MetricValue
                   value={s?.epaPerPlay ?? null}
                   format={formatEpa}
-                  className="hidden text-right text-sm text-text sm:block"
+                  className="text-right text-xs text-text sm:text-sm"
                 />
 
-                <span className="hidden justify-end sm:flex">
+                <span className="flex justify-end">
                   {values.length > 0 ? (
                     <Sparkline
                       values={values}
