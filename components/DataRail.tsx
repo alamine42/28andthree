@@ -65,6 +65,13 @@ function Row({
           ) : (
             <Link
               href={href as Route}
+              // No prefetch. This rail renders on every data page, and Next
+              // prefetches viewport links by default — so each page view fired
+              // a background request at /status, which is force-dynamic,
+              // no-store, and rate-limited to 60/min/IP in middleware. It
+              // burned that budget for a page almost nobody clicks, and made
+              // the E2E suite 429 on its own /status fetch.
+              prefetch={false}
               className="inline-flex min-h-[44px] items-center underline decoration-border-strong underline-offset-4 hover:decoration-text md:min-h-0"
             >
               {value}
