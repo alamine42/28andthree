@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import { desc } from 'drizzle-orm';
+import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import { metaRefresh } from '@/db/schema';
 import { getDb } from '@/lib/db';
 import { isSandbox } from '@/lib/sandbox';
@@ -33,16 +33,22 @@ export const getLastRefresh = cache(async (): Promise<RefreshSnapshot> => {
   const db = getDb();
   if (!db) return { completedAt: null };
   try {
+    // Filter to successful runs in the query, not after it. meta_refresh
+    // also carries 'heartbeat', 'running' and 'failed' rows, so "newest row,
+    // rejected unless it is ok" reports "unknown" every time the newest row
+    // is a heartbeat — which is most of the time. The ask is the newest row
+    // that IS ok.
+    //
+    // isNotNull is load-bearing too: a 'running' row has a null completed_at,
+    // and Postgres sorts NULLs FIRST in DESC, so without it an in-flight run
+    // wins the sort and hides the real answer behind it.
     const [row] = await db
-      .select({ completedAt: metaRefresh.completedAt, status: metaRefresh.status })
+      .select({ completedAt: metaRefresh.completedAt })
       .from(metaRefresh)
+      .where(and(eq(metaRefresh.status, 'ok'), isNotNull(metaRefresh.completedAt)))
       .orderBy(desc(metaRefresh.completedAt))
       .limit(1);
-    // A failed run still has a completedAt. Reporting it as the freshness
-    // of the data would be a lie — the numbers on screen are from whatever
-    // succeeded before it — so only an 'ok' run counts.
-    if (!row || row.status !== 'ok') return { completedAt: null };
-    return { completedAt: row.completedAt };
+    return { completedAt: row?.completedAt ?? null };
   } catch (e) {
     // The table is missing before the first migration on a fresh database.
     // A freshness line is decoration on top of the page's real content, so
