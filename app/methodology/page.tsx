@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { SectionHeader } from '@/components/SectionHeader';
 import { pageMetadata } from '@/lib/seo/page-metadata';
+import { PROSE_SHELL } from '@/components/PageShell';
 
 export const metadata: Metadata = pageMetadata({
   title: 'Methodology',
@@ -42,7 +43,9 @@ const TOC: ReadonlyArray<TocItem> = [
 
 export default function MethodologyPage() {
   return (
-    <article className="flex flex-col gap-12 py-12 md:gap-16 md:py-16">
+    // Editorial page: keeps the full hero and the 120px section rhythm that
+    // data pages gave up in E13, and the 1240px prose measure.
+    <article className={`${PROSE_SHELL} flex flex-col gap-12 py-12 md:gap-16 md:py-16`}>
       <header className="flex flex-col gap-5">
         <p
           className="font-mono text-2xs uppercase tracking-widest text-text-muted"

@@ -35,9 +35,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <SandboxBanner />
         <div className="flex min-h-screen flex-col">
           <SiteHeader currentSeason={ctx.season} seasons={seasons} />
-          <main className="mx-auto w-full max-w-content flex-1 px-4 md:px-6 lg:px-8">
-            {children}
-          </main>
+          {/* E13: width and gutter moved into PageShell / ProseShell so a
+              data page can run to 1600px with a rail while an editorial
+              page stays at the 1240px prose measure. */}
+          <main className="w-full flex-1">{children}</main>
           <SiteFooter />
         </div>
         <AgentationToolbar />

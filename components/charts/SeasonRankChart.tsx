@@ -54,7 +54,8 @@ export function SeasonRankChart({ points, phaseLabel }: Props) {
           role="img"
           aria-label={`${phaseLabel} league rank by season. ${summary}.`}
           viewBox={`0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`}
-          className="w-full min-w-[560px]"
+          // E13: see TrendChart — height tracks width through the viewBox.
+          className="max-h-[340px] w-full min-w-[560px]"
         >
           <title>{`${phaseLabel} rank by season`}</title>
 

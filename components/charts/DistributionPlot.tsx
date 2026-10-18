@@ -43,6 +43,10 @@ export function DistributionPlot({ rows, highlightTeam, phaseLabel }: Props) {
       role="img"
       aria-label={`${phaseLabel} distribution across ${qualifying.length} teams`}
       viewBox={`0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`}
+      // No max-h here, unlike TrendChart: this viewBox is 720x120, so even
+      // at the full width of the wider E13 column it renders under 200px
+      // tall. Capping it would only letterbox a chart that was never too
+      // tall, for no gain.
       className="w-full"
       data-testid="distribution-plot"
     >
@@ -74,9 +78,12 @@ export function DistributionPlot({ rows, highlightTeam, phaseLabel }: Props) {
               data-team={r.team}
               data-tier={rankTier(r.rank)}
             >
-              <title>
-                {r.team} · rank {r.rank ?? '—'} · {formatEpa(r.epaPerPlay)}
-              </title>
+              {/* One interpolated string, not several JSX children. React
+                  SSRs sibling text children with <!-- --> separators and
+                  rebuilds them as plain text nodes on the client, which
+                  mismatches and forces React to regenerate this subtree —
+                  taking the trend chart's toggle state with it. */}
+              <title>{`${r.team} · rank ${r.rank ?? '—'} · ${formatEpa(r.epaPerPlay)}`}</title>
             </circle>
           );
         })}
@@ -91,10 +98,7 @@ export function DistributionPlot({ rows, highlightTeam, phaseLabel }: Props) {
               data-team={highlightRow.team}
               data-tier={rankTier(highlightRow.rank)}
             >
-              <title>
-                {highlightRow.team} · rank {highlightRow.rank ?? '—'} ·{' '}
-                {formatEpa(highlightRow.epaPerPlay)}
-              </title>
+              <title>{`${highlightRow.team} · rank ${highlightRow.rank ?? '—'} · ${formatEpa(highlightRow.epaPerPlay)}`}</title>
             </circle>
             <text
               x={xScale(highlightRow.epaPerPlay as number)}

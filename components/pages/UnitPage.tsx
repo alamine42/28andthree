@@ -2,7 +2,9 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { UNIT_DISPLAY_NAMES, type UnitSlug } from '@/lib/constants/units';
 import { getDefenseUnit, getDlUnit, getOlUnit } from '@/lib/data/units';
+import { DataRail } from '@/components/DataRail';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
+import { PageHead, PageShell } from '@/components/PageShell';
 import { SeasonNotice } from '@/components/SeasonNotice';
 import { MetricCell } from '@/components/StatCell';
 import { formatEpa, formatPercent } from '@/lib/format/number';
@@ -25,38 +27,44 @@ export async function UnitPage({
   const display = UNIT_DISPLAY_NAMES[unit];
 
   return (
-    <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
-      {historical ? null : <SeasonNotice />}
-      <nav
-        aria-label="Breadcrumb"
-        className="font-mono text-2xs uppercase tracking-widest text-text-muted"
-      >
-        <Link
-          href={(historical ? `/?season=${season}` : '/') as Route}
-          className="inline-flex min-h-[44px] items-center underline decoration-border-strong underline-offset-4 hover:text-text hover:decoration-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
+    <PageShell rail={<DataRail />}>
+      <section className="flex flex-col gap-8 md:gap-[60px]">
+        {historical ? null : <SeasonNotice />}
+        <nav
+          aria-label="Breadcrumb"
+          className="font-mono text-2xs uppercase tracking-widest text-text-muted"
         >
-          Season overview
-        </Link>
-        <span className="mx-2 text-text-muted">/</span> Team units{' '}
-        <span className="mx-2 text-text-muted">/</span>
-        <span className="text-text">{display}</span>
-      </nav>
+          <Link
+            href={(historical ? `/?season=${season}` : '/') as Route}
+            className="inline-flex min-h-[44px] items-center underline decoration-border-strong underline-offset-4 hover:text-text hover:decoration-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
+          >
+            Season overview
+          </Link>
+          <span className="mx-2 text-text-muted">/</span> Team units{' '}
+          <span className="mx-2 text-text-muted">/</span>
+          <span className="text-text">{display}</span>
+        </nav>
 
-      <header className="flex flex-col gap-3">
-        {historical ? <HistoricalMarker season={season} backHref={`/team/units/${unit}`} /> : null}
-        <h1 className="font-display text-3xl font-bold tracking-tightest text-text md:text-display">
-          {display} unit
-        </h1>
-        <p className="font-mono text-xs text-text-muted">
-          Team-level aggregates · <span className="tabular-nums">{season}</span> regular season ·
-          New England
-        </p>
-      </header>
+        <PageHead
+          eyebrow={
+            <>
+              Team-level aggregates · <span className="tabular-nums">{season}</span> regular season
+              · New England
+            </>
+          }
+          title={`${display} unit`}
+          marker={
+            historical ? (
+              <HistoricalMarker season={season} backHref={`/team/units/${unit}`} />
+            ) : null
+          }
+        />
 
-      {await renderUnit(unit, season)}
+        {await renderUnit(unit, season)}
 
-      <MethodologyCallout unit={unit} />
-    </section>
+        <MethodologyCallout unit={unit} />
+      </section>
+    </PageShell>
   );
 }
 

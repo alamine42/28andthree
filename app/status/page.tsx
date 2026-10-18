@@ -5,6 +5,7 @@ import { type EtlStatus, ETL_STATUSES, metaRefresh, type MetaRefresh } from '@/d
 import { getDb } from '@/lib/db';
 import { getServerEnv } from '@/lib/env';
 import { pageMetadata } from '@/lib/seo/page-metadata';
+import { PROSE_SHELL } from '@/components/PageShell';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -74,7 +75,7 @@ export default async function StatusPage({ searchParams }: StatusPageProps) {
   const completedAbs = row?.completedAt ? formatAbsolute(row.completedAt) : null;
 
   return (
-    <section className="flex flex-col gap-10 py-12 md:py-16">
+    <section className={`${PROSE_SHELL} flex flex-col gap-10 py-12 md:py-16`}>
       <header className="flex flex-col gap-3">
         <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">Data status</p>
         <div className="flex flex-wrap items-center gap-4">

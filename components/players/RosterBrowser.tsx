@@ -3,8 +3,8 @@
 import { useMemo, useState } from 'react';
 import type { RosterEntry } from '@/lib/data/players-hub';
 import type { PlayerCategory } from '@/lib/format/player-routes';
-import { RosterCard } from './RosterCard';
 import { PlayerSearch } from './PlayerSearch';
+import { RosterTable } from './RosterTable';
 
 type Props = {
   roster: ReadonlyArray<RosterEntry>;
@@ -74,11 +74,7 @@ export function RosterBrowser({ roster, seasonQuery }: Props) {
           No players in this position for the current roster.
         </p>
       ) : (
-        <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {visible.map((p) => (
-            <RosterCard seasonQuery={seasonQuery} key={p.gsisId} player={p} />
-          ))}
-        </div>
+        <RosterTable roster={visible} seasonQuery={seasonQuery} />
       )}
     </div>
   );
