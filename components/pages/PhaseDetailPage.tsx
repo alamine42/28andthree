@@ -4,11 +4,7 @@ import { notFound } from 'next/navigation';
 import { type Phase } from '@/lib/constants/phases';
 import { phaseDisplayName } from '@/lib/format/phase';
 import { getSeasonContext } from '@/lib/data/current-season';
-import {
-  getLeagueDistribution,
-  getPhaseDetail,
-  getPhaseWeeklyTrend,
-} from '@/lib/data/phases';
+import { getLeagueDistribution, getPhaseDetail, getPhaseWeeklyTrend } from '@/lib/data/phases';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
 import { NoSeasonData } from '@/components/NoSeasonData';
 import { SeasonNotice } from '@/components/SeasonNotice';
@@ -55,9 +51,7 @@ export async function PhaseDetailPage({
         {historical ? null : <SeasonNotice />}
         <PhaseBreadcrumb display={display} homeHref={homeHref} />
         <header className="flex flex-col gap-3">
-          {historical ? (
-            <HistoricalMarker season={season} backHref={`/phases/${phase}`} />
-          ) : null}
+          {historical ? <HistoricalMarker season={season} backHref={`/phases/${phase}`} /> : null}
           <h1 className="font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
             {display}
           </h1>
@@ -76,9 +70,7 @@ export async function PhaseDetailPage({
       <PhaseBreadcrumb display={display} homeHref={homeHref} />
 
       <header className="flex flex-col gap-3">
-        {historical ? (
-          <HistoricalMarker season={season} backHref={`/phases/${phase}`} />
-        ) : null}
+        {historical ? <HistoricalMarker season={season} backHref={`/phases/${phase}`} /> : null}
         <h1 className="font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
           {display}
         </h1>
@@ -87,13 +79,9 @@ export async function PhaseDetailPage({
             EPA per play · regular season <span className="tabular-nums">{season}</span>
           </span>
           {detail.totalQualified !== 32 ? (
-            <span className="text-text-muted">
-              of {detail.totalQualified} qualified teams
-            </span>
+            <span className="text-text-muted">of {detail.totalQualified} qualified teams</span>
           ) : null}
-          {detail.insufficientSample ? (
-            <InsufficientSampleChip plays={detail.plays} />
-          ) : null}
+          {detail.insufficientSample ? <InsufficientSampleChip plays={detail.plays} /> : null}
         </p>
       </header>
 
@@ -142,7 +130,11 @@ export async function PhaseDetailPage({
           <>
             <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
               {contributors.map((c, i) => (
-                <TopContributorCard key={c.gsisId || `unit-${i}`} card={c} seasonQuery={historical ? season : null} />
+                <TopContributorCard
+                  key={c.gsisId || `unit-${i}`}
+                  card={c}
+                  seasonQuery={historical ? season : null}
+                />
               ))}
             </div>
             {contributors[0]?.caveat ? (
@@ -168,7 +160,7 @@ function PhaseBreadcrumb({ display, homeHref }: { display: string; homeHref: str
     >
       <Link
         href={homeHref as Route}
-        className="inline-flex min-h-[44px] items-center underline underline-offset-4 decoration-border-strong hover:decoration-text hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
+        className="inline-flex min-h-[44px] items-center underline decoration-border-strong underline-offset-4 hover:text-text hover:decoration-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
       >
         Season overview
       </Link>
@@ -192,4 +184,3 @@ function InsufficientSampleChip({ plays }: { plays: number }) {
     </span>
   );
 }
-

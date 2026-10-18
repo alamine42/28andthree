@@ -40,18 +40,12 @@ export async function QbDeepDivePage({
         {historical ? null : <SeasonNotice />}
         <header className="flex flex-col gap-3">
           <PlayerHeader player={player} season={season} subtitle="Quarterback" />
-          {historical ? (
-            <HistoricalMarker season={season} backHref="/players" />
-          ) : null}
+          {historical ? <HistoricalMarker season={season} backHref="/players" /> : null}
         </header>
         <NoSeasonData
           season={season}
           variant={historical ? 'historical' : 'upcoming'}
-          message={
-            historical
-              ? `No recorded ${season} snaps with the Patriots.`
-              : undefined
-          }
+          message={historical ? `No recorded ${season} snaps with the Patriots.` : undefined}
         />
       </section>
     );
@@ -65,9 +59,7 @@ export async function QbDeepDivePage({
           route 404s (code review pass 1). */}
       <header className="flex flex-col gap-3">
         <PlayerHeader player={player} season={season} subtitle="Quarterback" />
-        {historical ? (
-          <HistoricalMarker season={season} backHref="/players" />
-        ) : null}
+        {historical ? <HistoricalMarker season={season} backHref="/players" /> : null}
       </header>
 
       <SmallSampleBanner kind="dropbacks" n={deepDive.dropbacks} threshold={100} />
@@ -79,22 +71,30 @@ export async function QbDeepDivePage({
         <StatCell label="EPA / dropback">
           <StatValue>
             <MetricValue value={deepDive.epaPerDropback} format={formatEpa} />
-            </StatValue>
+          </StatValue>
         </StatCell>
         <StatCell label="CPOE">
           <StatValue>
-            <MetricValue value={deepDive.cpoe} format={(v) => v == null ? '—' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + '%'} />
-            </StatValue>
+            <MetricValue
+              value={deepDive.cpoe}
+              format={(v) =>
+                v == null ? '—' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + '%'
+              }
+            />
+          </StatValue>
         </StatCell>
         <StatCell label="aDOT">
           <StatValue>
-            <MetricValue value={deepDive.adot} format={(v) => v == null ? '—' : v.toFixed(1) + ' yds'} />
-            </StatValue>
+            <MetricValue
+              value={deepDive.adot}
+              format={(v) => (v == null ? '—' : v.toFixed(1) + ' yds')}
+            />
+          </StatValue>
         </StatCell>
         <StatCell label="Pressure rate">
           <StatValue>
             <MetricValue value={deepDive.pressureRate} format={formatPercent} />
-            </StatValue>
+          </StatValue>
         </StatCell>
       </dl>
 
@@ -107,12 +107,12 @@ export async function QbDeepDivePage({
         <StatCell label="Clean pocket (EPA/dropback)">
           <StatValue>
             <MetricValue value={deepDive.cleanPocketEpaPerDropback} format={formatEpa} />
-            </StatValue>
+          </StatValue>
         </StatCell>
         <StatCell label="Under pressure (EPA/dropback)">
           <StatValue>
             <MetricValue value={deepDive.pressuredEpaPerDropback} format={formatEpa} />
-            </StatValue>
+          </StatValue>
         </StatCell>
       </dl>
 
@@ -123,12 +123,12 @@ export async function QbDeepDivePage({
         <StatCell label="Deep-ball EPA (20+ air yds)">
           <StatValue>
             <MetricValue value={deepDive.deepEpaPerAttempt} format={formatEpa} />
-            </StatValue>
+          </StatValue>
         </StatCell>
         <StatCell label="Success rate">
           <StatValue>
             <MetricValue value={deepDive.successRate} format={formatPercent} />
-            </StatValue>
+          </StatValue>
         </StatCell>
       </dl>
 
@@ -137,15 +137,14 @@ export async function QbDeepDivePage({
   );
 }
 
-
 function MethodologyCallout() {
   return (
     <aside className="flex flex-col gap-2 rounded-sm border-l-2 border-positive bg-surface px-4 py-3">
       <p className="font-mono text-2xs uppercase tracking-widest text-positive">Methodology</p>
       <p className="max-w-prose text-sm text-text">
-        Primary starter = games where the QB took more than 50% of team dropbacks. Pressure rate
-        and clean-pocket splits are shown only when participation data coverage for the underlying
-        games is ≥ 80% (SPEC §3.3); em-dashes otherwise.
+        Primary starter = games where the QB took more than 50% of team dropbacks. Pressure rate and
+        clean-pocket splits are shown only when participation data coverage for the underlying games
+        is ≥ 80% (SPEC §3.3); em-dashes otherwise.
       </p>
     </aside>
   );

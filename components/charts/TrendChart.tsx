@@ -55,7 +55,11 @@ export function TrendChart({ points, phaseLabel }: Props) {
   return (
     <div className="flex flex-col gap-3" data-testid="trend-chart">
       <div className="flex justify-end">
-        <div role="group" aria-label="View" className="flex gap-px rounded-sm border border-border bg-border p-px">
+        <div
+          role="group"
+          aria-label="View"
+          className="flex gap-px rounded-sm border border-border bg-border p-px"
+        >
           <ToggleButton pressed={view === 'rolling'} onClick={() => setView('rolling')}>
             Rolling 4 wk
           </ToggleButton>

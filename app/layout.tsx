@@ -30,10 +30,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const ctx = await getSeasonContext();
   const seasons = browsableSeasons(ctx.season);
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${display.variable}`}
-    >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${display.variable}`}>
       <body className="min-h-screen bg-bg text-text antialiased">
         <SandboxBanner />
         <div className="flex min-h-screen flex-col">

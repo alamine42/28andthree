@@ -41,16 +41,15 @@ export async function TeamOverviewPage({
           className="flex flex-wrap items-center gap-x-2 font-mono text-2xs uppercase tracking-widest text-text-muted"
           data-testid="season-eyebrow"
         >
-          <span className="tabular-nums">{season}</span>{' '}
-          <span>{eyebrowSuffix}</span>
+          <span className="tabular-nums">{season}</span> <span>{eyebrowSuffix}</span>
         </p>
         {historical ? <HistoricalMarker season={season} backHref="/" /> : null}
         <h1 className="max-w-4xl font-display text-2xl font-bold leading-tight tracking-tightest text-text md:text-3xl">
           New England, {season} in one page.
         </h1>
         <p className="max-w-prose text-sm text-text-muted md:text-base">
-          League rank across every phase of play. Weekly trend, recent results,
-          32-team distribution.
+          League rank across every phase of play. Weekly trend, recent results, 32-team
+          distribution.
         </p>
       </header>
 

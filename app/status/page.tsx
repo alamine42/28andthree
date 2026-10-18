@@ -25,7 +25,10 @@ type StatusPageProps = {
 // a status page that hides outages is worse than a status page that 500s.
 const PG_UNDEFINED_TABLE = '42P01';
 
-type RefreshResult = { kind: 'row'; row: MetaRefresh } | { kind: 'empty' } | { kind: 'error'; message: string };
+type RefreshResult =
+  | { kind: 'row'; row: MetaRefresh }
+  | { kind: 'empty' }
+  | { kind: 'error'; message: string };
 
 async function getLastRefresh(): Promise<RefreshResult> {
   const db = getDb();
@@ -91,7 +94,11 @@ export default async function StatusPage({ searchParams }: StatusPageProps) {
           <StatField label="Status" value={normalizedStatus ?? 'unknown'} mono />
           <StatField
             label="Season / Week"
-            value={row.season === null && row.week === null ? '—' : `${row.season ?? '—'} · W${row.week ?? '—'}`}
+            value={
+              row.season === null && row.week === null
+                ? '—'
+                : `${row.season ?? '—'} · W${row.week ?? '—'}`
+            }
           />
           <StatField
             label="Started"
@@ -196,7 +203,9 @@ function EmptyState() {
         waiting for first run
       </p>
       <p className="max-w-prose text-base text-text">
-        Once the weekly ETL writes its first row to <code className="font-mono text-sm text-text-muted">meta_refresh</code>, this page will show run status, timing, and per-table row counts.
+        Once the weekly ETL writes its first row to{' '}
+        <code className="font-mono text-sm text-text-muted">meta_refresh</code>, this page will show
+        run status, timing, and per-table row counts.
       </p>
     </div>
   );
@@ -205,12 +214,10 @@ function EmptyState() {
 function ErrorState({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-start gap-3 rounded-md border border-negative bg-surface p-6 md:p-8">
-      <p className="font-mono text-2xs uppercase tracking-widest text-text">
-        database unreachable
-      </p>
+      <p className="font-mono text-2xs uppercase tracking-widest text-text">database unreachable</p>
       <p className="max-w-prose text-base text-text">
-        The status query failed. The ETL may still be writing — this page just can&apos;t read
-        right now. Check Sentry for the full error.
+        The status query failed. The ETL may still be writing — this page just can&apos;t read right
+        now. Check Sentry for the full error.
       </p>
       <code className="max-w-full overflow-x-auto rounded-sm bg-surface-2 px-2 py-1 font-mono text-sm text-text-muted">
         {message}

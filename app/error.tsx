@@ -23,10 +23,7 @@ export default function RouteError({
   }, [error]);
 
   return (
-    <section
-      data-testid="route-error"
-      className="flex flex-col gap-12 py-16 md:gap-16 md:py-24"
-    >
+    <section data-testid="route-error" className="flex flex-col gap-12 py-16 md:gap-16 md:py-24">
       <header className="flex flex-col gap-5">
         <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">
           Something broke
@@ -35,9 +32,8 @@ export default function RouteError({
           A fumble. Sorry about that.
         </h1>
         <p className="max-w-prose text-base text-text-muted md:text-lg">
-          The page failed to render. We were notified automatically. Try
-          again; if it keeps happening, the ETL or a data path is probably
-          broken and we&rsquo;re already on it.
+          The page failed to render. We were notified automatically. Try again; if it keeps
+          happening, the ETL or a data path is probably broken and we&rsquo;re already on it.
         </p>
       </header>
 

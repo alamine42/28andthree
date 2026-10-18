@@ -9,10 +9,7 @@ export const metadata: Metadata = {
 
 export default function NotFoundPage() {
   return (
-    <section
-      data-testid="not-found"
-      className="flex flex-col gap-12 py-16 md:gap-16 md:py-24"
-    >
+    <section data-testid="not-found" className="flex flex-col gap-12 py-16 md:gap-16 md:py-24">
       <header className="flex flex-col gap-5">
         <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">
           404 &middot; Not found
@@ -21,9 +18,8 @@ export default function NotFoundPage() {
           Play not in the book.
         </h1>
         <p className="max-w-prose text-base text-text-muted md:text-lg">
-          That URL doesn&rsquo;t resolve to anything on 28 and Three. Either
-          you followed a stale link, the page got renamed, or the slug has a
-          typo.
+          That URL doesn&rsquo;t resolve to anything on 28 and Three. Either you followed a stale
+          link, the page got renamed, or the slug has a typo.
         </p>
       </header>
 
@@ -37,12 +33,7 @@ export default function NotFoundPage() {
           title="Season overview"
           caption="Phase ranks, record, weekly trend"
         />
-        <NavCard
-          href="/players"
-          eyebrow="Players"
-          title="Roster hub"
-          caption="QB, skill, units"
-        />
+        <NavCard href="/players" eyebrow="Players" title="Roster hub" caption="QB, skill, units" />
         <NavCard
           href="/methodology"
           eyebrow="Methodology"

@@ -58,10 +58,10 @@ export default async function TrendsPage() {
           Twelve phases, season by season.
         </h1>
         <p className="max-w-prose text-base text-text-muted md:text-lg">
-          Each line is a league rank, not a raw number. League-wide EPA/play
-          drifts from season to season, so 4th in {EARLIEST_SEASON} and 4th
-          today mean the same thing while <span className="whitespace-nowrap">+0.08</span>{' '}
-          does not. EPA/play rides along under each point.
+          Each line is a league rank, not a raw number. League-wide EPA/play drifts from season to
+          season, so 4th in {EARLIEST_SEASON} and 4th today mean the same thing while{' '}
+          <span className="whitespace-nowrap">+0.08</span> does not. EPA/play rides along under each
+          point.
         </p>
       </header>
 
@@ -75,26 +75,16 @@ export default async function TrendsPage() {
       ) : (
         <>
           <div className="flex flex-col gap-6">
-            <SectionHeader
-              eyebrow="HEADLINE"
-              title="Overall EPA differential"
-              anchor="overall"
-            />
+            <SectionHeader eyebrow="HEADLINE" title="Overall EPA differential" anchor="overall" />
             <p className="max-w-prose text-sm text-text-muted">
-              Offensive EPA/play minus defensive EPA/play allowed — the one
-              number that carries a whole season.
+              Offensive EPA/play minus defensive EPA/play allowed — the one number that carries a
+              whole season.
             </p>
-            {overall ? (
-              <SeasonRankChart points={overall.points} phaseLabel="Overall" />
-            ) : null}
+            {overall ? <SeasonRankChart points={overall.points} phaseLabel="Overall" /> : null}
           </div>
 
           <div className="flex flex-col gap-10">
-            <SectionHeader
-              eyebrow="BY PHASE"
-              title="Every phase, one axis"
-              anchor="phases"
-            />
+            <SectionHeader eyebrow="BY PHASE" title="Every phase, one axis" anchor="phases" />
             {GRID_GROUPS.map((group) => (
               <div key={group.label} className="flex flex-col gap-4">
                 <h3 className="font-mono text-2xs uppercase tracking-widest text-text-muted">
@@ -103,9 +93,7 @@ export default async function TrendsPage() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {group.phases.map((phase) => {
                     const series = byPhase.get(phase);
-                    return series ? (
-                      <SeasonHistoryCard key={phase} series={series} />
-                    ) : null;
+                    return series ? <SeasonHistoryCard key={phase} series={series} /> : null;
                   })}
                 </div>
               </div>
@@ -116,10 +104,9 @@ export default async function TrendsPage() {
 
       <aside className="border-l-2 border-positive bg-surface p-5 text-sm text-text-muted">
         <p className="max-w-prose">
-          A season only appears once the Patriots have run at least{' '}
-          {SEASON_SAMPLE_FLOOR} plays in that phase. Below the floor the point
-          is left blank rather than plotted — an in-progress September carries
-          no meaningful rank. Gaps in a line are missing data, never zero.
+          A season only appears once the Patriots have run at least {SEASON_SAMPLE_FLOOR} plays in
+          that phase. Below the floor the point is left blank rather than plotted — an in-progress
+          September carries no meaningful rank. Gaps in a line are missing data, never zero.
         </p>
       </aside>
     </section>

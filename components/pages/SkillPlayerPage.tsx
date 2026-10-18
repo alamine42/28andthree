@@ -38,18 +38,12 @@ export async function SkillPlayerPage({
         {historical ? null : <SeasonNotice />}
         <header className="flex flex-col gap-3">
           <PlayerHeader player={player} season={season} subtitle={player.position ?? undefined} />
-          {historical ? (
-            <HistoricalMarker season={season} backHref="/players" />
-          ) : null}
+          {historical ? <HistoricalMarker season={season} backHref="/players" /> : null}
         </header>
         <NoSeasonData
           season={season}
           variant={historical ? 'historical' : 'upcoming'}
-          message={
-            historical
-              ? `No recorded ${season} snaps with the Patriots.`
-              : undefined
-          }
+          message={historical ? `No recorded ${season} snaps with the Patriots.` : undefined}
         />
       </section>
     );
@@ -65,14 +59,12 @@ export async function SkillPlayerPage({
           route 404s (code review pass 1). */}
       <header className="flex flex-col gap-3">
         <PlayerHeader player={player} season={season} subtitle={usage.position} />
-        {historical ? (
-          <HistoricalMarker season={season} backHref="/players" />
-        ) : null}
+        {historical ? <HistoricalMarker season={season} backHref="/players" /> : null}
       </header>
 
       <SmallSampleBanner
         kind={isRb ? 'carries' : 'targets'}
-        n={isRb ? usage.carries ?? 0 : usage.targets ?? 0}
+        n={isRb ? (usage.carries ?? 0) : (usage.targets ?? 0)}
         threshold={isRb ? 50 : 30}
       />
 
@@ -83,31 +75,59 @@ export async function SkillPlayerPage({
         {isRb ? (
           <>
             <StatCell label="Carries">
-              <StatValue><MetricValue value={usage.carries} format={(v) => v == null ? '—' : String(v)} /></StatValue>
+              <StatValue>
+                <MetricValue value={usage.carries} format={(v) => (v == null ? '—' : String(v))} />
+              </StatValue>
             </StatCell>
             <StatCell label="Yards">
-              <StatValue><MetricValue value={usage.yardsRushing} format={(v) => v == null ? '—' : String(v)} /></StatValue>
+              <StatValue>
+                <MetricValue
+                  value={usage.yardsRushing}
+                  format={(v) => (v == null ? '—' : String(v))}
+                />
+              </StatValue>
             </StatCell>
             <StatCell label="YPC">
-              <StatValue><MetricValue value={usage.ypc} format={(v) => v == null ? '—' : v.toFixed(2)} /></StatValue>
+              <StatValue>
+                <MetricValue value={usage.ypc} format={(v) => (v == null ? '—' : v.toFixed(2))} />
+              </StatValue>
             </StatCell>
             <StatCell label="RZ targets">
-              <StatValue><MetricValue value={usage.redzoneTargets} format={(v) => v == null ? '—' : String(v)} /></StatValue>
+              <StatValue>
+                <MetricValue
+                  value={usage.redzoneTargets}
+                  format={(v) => (v == null ? '—' : String(v))}
+                />
+              </StatValue>
             </StatCell>
           </>
         ) : (
           <>
             <StatCell label="Targets">
-              <StatValue><MetricValue value={usage.targets} format={(v) => v == null ? '—' : String(v)} /></StatValue>
+              <StatValue>
+                <MetricValue value={usage.targets} format={(v) => (v == null ? '—' : String(v))} />
+              </StatValue>
             </StatCell>
             <StatCell label="Receptions">
-              <StatValue><MetricValue value={usage.receptions} format={(v) => v == null ? '—' : String(v)} /></StatValue>
+              <StatValue>
+                <MetricValue
+                  value={usage.receptions}
+                  format={(v) => (v == null ? '—' : String(v))}
+                />
+              </StatValue>
             </StatCell>
             <StatCell label="Target share" testid="skill-target-share">
-              <StatValue><MetricValue value={usage.targetShare} format={formatPercent} /></StatValue>
+              <StatValue>
+                <MetricValue value={usage.targetShare} format={formatPercent} />
+              </StatValue>
             </StatCell>
             <StatCell label="YAC / reception">
-              <StatValue><MetricValue value={usage.yacPerReception} format={(v) => v == null ? '—' : v.toFixed(1) + ' yds'} /></StatValue>
+              <StatValue>
+                <MetricValue
+                  value={usage.yacPerReception}
+                  format={(v) => (v == null ? '—' : v.toFixed(1) + ' yds')}
+                />
+              </StatValue>
             </StatCell>
           </>
         )}
@@ -115,5 +135,3 @@ export async function SkillPlayerPage({
     </section>
   );
 }
-
-

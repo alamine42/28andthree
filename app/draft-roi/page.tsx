@@ -49,10 +49,9 @@ export default async function DraftRoiPage() {
           Mayo &amp; Wolf, by the draft class.
         </h1>
         <p className="max-w-prose text-base text-text-muted md:text-lg">
-          Five classes, fifty-odd picks. Slot-expected value is the curve fit
-          against 2015–2024 league-wide outcomes at the same slot. Actual
-          value is EPA-weighted contribution to date for skill positions;
-          for trench + secondary picks it&rsquo;s a unit-proxy tier (marked
+          Five classes, fifty-odd picks. Slot-expected value is the curve fit against 2015–2024
+          league-wide outcomes at the same slot. Actual value is EPA-weighted contribution to date
+          for skill positions; for trench + secondary picks it&rsquo;s a unit-proxy tier (marked
           with an asterisk).
         </p>
       </header>
@@ -66,12 +65,7 @@ export default async function DraftRoiPage() {
           <div className="flex flex-col gap-14">
             {classes.map(({ year, rows, summary }) =>
               rows.length > 0 ? (
-                <ClassTable
-                  key={year}
-                  draftSeason={year}
-                  rows={rows}
-                  summary={summary}
-                />
+                <ClassTable key={year} draftSeason={year} rows={rows} summary={summary} />
               ) : null,
             )}
           </div>
@@ -82,12 +76,10 @@ export default async function DraftRoiPage() {
         className="flex flex-col gap-2 rounded-sm border-l-2 border-positive bg-surface px-4 py-3"
         data-testid="draft-methodology-callout"
       >
-        <p className="font-mono text-2xs uppercase tracking-widest text-positive">
-          Methodology
-        </p>
+        <p className="font-mono text-2xs uppercase tracking-widest text-positive">Methodology</p>
         <p className="max-w-prose text-sm text-text">
-          HIT ≥ 1.25× slot-expected value · FAIR 0.75–1.25× · MISS &lt; 0.75× ·
-          PENDING for sub-2-season picks and K/P/LS.{' '}
+          HIT ≥ 1.25× slot-expected value · FAIR 0.75–1.25× · MISS &lt; 0.75× · PENDING for
+          sub-2-season picks and K/P/LS.{' '}
           <a
             href="/methodology#draft-grade"
             className="text-positive underline underline-offset-2 hover:text-text"
@@ -122,10 +114,9 @@ function DraftEmptyState() {
         DRAFT DATA — AWAITING ETL
       </p>
       <p className="max-w-prose text-base text-text md:text-lg">
-        The slot-expected-value curve and the Pats pick roster haven&rsquo;t
-        landed yet. Once the ingest runs, each draft class renders as a
-        HIT&thinsp;/&thinsp;FAIR&thinsp;/&thinsp;MISS table with actual vs.
-        expected contribution.
+        The slot-expected-value curve and the Pats pick roster haven&rsquo;t landed yet. Once the
+        ingest runs, each draft class renders as a HIT&thinsp;/&thinsp;FAIR&thinsp;/&thinsp;MISS
+        table with actual vs. expected contribution.
       </p>
       <p className="font-mono text-xs text-text-muted">
         Next ETL: Tuesday 14:00 UTC · docs/runbook.md#etl-rollback

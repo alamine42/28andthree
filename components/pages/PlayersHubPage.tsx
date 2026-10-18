@@ -10,9 +10,7 @@ import { SeasonNotice } from '@/components/SeasonNotice';
 // the preseason transition window (review finding #8 in players-hub DAL).
 
 export async function PlayersHubPage(
-  props:
-    | { historical: true; season: number }
-    | { historical: false; season: null },
+  props: { historical: true; season: number } | { historical: false; season: null },
 ) {
   const { season, historical } = props;
   const rosterSeason = historical ? season : await getCurrentRosterSeason('NE');
@@ -59,10 +57,7 @@ export async function PlayersHubPage(
           }
         />
       ) : (
-        <RosterBrowser
-          roster={roster}
-          seasonQuery={historical ? rosterSeason : null}
-        />
+        <RosterBrowser roster={roster} seasonQuery={historical ? rosterSeason : null} />
       )}
     </section>
   );
