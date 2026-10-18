@@ -4,6 +4,7 @@
 
 import type { Metadata } from 'next';
 import { pageMetadata } from '@/lib/seo/page-metadata';
+import { PROSE_SHELL } from '@/components/PageShell';
 
 export const metadata: Metadata = pageMetadata({
   title: 'Design tokens',
@@ -32,7 +33,7 @@ const DARK_TOKENS: TokenRow[] = [
 
 export default function TokensPage() {
   return (
-    <section className="flex flex-col gap-8 py-12">
+    <section className={`${PROSE_SHELL} flex flex-col gap-8 py-12`}>
       <header className="flex flex-col gap-2">
         <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">Internal</p>
         <h1 className="font-display text-2xl font-bold tracking-tighter text-text">

@@ -1,13 +1,7 @@
 import { rankTier } from '@/lib/color/rank';
 import { formatEpa, formatRank } from '@/lib/format/number';
 import type { SeasonPoint } from '@/lib/data/trends';
-import {
-  LEAGUE_SIZE,
-  buildRankPath,
-  plottedPoints,
-  xFor,
-  yForRank,
-} from './season-rank-path';
+import { LEAGUE_SIZE, buildRankPath, plottedPoints, xFor, yForRank } from './season-rank-path';
 
 type Props = {
   points: ReadonlyArray<SeasonPoint>;
@@ -51,102 +45,101 @@ export function SeasonRankChart({ points, phaseLabel }: Props) {
     );
   }
 
-  const summary = published
-    .map((p) => `${p.season}: ${formatRank(p.rank)}`)
-    .join(', ');
+  const summary = published.map((p) => `${p.season}: ${formatRank(p.rank)}`).join(', ');
 
   return (
     <figure className="flex flex-col gap-3" data-testid="season-rank-chart">
       <div className="overflow-x-auto">
-      <svg
-        role="img"
-        aria-label={`${phaseLabel} league rank by season. ${summary}.`}
-        viewBox={`0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`}
-        className="w-full min-w-[560px]"
-      >
-        <title>{`${phaseLabel} rank by season`}</title>
+        <svg
+          role="img"
+          aria-label={`${phaseLabel} league rank by season. ${summary}.`}
+          viewBox={`0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`}
+          // E13: see TrendChart — height tracks width through the viewBox.
+          className="max-h-[340px] w-full min-w-[560px]"
+        >
+          <title>{`${phaseLabel} rank by season`}</title>
 
-        <g transform={`translate(${MARGIN.left}, ${MARGIN.top})`}>
-          {GRID_RANKS.map((r) => {
-            const y = yForRank(r, innerH);
-            return (
-              <g key={r}>
-                <line
-                  x1={0}
-                  x2={innerW}
-                  y1={y}
-                  y2={y}
-                  className="stroke-border"
-                  strokeWidth={1}
-                />
-                <text
-                  x={-10}
-                  y={y + 3}
-                  textAnchor="end"
-                  className="fill-text-muted font-mono text-[10px] tabular-nums"
-                >
-                  {r}
-                </text>
-              </g>
-            );
-          })}
+          <g transform={`translate(${MARGIN.left}, ${MARGIN.top})`}>
+            {GRID_RANKS.map((r) => {
+              const y = yForRank(r, innerH);
+              return (
+                <g key={r}>
+                  <line
+                    x1={0}
+                    x2={innerW}
+                    y1={y}
+                    y2={y}
+                    className="stroke-border"
+                    strokeWidth={1}
+                  />
+                  <text
+                    x={-10}
+                    y={y + 3}
+                    textAnchor="end"
+                    className="fill-text-muted font-mono text-[10px] tabular-nums"
+                  >
+                    {r}
+                  </text>
+                </g>
+              );
+            })}
 
-          {path ? (
-            <path
-              d={path}
-              fill="none"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="stroke-text-muted"
-            />
-          ) : null}
+            {path ? (
+              <path
+                d={path}
+                fill="none"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="stroke-text-muted"
+              />
+            ) : null}
 
-          {dots.map((d) => {
-            const point = points[d.index]!;
-            const tier = rankTier(d.rank);
-            return (
-              <g key={point.season}>
-                <circle cx={d.x} cy={d.y} r={4} className={DOT[tier]} />
-                <text
-                  x={d.x}
-                  y={d.y - 12}
-                  textAnchor="middle"
-                  className="fill-text font-mono text-[10px] tabular-nums"
-                >
-                  {formatRank(d.rank)}
-                </text>
-                <text
-                  x={d.x}
-                  y={d.y + 20}
-                  textAnchor="middle"
-                  className="fill-text-muted font-mono text-[10px] tabular-nums"
-                >
-                  {formatEpa(point.epaPerPlay)}
-                </text>
-              </g>
-            );
-          })}
+            {dots.map((d) => {
+              const point = points[d.index]!;
+              const tier = rankTier(d.rank);
+              return (
+                <g key={point.season}>
+                  <circle cx={d.x} cy={d.y} r={4} className={DOT[tier]} />
+                  <text
+                    x={d.x}
+                    y={d.y - 12}
+                    textAnchor="middle"
+                    className="fill-text font-mono text-[10px] tabular-nums"
+                  >
+                    {formatRank(d.rank)}
+                  </text>
+                  <text
+                    x={d.x}
+                    y={d.y + 20}
+                    textAnchor="middle"
+                    className="fill-text-muted font-mono text-[10px] tabular-nums"
+                  >
+                    {formatEpa(point.epaPerPlay)}
+                  </text>
+                </g>
+              );
+            })}
 
-          {/* Season axis. Unpublished seasons keep their slot and label so
+            {/* Season axis. Unpublished seasons keep their slot and label so
               the gap is legible as "no data", not as a missing year. */}
-          {points.map((p, i) => (
-            <text
-              key={p.season}
-              x={xFor(i, points.length, innerW)}
-              y={innerH + 26}
-              textAnchor="middle"
-              className={
-                p.rank == null
-                  ? 'fill-border-strong font-mono text-[10px] tabular-nums'
-                  : 'fill-text-muted font-mono text-[10px] tabular-nums'
-              }
-            >
-              {`’${String(p.season).slice(2)}`}
-            </text>
-          ))}
-        </g>
-      </svg>
+            {points.map((p, i) => (
+              <text
+                key={p.season}
+                x={xFor(i, points.length, innerW)}
+                y={innerH + 26}
+                textAnchor="middle"
+                className={
+                  p.rank == null
+                    ? 'fill-border-strong font-mono text-[10px] tabular-nums'
+                    : 'fill-text-muted font-mono text-[10px] tabular-nums'
+                }
+              >
+                {`’${String(p.season).slice(2)}`}
+              </text>
+            ))}
+          </g>
+        </svg>
       </div>
 
       <figcaption className="font-mono text-2xs uppercase tracking-widest text-text-muted">

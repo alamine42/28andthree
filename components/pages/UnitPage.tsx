@@ -2,7 +2,9 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { UNIT_DISPLAY_NAMES, type UnitSlug } from '@/lib/constants/units';
 import { getDefenseUnit, getDlUnit, getOlUnit } from '@/lib/data/units';
+import { DataRailLive } from '@/components/DataRailLive';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
+import { PageHead, PageShell } from '@/components/PageShell';
 import { SeasonNotice } from '@/components/SeasonNotice';
 import { MetricCell } from '@/components/StatCell';
 import { formatEpa, formatPercent } from '@/lib/format/number';
@@ -25,40 +27,44 @@ export async function UnitPage({
   const display = UNIT_DISPLAY_NAMES[unit];
 
   return (
-    <section className="flex flex-col gap-16 py-12 md:gap-[120px] md:py-16">
-      {historical ? null : <SeasonNotice />}
-      <nav
-        aria-label="Breadcrumb"
-        className="font-mono text-2xs uppercase tracking-widest text-text-muted"
-      >
-        <Link
-          href={(historical ? `/?season=${season}` : '/') as Route}
-          className="inline-flex min-h-[44px] items-center underline underline-offset-4 decoration-border-strong hover:decoration-text hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
+    <PageShell rail={<DataRailLive />}>
+      <section className="flex flex-col gap-8 md:gap-[60px]">
+        {historical ? null : <SeasonNotice />}
+        <nav
+          aria-label="Breadcrumb"
+          className="font-mono text-2xs uppercase tracking-widest text-text-muted"
         >
-          Season overview
-        </Link>
-        <span className="mx-2 text-text-muted">/</span>{' '}
-        Team units <span className="mx-2 text-text-muted">/</span>
-        <span className="text-text">{display}</span>
-      </nav>
+          <Link
+            href={(historical ? `/?season=${season}` : '/') as Route}
+            className="inline-flex min-h-[44px] items-center underline decoration-border-strong underline-offset-4 hover:text-text hover:decoration-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-positive"
+          >
+            Season overview
+          </Link>
+          <span className="mx-2 text-text-muted">/</span> Team units{' '}
+          <span className="mx-2 text-text-muted">/</span>
+          <span className="text-text">{display}</span>
+        </nav>
 
-      <header className="flex flex-col gap-3">
-        {historical ? (
-          <HistoricalMarker season={season} backHref={`/team/units/${unit}`} />
-        ) : null}
-        <h1 className="font-display text-3xl font-bold tracking-tightest text-text md:text-display">
-          {display} unit
-        </h1>
-        <p className="font-mono text-xs text-text-muted">
-          Team-level aggregates · <span className="tabular-nums">{season}</span> regular
-          season · New England
-        </p>
-      </header>
+        <PageHead
+          eyebrow={
+            <>
+              Team-level aggregates · <span className="tabular-nums">{season}</span> regular season
+              · New England
+            </>
+          }
+          title={`${display} unit`}
+          marker={
+            historical ? (
+              <HistoricalMarker season={season} backHref={`/team/units/${unit}`} />
+            ) : null
+          }
+        />
 
-      {await renderUnit(unit, season)}
+        {await renderUnit(unit, season)}
 
-      <MethodologyCallout unit={unit} />
-    </section>
+        <MethodologyCallout unit={unit} />
+      </section>
+    </PageShell>
   );
 }
 
@@ -70,9 +76,21 @@ async function renderUnit(unit: UnitSlug, season: number) {
         className="grid gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-4"
         data-testid="unit-hero"
       >
-        <MetricCell label="Pressure rate" value={stats?.pressureRate ?? null} format={formatPercent} />
-        <MetricCell label="Coverage EPA allowed" value={stats?.coverageEpaAllowed ?? null} format={formatEpa} />
-        <MetricCell label="Run stop rate" value={stats?.runStopRate ?? null} format={formatPercent} />
+        <MetricCell
+          label="Pressure rate"
+          value={stats?.pressureRate ?? null}
+          format={formatPercent}
+        />
+        <MetricCell
+          label="Coverage EPA allowed"
+          value={stats?.coverageEpaAllowed ?? null}
+          format={formatEpa}
+        />
+        <MetricCell
+          label="Run stop rate"
+          value={stats?.runStopRate ?? null}
+          format={formatPercent}
+        />
         <MetricCell
           label="Explosives allowed"
           value={stats?.explosivePlaysAllowed ?? null}
@@ -88,14 +106,26 @@ async function renderUnit(unit: UnitSlug, season: number) {
         className="grid gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-4"
         data-testid="unit-hero"
       >
-        <MetricCell label="Pass block win %" value={stats?.passBlockWinRate ?? null} format={formatPercent} />
-        <MetricCell label="Run block rate" value={stats?.runBlockRate ?? null} format={formatPercent} />
+        <MetricCell
+          label="Pass block win %"
+          value={stats?.passBlockWinRate ?? null}
+          format={formatPercent}
+        />
+        <MetricCell
+          label="Run block rate"
+          value={stats?.runBlockRate ?? null}
+          format={formatPercent}
+        />
         <MetricCell
           label="Pressures allowed"
           value={stats?.pressuresAllowed ?? null}
           format={(v) => (v == null ? '—' : String(v))}
         />
-        <MetricCell label="EPA on dropbacks" value={stats?.epaOnDropbacks ?? null} format={formatEpa} />
+        <MetricCell
+          label="EPA on dropbacks"
+          value={stats?.epaOnDropbacks ?? null}
+          format={formatEpa}
+        />
       </dl>
     );
   }
@@ -111,13 +141,16 @@ async function renderUnit(unit: UnitSlug, season: number) {
         value={stats?.pressuresGenerated ?? null}
         format={(v) => (v == null ? '—' : String(v))}
       />
-      <MetricCell label="Pass rush win %" value={stats?.passRushWinRate ?? null} format={formatPercent} />
+      <MetricCell
+        label="Pass rush win %"
+        value={stats?.passRushWinRate ?? null}
+        format={formatPercent}
+      />
       <MetricCell label="Run stop rate" value={stats?.runStopRate ?? null} format={formatPercent} />
       <MetricCell label="Sack rate" value={stats?.sackRate ?? null} format={formatPercent} />
     </dl>
   );
 }
-
 
 function MethodologyCallout({ unit }: { unit: UnitSlug }) {
   // Per SPEC §3.3 the defense page must prominently disclose that individual
@@ -129,9 +162,9 @@ function MethodologyCallout({ unit }: { unit: UnitSlug }) {
       <p className="font-mono text-2xs uppercase tracking-widest text-positive">Methodology</p>
       {defenseNote ? (
         <p className="max-w-prose text-sm text-text">
-          Individual defender ratings are deferred for v1 — participation data from public
-          nflverse sources is insufficient to produce reliable per-player numbers without PFF
-          grades (not in scope). Better to ship nothing than ship bad defensive numbers.
+          Individual defender ratings are deferred for v1 — participation data from public nflverse
+          sources is insufficient to produce reliable per-player numbers without PFF grades (not in
+          scope). Better to ship nothing than ship bad defensive numbers.
         </p>
       ) : (
         <p className="max-w-prose text-sm text-text">

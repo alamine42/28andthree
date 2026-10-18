@@ -54,13 +54,20 @@ test.describe('E7 players hub', () => {
     await expect(page).toHaveURL(/\/team\/units\/offensive-line$/);
   });
 
-  test('st_card_is_non_clickable_div_not_link', async ({ page }) => {
+  test('st_row_is_not_a_link_and_says_why', async ({ page }) => {
     await page.goto('/players');
     await page.getByRole('button', { name: /^ST/i }).click();
     const first = page.locator('[data-testid^="roster-card-"]').first();
     await expect(first).toBeVisible();
-    const tag = await first.evaluate((el) => el.tagName);
-    assertSt(tag);
+    // The contract is "special teams has no destination yet", not a
+    // particular tag. E13 moved the roster from a card grid to a table, so
+    // this is a <tr> rather than a <div>; what has to hold is that it is
+    // not a link, contains no link, and explains itself to a screen reader.
+    expect(await first.evaluate((el) => el.tagName)).not.toBe('A');
+    await expect(first.locator('a')).toHaveCount(0);
+    await expect(first).toHaveAttribute('aria-disabled', 'true');
+    await expect(first).toHaveAttribute('aria-describedby', /.+/);
+    await expect(first).toContainText(/coming soon/i);
   });
 
   test('escape_closes_listbox_but_preserves_input_text', async ({ page }) => {
@@ -90,13 +97,22 @@ test.describe('E7 players hub', () => {
     await page.goto('/players');
     const first = page.locator('[data-testid^="roster-card-"]').first();
     await expect(first).toBeVisible();
-    // Viewport has ~32px total gutters → card should be >=300px wide.
-    const box = await first.boundingBox();
-    expect(box?.width ?? 0).toBeGreaterThan(300);
+
+    // What the name promises, asserted directly. This used to be inferred
+    // from a card being >=300px wide, which stopped meaning anything when
+    // E13 made the roster a table: the test id now sits on the row's name
+    // link, which is legitimately narrower than the viewport.
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(scrollWidth, 'page scrolls horizontally at 393px').toBeLessThanOrEqual(clientWidth);
+
+    // And the roster still spans the viewport rather than collapsing into a
+    // narrow column. The row is the element that should be full-width; for
+    // an inert special-teams row the test id is already on the <tr>.
+    const row = first.locator('xpath=ancestor-or-self::tr[1]');
+    const box = await row.boundingBox();
+    expect(box?.width ?? 0, 'roster row is too narrow at 393px').toBeGreaterThan(300);
   });
 });
-
-function assertSt(tag: string): void {
-  // Extracted so the assertion message points at the right line if it fails.
-  expect(tag).toBe('DIV');
-}

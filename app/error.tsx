@@ -2,6 +2,8 @@
 
 import * as Sentry from '@sentry/nextjs';
 import { useEffect } from 'react';
+import { DataRail } from '@/components/DataRail';
+import { PageHead, PageShell, RailBlock, RailRow } from '@/components/PageShell';
 
 // Route-group error boundary. Keeps the site chrome (header/footer) from
 // RootLayout intact. Reports to Sentry on mount; renders a quiet, on-brand
@@ -23,48 +25,62 @@ export default function RouteError({
   }, [error]);
 
   return (
-    <section
-      data-testid="route-error"
-      className="flex flex-col gap-12 py-16 md:gap-16 md:py-24"
-    >
-      <header className="flex flex-col gap-5">
-        <p className="font-mono text-2xs uppercase tracking-widest text-text-muted">
-          Something broke
-        </p>
-        <h1 className="font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
-          A fumble. Sorry about that.
-        </h1>
-        <p className="max-w-prose text-base text-text-muted md:text-lg">
-          The page failed to render. We were notified automatically. Try
-          again; if it keeps happening, the ETL or a data path is probably
-          broken and we&rsquo;re already on it.
-        </p>
-      </header>
+    <PageShell rail={<ErrorRail digest={error.digest} />}>
+      <section data-testid="route-error" className="flex flex-col gap-8 md:gap-12">
+        <PageHead
+          eyebrow="Something broke"
+          title="A fumble. Sorry about that."
+          lede="The page failed to render and we were notified automatically. Try again; if it keeps happening, a data path is probably broken."
+        />
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
-        <button
-          type="button"
-          onClick={() => reset()}
-          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm bg-accent px-6 font-mono text-2xs uppercase tracking-widest text-text transition-colors hover:bg-accent-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive"
-        >
-          Try again
-        </button>
-        <a
-          href="/"
-          className="inline-flex min-h-[44px] items-center font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive"
-        >
-          &larr; Back to the season overview
-        </a>
-      </div>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center">
+          <button
+            type="button"
+            onClick={() => reset()}
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm bg-accent px-6 font-mono text-2xs uppercase tracking-widest text-text transition-colors hover:bg-accent-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive"
+          >
+            Try again
+          </button>
+          <a
+            href="/"
+            className="inline-flex min-h-[44px] items-center font-mono text-2xs uppercase tracking-widest text-text-muted transition-colors hover:text-text focus-visible:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-positive"
+          >
+            &larr; Back to the season overview
+          </a>
+        </div>
 
-      {error.digest ? (
-        <p
-          data-testid="error-digest"
-          className="font-mono text-2xs uppercase tracking-widest text-text-muted"
-        >
-          Ref: <span className="text-text-muted">{error.digest}</span>
+        {error.digest ? (
+          <p
+            data-testid="error-digest"
+            className="font-mono text-2xs uppercase tracking-widest text-text-muted"
+          >
+            Ref: <span className="text-text-muted">{error.digest}</span>
+          </p>
+        ) : null}
+      </section>
+    </PageShell>
+  );
+}
+
+/** A failed render is not a missing page: recovery is retry, not
+ * navigation, and the digest is what ties a report to the Sentry event. */
+function ErrorRail({ digest }: { digest?: string }) {
+  return (
+    <>
+      <RailBlock title="Reference">
+        <dl className="space-y-2">
+          <RailRow label="Digest" value={digest ?? '\u2014'} />
+        </dl>
+        <p className="mt-2 font-mono text-2xs text-text-muted">
+          Quote this if you report the failure. No personal data is attached to it.
         </p>
-      ) : null}
-    </section>
+      </RailBlock>
+      <RailBlock title="Still working">
+        <p className="text-xs text-text-muted">
+          This boundary wraps one route. The rest of the site still renders the last good ETL run.
+        </p>
+      </RailBlock>
+      <DataRail />
+    </>
   );
 }

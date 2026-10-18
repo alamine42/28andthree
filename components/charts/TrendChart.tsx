@@ -55,7 +55,11 @@ export function TrendChart({ points, phaseLabel }: Props) {
   return (
     <div className="flex flex-col gap-3" data-testid="trend-chart">
       <div className="flex justify-end">
-        <div role="group" aria-label="View" className="flex gap-px rounded-sm border border-border bg-border p-px">
+        <div
+          role="group"
+          aria-label="View"
+          className="flex gap-px rounded-sm border border-border bg-border p-px"
+        >
           <ToggleButton pressed={view === 'rolling'} onClick={() => setView('rolling')}>
             Rolling 4 wk
           </ToggleButton>
@@ -69,7 +73,12 @@ export function TrendChart({ points, phaseLabel }: Props) {
         role="img"
         aria-label={`${phaseLabel} weekly trend, ${view === 'rolling' ? '4-week rolling' : 'raw weekly'}`}
         viewBox={`0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`}
-        className="w-full"
+        // E13: viewBox + w-full with no height makes height = width x
+        // 320/720, so the wider direction-B column rendered this ~525px
+        // tall with five points floating in it. max-h caps the rendered
+        // height; the browser letterboxes horizontally, so the chart keeps
+        // its aspect ratio rather than stretching strokes and type.
+        className="max-h-[360px] w-full"
       >
         <title>{`${phaseLabel} trend`}</title>
 

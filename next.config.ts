@@ -27,6 +27,7 @@ const SANDBOX_ALIAS_KEYS = [
   '@/lib/sandbox/stubs/coaching',
   '@/lib/sandbox/stubs/current-season',
   '@/lib/sandbox/stubs/contributors',
+  '@/lib/sandbox/stubs/refresh',
   '@/lib/sandbox/stubs/schedule',
   '@/lib/sandbox/season-state',
 ];

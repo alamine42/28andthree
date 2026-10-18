@@ -3,7 +3,9 @@ import {
   getCoachSegments,
   getFourthDownDecisions,
 } from '@/lib/data/coaching';
+import { DataRailLive } from '@/components/DataRailLive';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
+import { PageHead, PageShell, RailBlock, RailRow } from '@/components/PageShell';
 import { NoSeasonData } from '@/components/NoSeasonData';
 import { SeasonNotice } from '@/components/SeasonNotice';
 import { CoachSegmentBanner } from '@/components/coaching/CoachSegmentBanner';
@@ -42,137 +44,153 @@ export async function CoachingPage({
   const dcRollup = latestSegment(segments, 'DC')?.rollup ?? null;
 
   return (
-    <section className="flex flex-col gap-12 py-12 md:gap-16 md:py-16">
-      {historical ? null : <SeasonNotice />}
-      <header className="flex flex-col gap-5">
-        <p
-          className="font-mono text-2xs uppercase tracking-widest text-text-muted"
-          data-testid="coaching-eyebrow"
-        >
-          <span className="tabular-nums">{season}</span> SEASON · COACHING TENDENCIES
-        </p>
-        {historical ? <HistoricalMarker season={season} backHref="/coaching" /> : null}
-        <h1 className="max-w-4xl font-display text-3xl font-bold leading-tight tracking-tightest text-text md:text-display">
-          Patriots coaching, the tendencies that decide games.
-        </h1>
-        <p className="max-w-prose text-base text-text-muted md:text-lg">
-          Play-call splits, situational rates, score-state pressure, and the
-          4th-down ledger against Ben Baldwin&rsquo;s nfl4th model.
-          Coordinator changes split into date-range rows so each tendency
-          sits under the coach who produced it.
-        </p>
-      </header>
+    <PageShell rail={<Rail segments={segments} season={season} />}>
+      <section className="flex flex-col gap-8 md:gap-[60px]">
+        {historical ? null : <SeasonNotice />}
+        <PageHead
+          testId="coaching-eyebrow"
+          eyebrow={
+            <>
+              <span className="tabular-nums">{season}</span> SEASON · COACHING TENDENCIES
+            </>
+          }
+          title="Patriots coaching, the tendencies that decide games."
+          lede="Play-call splits, situational rates, score-state pressure, and the 4th-down ledger against the nfl4th model."
+          marker={historical ? <HistoricalMarker season={season} backHref="/coaching" /> : null}
+        />
 
-      {!hasData ? (
-        historical ? (
-          <NoSeasonData
-            season={season}
-            variant="historical"
-            message={`No ${season} coaching rollups.`}
-          />
-        ) : (
-          <CoachingEmptyState />
-        )
-      ) : (
-        <>
-          <CoachingHero
-            season={season}
-            offense={ocRollup}
-            defense={dcRollup}
-            fourthDowns={fourthDowns}
-          />
-
-          <CoachSegmentBanner segments={segments} />
-
-          {ocRollup ? (
-            <section className="flex flex-col gap-5">
-              <SectionHeader
-                eyebrow="Offense"
-                title="Play-call mix & situation"
-                anchor="offense"
-              />
-              <PlayCallMixTable rollup={ocRollup} />
-              <SituationalGrid rollup={ocRollup} />
-              <ScoreStatePanel rollup={ocRollup} />
-            </section>
-          ) : null}
-
-          <section className="flex flex-col gap-5">
-            <SectionHeader
-              eyebrow="4th downs"
-              title="Model vs. the gut"
-              anchor="fourth-down"
+        {!hasData ? (
+          historical ? (
+            <NoSeasonData
+              season={season}
+              variant="historical"
+              message={`No ${season} coaching rollups.`}
             />
-            {fourthDowns.length > 0 ? (
-              <FourthDownLedger decisions={fourthDowns} />
-            ) : (
-              <aside
-                data-testid="fourth-down-pending"
-                className="flex flex-col gap-2 rounded-sm border-l-2 border-positive bg-surface px-4 py-3"
-              >
-                <p className="font-mono text-2xs uppercase tracking-widest text-positive">
-                  {historical ? '4th down — no model data' : '4th down — model pending'}
-                </p>
-                <p className="max-w-prose text-sm text-text">
-                  {historical
-                    ? `No ${season} 4th-down model recommendations were recorded.`
-                    : 'Recommendations from the 4th-down model haven\u2019t been computed for this season yet. Check back after the next ETL run.'}
-                </p>
-              </aside>
-            )}
-          </section>
+          ) : (
+            <CoachingEmptyState />
+          )
+        ) : (
+          <>
+            <CoachingHero
+              season={season}
+              offense={ocRollup}
+              defense={dcRollup}
+              fourthDowns={fourthDowns}
+            />
 
-          {dcRollup ? (
+            <CoachSegmentBanner segments={segments} />
+
+            {ocRollup ? (
+              <section className="flex flex-col gap-5">
+                <SectionHeader
+                  eyebrow="Offense"
+                  title="Play-call mix & situation"
+                  anchor="offense"
+                />
+                <PlayCallMixTable rollup={ocRollup} />
+                <SituationalGrid rollup={ocRollup} />
+                <ScoreStatePanel rollup={ocRollup} />
+              </section>
+            ) : null}
+
             <section className="flex flex-col gap-5">
-              <SectionHeader
-                eyebrow="Defense"
-                title="Pressure & personnel"
-                anchor="defense"
-              />
-              <div
-                className={`grid gap-8 ${dcRollup.blitzRate !== null ? 'md:grid-cols-2' : ''}`}
-              >
-                {dcRollup.blitzRate !== null ? (
-                  <BlitzCard blitzRate={dcRollup.blitzRate} />
-                ) : null}
-                <PersonnelPanel rollup={dcRollup} />
-              </div>
+              <SectionHeader eyebrow="4th downs" title="Model vs. the gut" anchor="fourth-down" />
+              {fourthDowns.length > 0 ? (
+                <FourthDownLedger decisions={fourthDowns} />
+              ) : (
+                <aside
+                  data-testid="fourth-down-pending"
+                  className="flex flex-col gap-2 rounded-sm border-l-2 border-positive bg-surface px-4 py-3"
+                >
+                  <p className="font-mono text-2xs uppercase tracking-widest text-positive">
+                    {historical ? '4th down — no model data' : '4th down — model pending'}
+                  </p>
+                  <p className="max-w-prose text-sm text-text">
+                    {historical
+                      ? `No ${season} 4th-down model recommendations were recorded.`
+                      : 'Recommendations from the 4th-down model haven\u2019t been computed for this season yet. Check back after the next ETL run.'}
+                  </p>
+                </aside>
+              )}
             </section>
-          ) : null}
-        </>
-      )}
 
-      <aside
-        className="flex flex-col gap-2 rounded-sm border-l-2 border-positive bg-surface px-4 py-3"
-        data-testid="coaching-methodology-callout"
-      >
-        <p className="font-mono text-2xs uppercase tracking-widest text-positive">
-          Methodology
-        </p>
-        <p className="max-w-prose text-sm text-text">
-          Coordinator segments render per SPEC §3.5a: when a role changes
-          mid-season, you&rsquo;ll see two rows. 4th-down recommendations
-          come from Ben Baldwin&rsquo;s nfl4th model, computed in the ETL.{' '}
-          <a
-            href="/methodology#coaching"
-            className="text-positive underline underline-offset-2 hover:text-text"
-          >
-            Full methodology
-          </a>
-          .
-        </p>
-      </aside>
-    </section>
+            {dcRollup ? (
+              <section className="flex flex-col gap-5">
+                <SectionHeader eyebrow="Defense" title="Pressure & personnel" anchor="defense" />
+                <div
+                  className={`grid gap-8 ${dcRollup.blitzRate !== null ? 'md:grid-cols-2' : ''}`}
+                >
+                  {dcRollup.blitzRate !== null ? (
+                    <BlitzCard blitzRate={dcRollup.blitzRate} />
+                  ) : null}
+                  <PersonnelPanel rollup={dcRollup} />
+                </div>
+              </section>
+            ) : null}
+          </>
+        )}
+
+        <aside
+          className="flex flex-col gap-2 rounded-sm border-l-2 border-positive bg-surface px-4 py-3"
+          data-testid="coaching-methodology-callout"
+        >
+          <p className="font-mono text-2xs uppercase tracking-widest text-positive">Methodology</p>
+          <p className="max-w-prose text-sm text-text">
+            Coordinator segments render per SPEC §3.5a: when a role changes mid-season, you&rsquo;ll
+            see two rows. 4th-down recommendations come from Ben Baldwin&rsquo;s nfl4th model,
+            computed in the ETL.{' '}
+            <a
+              href="/methodology#coaching"
+              className="text-positive underline underline-offset-2 hover:text-text"
+            >
+              Full methodology
+            </a>
+            .
+          </p>
+        </aside>
+      </section>
+    </PageShell>
   );
 }
 
-function latestSegment(
-  segments: ReadonlyArray<CoachSegmentWithRollup>,
-  role: Role,
-) {
-  return segments
-    .filter((s) => s.role === role)
-    .sort((a, b) => b.weekStart - a.weekStart)[0];
+/** Rail: who produced these tendencies, and where the model comes from.
+ * A coordinator change splits every tendency into date-range rows, so the
+ * names belong beside the numbers, not buried in a banner. */
+function Rail({
+  segments,
+  season,
+}: {
+  segments: ReadonlyArray<CoachSegmentWithRollup>;
+  season: number;
+}) {
+  const hc = latestSegment(segments, 'HC');
+  const oc = latestSegment(segments, 'OC');
+  const dc = latestSegment(segments, 'DC');
+  const any = hc || oc || dc;
+  return (
+    <>
+      {any ? (
+        <RailBlock title="Coordinators" note={String(season)}>
+          <dl className="space-y-2">
+            <RailRow label="Head coach" value={hc?.coachName ?? '\u2014'} />
+            <RailRow label="Offense" value={oc?.coachName ?? '\u2014'} />
+            <RailRow label="Defense" value={dc?.coachName ?? '\u2014'} />
+          </dl>
+        </RailBlock>
+      ) : null}
+      <RailBlock title="Methodology">
+        <p className="border-l-2 border-positive bg-surface px-3 py-2 text-xs text-text-muted">
+          4th-down recommendations come from Ben Baldwin&rsquo;s nfl4th model, computed in the ETL.
+          A mid-season coaching change splits each tendency into date-range rows.
+        </p>
+      </RailBlock>
+      <DataRailLive />
+    </>
+  );
+}
+
+function latestSegment(segments: ReadonlyArray<CoachSegmentWithRollup>, role: Role) {
+  return segments.filter((s) => s.role === role).sort((a, b) => b.weekStart - a.weekStart)[0];
 }
 
 function CoachingEmptyState() {
@@ -185,10 +203,9 @@ function CoachingEmptyState() {
         COACHING DATA — AWAITING ETL
       </p>
       <p className="max-w-prose text-base text-text md:text-lg">
-        The weekly coaching-tendency rollups haven&rsquo;t been computed
-        yet. Once the ingest runs you&rsquo;ll see per-coach play-call
-        splits, situational rates, score-state pass rate, personnel
-        groupings, and a 4th-down ledger against the nfl4th model.
+        The weekly coaching-tendency rollups haven&rsquo;t been computed yet. Once the ingest runs
+        you&rsquo;ll see per-coach play-call splits, situational rates, score-state pass rate,
+        personnel groupings, and a 4th-down ledger against the nfl4th model.
       </p>
       <p className="font-mono text-xs text-text-muted">
         Next ETL: Tuesday 14:00 UTC · docs/runbook.md#etl-rollback

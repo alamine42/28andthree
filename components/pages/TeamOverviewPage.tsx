@@ -1,11 +1,14 @@
+import { DataRailLive } from '@/components/DataRailLive';
 import { HeroStats } from '@/components/HeroStats';
 import { HistoricalMarker } from '@/components/HistoricalMarker';
-import { PhaseGrid } from '@/components/PhaseGrid';
+import { PageHead, PageShell, RailBlock, RailRow } from '@/components/PageShell';
+import { PhaseTable } from '@/components/PhaseTable';
 import { SeasonNotice } from '@/components/SeasonNotice';
-import { WeekResultsStrip } from '@/components/WeekResultsStrip';
+import { WeekResultsList } from '@/components/WeekResultsList';
 import { getSeasonContext, type SeasonContext } from '@/lib/data/current-season';
 import { getPatsPhaseSparklines, getPhaseRankSnapshot } from '@/lib/data/phases';
 import { getRecentGames, getTeamSeasonOverview } from '@/lib/data/team';
+import { formatRank, formatSignedInt } from '@/lib/format/number';
 import { getSchedulePhase, type ScheduleSnapshot } from '@/lib/schedule/phase';
 
 // E11: shared home-page template. The clean route renders it with the
@@ -34,36 +37,74 @@ export async function TeamOverviewPage({
   const eyebrowSuffix = historical ? 'SEASON · FINAL' : buildEyebrowSuffix(snap, ctx);
 
   return (
-    <section className="flex flex-col gap-10 py-8 md:gap-[60px] md:py-12">
-      {historical ? null : <SeasonNotice />}
-      <header className="flex flex-col gap-3">
-        <p
-          className="flex flex-wrap items-center gap-x-2 font-mono text-2xs uppercase tracking-widest text-text-muted"
-          data-testid="season-eyebrow"
-        >
-          <span className="tabular-nums">{season}</span>{' '}
-          <span>{eyebrowSuffix}</span>
-        </p>
-        {historical ? <HistoricalMarker season={season} backHref="/" /> : null}
-        <h1 className="max-w-4xl font-display text-2xl font-bold leading-tight tracking-tightest text-text md:text-3xl">
-          New England, {season} in one page.
-        </h1>
-        <p className="max-w-prose text-sm text-text-muted md:text-base">
-          League rank across every phase of play. Weekly trend, recent results,
-          32-team distribution.
-        </p>
-      </header>
+    <PageShell rail={<Rail overview={overview} games={games} />}>
+      <section className="flex flex-col gap-8 md:gap-[60px]">
+        {historical ? null : <SeasonNotice />}
+        <div>
+          <PageHead
+            testId="season-eyebrow"
+            eyebrow={
+              <>
+                <span className="tabular-nums">{season}</span> <span>{eyebrowSuffix}</span>
+              </>
+            }
+            title={`New England, ${season} in one page.`}
+            lede="League rank across every phase of play. Weekly trend, recent results, 32-team distribution."
+            marker={historical ? <HistoricalMarker season={season} backHref="/" /> : null}
+          />
 
-      <HeroStats overview={overview} />
+          <HeroStats overview={overview} />
+        </div>
 
-      <PhaseGrid
-        snapshot={snapshot}
-        sparklines={sparklines}
-        seasonQuery={historical ? season : null}
-      />
+        <PhaseTable
+          snapshot={snapshot}
+          sparklines={sparklines}
+          seasonQuery={historical ? season : null}
+        />
+      </section>
+    </PageShell>
+  );
+}
 
-      <WeekResultsStrip games={games} />
-    </section>
+/** Secondary content, pinned beside the page instead of stacked under it:
+ * recent results, the season summary, and where the numbers come from. */
+function Rail({
+  overview,
+  games,
+}: {
+  overview: Awaited<ReturnType<typeof getTeamSeasonOverview>>;
+  games: Awaited<ReturnType<typeof getRecentGames>>;
+}) {
+  const played = overview.record.wins + overview.record.losses + overview.record.ties;
+  return (
+    <>
+      {games.length > 0 ? (
+        <RailBlock title="Results" note={`last ${games.length}`}>
+          <WeekResultsList games={games} />
+        </RailBlock>
+      ) : null}
+      <RailBlock title="Season">
+        <dl className="space-y-2">
+          <RailRow
+            label="Record"
+            value={`${overview.record.wins}-${overview.record.losses}${
+              overview.record.ties > 0 ? `-${overview.record.ties}` : ''
+            }`}
+          />
+          <RailRow label="Point diff" value={formatSignedInt(overview.pointDiff)} />
+          <RailRow
+            label={`Rank vs ${overview.season - 1}`}
+            value={
+              overview.prevSeasonRank != null
+                ? `${formatRank(overview.currentSeasonRank)} \u2190 ${formatRank(overview.prevSeasonRank)}`
+                : '\u2014'
+            }
+          />
+          <RailRow label="Games played" value={String(played)} />
+        </dl>
+      </RailBlock>
+      <DataRailLive />
+    </>
   );
 }
 
