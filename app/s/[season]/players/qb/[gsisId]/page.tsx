@@ -5,7 +5,7 @@ import { getPlayer, getQbDeepDive } from '@/lib/data/player';
 import { formatEpa } from '@/lib/format/number';
 import { pageMetadata } from '@/lib/seo/page-metadata';
 
-export const revalidate = 86400;
+export const revalidate = 3600;
 
 export default async function HistoricalQb({
   params,

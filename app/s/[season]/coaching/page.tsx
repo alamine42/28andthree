@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { getCoachSegments } from '@/lib/data/coaching';
 import { pageMetadata } from '@/lib/seo/page-metadata';
 
-export const revalidate = 86400;
+export const revalidate = 3600;
 
 export default async function HistoricalCoaching({
   params,

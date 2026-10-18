@@ -26,7 +26,12 @@ export type SeasonSegmentView = {
  * compares the param against the current season). The rollover path still
  * self-corrects: during season Y, `/s/Y/...` caches the current view, and
  * the first ETL run after the Y+1 rollover flushes the whole /s subtree
- * (plan §3.3), after which Y serves as history. */
+ * (plan §3.3), after which Y serves as history.
+ *
+ * Because the /s tree now serves live data, its pages carry the same
+ * 3600 fallback TTL as the clean routes — the ETL flush can skip itself
+ * silently, and a longer TTL would leave `?season=<current>` behind its
+ * own canonical URL. */
 export async function resolveSeasonSegment(
   seasonSegment: string,
 ): Promise<SeasonSegmentView> {

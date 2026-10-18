@@ -6,7 +6,7 @@ import type { Metadata } from 'next';
 import { UNIT_DISPLAY_NAMES } from '@/lib/constants/units';
 import { pageMetadata } from '@/lib/seo/page-metadata';
 
-export const revalidate = 86400;
+export const revalidate = 3600;
 
 export default async function HistoricalUnit({
   params,

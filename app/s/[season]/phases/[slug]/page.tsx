@@ -8,7 +8,7 @@ import { getPhaseDetail } from '@/lib/data/phases';
 import { formatEpa } from '@/lib/format/number';
 import { pageMetadata } from '@/lib/seo/page-metadata';
 
-export const revalidate = 86400;
+export const revalidate = 3600;
 
 export default async function HistoricalPhaseDetail({
   params,
