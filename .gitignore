@@ -55,3 +55,10 @@ coverage
 
 # etl/scripts/verify_anchors.py parquet cache (~20 MB per season)
 etl/.cache/
+
+# bd (beads) advisory lock — recreated per run, never content
+.beads.gate.lock
+
+# Per-machine Claude Code permission grants; the shared config is
+# .claude/settings.json
+.claude/settings.local.json
