@@ -60,6 +60,19 @@ bd update <id> --claim  # Claim work
 bd close <id>         # Complete work
 ```
 
+### In a git worktree, pass `--db`
+
+`.beads/embeddeddolt/` is gitignored, so a worktree checks out an empty
+`.beads/` shell. `bd` finds it, uses it, and reports **0 issues** — it does
+not error, so the answer looks real. Point it at the main checkout instead:
+
+```bash
+bd --db ../../../.beads/embeddeddolt ready    # from .claude/worktrees/<name>/
+```
+
+That relative path is the main checkout from any worktree the app creates.
+Without it you will be told there is no open work when there are dozens.
+
 ### Rules
 
 - Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
