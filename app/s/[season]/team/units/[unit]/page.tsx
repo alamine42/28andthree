@@ -1,10 +1,9 @@
 import { notFound } from 'next/navigation';
 import { isValidUnitSlug, type UnitSlug } from '@/lib/constants/units';
 import { UnitPage } from '@/components/pages/UnitPage';
-import { requireHistoricalSeason } from '@/lib/season-route';
+import { resolveSeasonSegment, seasonCanonical } from '@/lib/season-route';
 import type { Metadata } from 'next';
 import { UNIT_DISPLAY_NAMES } from '@/lib/constants/units';
-import { parseSeasonParam } from '@/lib/season-view';
 import { pageMetadata } from '@/lib/seo/page-metadata';
 
 export const revalidate = 86400;
@@ -16,8 +15,8 @@ export default async function HistoricalUnit({
 }) {
   const { season: seasonSegment, unit } = await params;
   if (!isValidUnitSlug(unit)) notFound();
-  const season = await requireHistoricalSeason(seasonSegment, `/team/units/${unit}`);
-  return <UnitPage unit={unit as UnitSlug} season={season} historical={true} />;
+  const { season, historical } = await resolveSeasonSegment(seasonSegment);
+  return <UnitPage unit={unit as UnitSlug} season={season} historical={historical} />;
 }
 
 export async function generateMetadata({
@@ -26,8 +25,9 @@ export async function generateMetadata({
   params: Promise<{ season: string; unit: string }>;
 }): Promise<Metadata> {
   const { season: seasonSegment, unit } = await params;
-  const season = parseSeasonParam(seasonSegment);
-  if (season == null || !isValidUnitSlug(unit)) return {};
+  if (!isValidUnitSlug(unit)) return {};
+  const view = await resolveSeasonSegment(seasonSegment);
+  const { season } = view;
   const display = UNIT_DISPLAY_NAMES[unit];
   return pageMetadata({
     title: `${display} unit · ${season}`,
@@ -36,6 +36,6 @@ export async function generateMetadata({
       title: `${display} unit`,
       eyebrow: `TEAM UNITS · ${season}`,
     },
-    canonical: `/team/units/${unit}?season=${season}`,
+    canonical: seasonCanonical(`/team/units/${unit}`, view),
   });
 }

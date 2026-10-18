@@ -1,8 +1,7 @@
 import { SkillPlayerPage } from '@/components/pages/SkillPlayerPage';
-import { requireHistoricalSeason } from '@/lib/season-route';
+import { resolveSeasonSegment, seasonCanonical } from '@/lib/season-route';
 import type { Metadata } from 'next';
 import { getPlayer, getSkillUsage } from '@/lib/data/player';
-import { parseSeasonParam } from '@/lib/season-view';
 import { pageMetadata } from '@/lib/seo/page-metadata';
 
 export const revalidate = 86400;
@@ -13,8 +12,8 @@ export default async function HistoricalSkill({
   params: Promise<{ season: string; gsisId: string }>;
 }) {
   const { season: seasonSegment, gsisId } = await params;
-  const season = await requireHistoricalSeason(seasonSegment, `/players/skill/${gsisId}`);
-  return <SkillPlayerPage gsisId={gsisId} season={season} historical={true} />;
+  const { season, historical } = await resolveSeasonSegment(seasonSegment);
+  return <SkillPlayerPage gsisId={gsisId} season={season} historical={historical} />;
 }
 
 export async function generateMetadata({
@@ -23,8 +22,8 @@ export async function generateMetadata({
   params: Promise<{ season: string; gsisId: string }>;
 }): Promise<Metadata> {
   const { season: seasonSegment, gsisId } = await params;
-  const season = parseSeasonParam(seasonSegment);
-  if (season == null) return {};
+  const view = await resolveSeasonSegment(seasonSegment);
+  const { season } = view;
   const [player, usage] = await Promise.all([
     getPlayer(gsisId, season),
     getSkillUsage(gsisId, season),
@@ -38,7 +37,7 @@ export async function generateMetadata({
       title: player.displayName,
       eyebrow: `${position.toUpperCase()} · ${season}`,
     },
-    canonical: `/players/skill/${gsisId}?season=${season}`,
+    canonical: seasonCanonical(`/players/skill/${gsisId}`, view),
     noindex: usage == null,
   });
 }
